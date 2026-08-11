@@ -1,0 +1,42 @@
+name: Deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      # Переменных окружения нет и не будет: приложение считает на устройстве,
+      # эндпойнтов и ключей у него не существует (рамка анти-Гриц).
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # ⚠ Находка Н-02, оплачена в boom-cmd 06.08.2026. Шаг деплоя жёстко
+      # ограничен десятью минутами: action молча срезает любой больший таймаут.
+      # Переждать медленный деплой невозможно в принципе. Единственный рычаг —
+      # вес артефакта. Растёт время деплоя — смотреть `du -sh dist` и жать
+      # картинки, а не крутить настройки.
+      - id: deployment
+        uses: actions/deploy-pages@v4

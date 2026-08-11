@@ -1,0 +1,112 @@
+/* ===== Design tokens — ЕДИНСТВЕННОЕ место во всём проекте, где допустим hex =====
+   Скопировано дословно из лекала boom-cmd (DESIGN-SYSTEM-TRANSFER §2).
+   Блок @font-face не переносился: брендовых начертаний у gderost пока нет,
+   роли шрифта держатся на системных (tailwind.config.js).
+   Правка любого значения здесь — решение D-NN в docs/РЕШЕНИЯ.md. */
+:root {
+  /* нейтрали (светлый холст) */
+  --bg: #F7F6F3;  --surface: #FFFFFF;  --surface-2: #F1F0EC;
+  --line: #E3E1DB;
+  --text: #1C1B18;  --text-secondary: #45433E;  --text-muted: #6F6D66;
+  /* брендовый акцент (жёлтый, только заливка) */
+  --accent: #FFC833;  --accent-ink: #1C1B18;
+  /* тёмно-графитовый нейтрал (бейджи, второстепенные ссылки) */
+  --graphite: #3A3833;
+  /* чистые сигналы */
+  --positive: #2F9E54;  --negative: #D92D20;  --info: #2563EB;  --warning: #FFC833;
+  /* статусы роадмапа */
+  --st-backlog: #8A8880;  --st-todo: #6F6D66;  --st-progress: #FFC833;
+  --st-review: #2563EB;  --st-done: #2F9E54;  --st-canceled: #9A968D;
+  /* текст/иконка на тёмной или насыщенной заливке */
+  --ink-on-color: #FFFFFF;
+  /* затемнение под модалкой (производное от --text) */
+  --scrim: rgba(28, 27, 24, 0.45);
+  /* placeholder — отдельно от --text-muted */
+  --placeholder: #6F6D66;
+  /* кант карточек: обводка и верхний блик («свет сверху») */
+  --rim: #E3E1DB;
+  --rim-glow: rgba(255, 255, 255, 0.6);
+  --card-shadow: 0 2px 14px rgba(28, 27, 24, 0.08);
+  /* фон строки меню под курсором (только устройства с настоящим ховером) */
+  --surface-hover: #E7E5DF;
+}
+
+/* тёмная тема — будущий свап */
+[data-theme="dark"] {
+  --bg: #1C1B18;  --surface: #232220;  --surface-2: #2C2B27;
+  --line: #34322C;
+  --text: #F7F6F3;  --text-secondary: #C9C6BD;  --text-muted: #9A968D;
+  --placeholder: #9A968D;
+  --surface-hover: #34322C;
+}
+
+/* ===== Тёмная витрина =====
+   В лекале этим скоупом сделан экран входа. У gderost ворот нет (рамка
+   анти-Гриц), и тем же приёмом решён первый экран «ГДЕ РОСТ?» белым по
+   чёрному: атрибут висит на компоненте экрана, внутрь приложения тёмное
+   не распространяется. Приложение остаётся светлым. Решение D-13. */
+[data-theme="showcase-dark"] {
+  --bg: #0A0A0A;             /* фон экрана */
+  --surface: #161616;        /* карточка */
+  --surface-2: #0F0F0F;      /* поля ввода — темнее карточки */
+  --line: #2A2A2A;           /* обводка полей */
+  --text: #F2F2F2;
+  --text-secondary: #9A9A9A;
+  --text-muted: #5C5C5C;
+  /* #5C5C5C на #0F0F0F = 2.87:1 — функциональный текст порог 4.5:1 проваливает.
+     #808080 = 4.85:1, на глаз от мокапа неотличим. */
+  --placeholder: #808080;
+  /* Главное действие здесь белое: жёлтый — цвет клиента ВНУТРИ приложения. */
+  --accent: #F2F2F2;  --accent-ink: #0A0A0A;
+  /* #D92D20 на карточке = 3.75:1 (провал). #FF5C4D — тот же тон, 5.94:1. */
+  --negative: #FF5C4D;
+  --graphite: #5C5C5C;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --rim: #383838;
+  --rim-glow: rgba(255, 255, 255, 0.18);
+  --surface-hover: #1E1E1E;
+  --card-shadow: inset 0 1px 0 var(--rim-glow), 0 24px 48px -24px rgba(0, 0, 0, 0.9);
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { font-size: 100%; }            /* 1rem = 16px; масштаб через rem (HIG) */
+  body {
+    margin: 0;
+    background: var(--surface-2);      /* нейтральный фон-окружение на десктопе */
+    color: var(--text);
+    font-size: 1.0625rem;              /* 17px — базовый body по HIG */
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* ===== Загрузочные состояния ===== */
+@keyframes bc-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.bc-skeleton {
+  background-color: var(--surface-2);
+  background-image: linear-gradient(
+    90deg, var(--surface-2) 0%, var(--surface) 50%, var(--surface-2) 100%
+  );
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  animation: bc-shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes bc-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: none; }
+}
+.bc-fade-in { animation: bc-fade-in 0.28s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bc-skeleton { animation: none; }
+  .bc-fade-in  { animation: none; }
+}
