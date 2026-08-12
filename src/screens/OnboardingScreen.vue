@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
+import { AlertCircle } from 'lucide-vue-next'
 import MoneyField from '../components/MoneyField.vue'
 import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
 import { todayISO } from '../composables/miniModel.js'
@@ -137,9 +138,15 @@ function submit() {
           hint="То, ради чего стараетесь сверх плана. Можно пропустить"
           placeholder="Можно пропустить"
         />
-        <p v-if="goalConflict" class="mt-2 text-[0.8125rem] leading-snug text-[var(--negative)]">
-          Цель ниже плана — тогда это не цель, а другой план.
-          Цель либо выше {{ formatRub(target) }}, либо её пока нет.
+        <p
+          v-if="goalConflict"
+          class="mt-2 flex items-start gap-1.5 text-[0.8125rem] leading-snug text-[var(--negative)]"
+        >
+          <AlertCircle class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>
+            Цель ниже плана — тогда это не цель, а другой план.
+            Цель либо выше {{ formatRub(target) }}, либо её пока нет.
+          </span>
         </p>
       </div>
 

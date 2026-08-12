@@ -3,9 +3,12 @@ import { computed } from 'vue'
 import { COUNTERS } from '../data/runscaleCounters.js'
 import { formatInt } from '../i18n/format.js'
 
-// Карточка некликабельная намеренно: раздела, куда она могла бы вести, пока нет.
-// Кнопка, которая никуда не ведёт, — обманка, а вся ставка этого приложения
-// на то, что оно нигде не врёт.
+// Кликабельной карточка становится только там, где ей есть куда вести.
+// На витрине разделов ещё нет, и она остаётся текстом: кнопка, которая никуда
+// не ведёт, — обманка, а вся ставка этого приложения на то, что оно нигде не врёт.
+
+defineProps({ clickable: { type: Boolean, default: false } })
+defineEmits(['open'])
 
 const asOf = computed(() => {
   const [y, m, d] = COUNTERS.asOf.split('-')
@@ -15,8 +18,14 @@ const asOf = computed(() => {
 
 <template>
   <div>
-    <ul class="flex items-stretch rounded-2xl border border-[var(--rim)] bg-[var(--surface)] py-3">
-      <li
+    <component
+      :is="clickable ? 'button' : 'ul'"
+      :type="clickable ? 'button' : null"
+      class="flex w-full items-stretch rounded-2xl border border-[var(--rim)] bg-[var(--surface)] py-3"
+      @click="clickable ? $emit('open') : null"
+    >
+      <component
+        :is="clickable ? 'span' : 'li'"
         v-for="(c, i) in COUNTERS.items" :key="c.key"
         class="flex flex-1 flex-col items-center justify-center px-1"
         :class="i > 0 ? 'border-l border-[var(--line)]' : ''"
@@ -25,8 +34,8 @@ const asOf = computed(() => {
           {{ formatInt(c.value) }}
         </span>
         <span class="mt-1 text-[0.6875rem] text-[var(--text-muted)]">{{ c.label }}</span>
-      </li>
-    </ul>
+      </component>
+    </component>
     <p class="mt-1.5 text-center text-[0.6875rem] text-[var(--text-muted)]">
       на {{ asOf }}, обновляется вручную
     </p>

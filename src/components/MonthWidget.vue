@@ -62,9 +62,11 @@ const stateNote = computed(() => GOAL_STATE[props.m.goalState] || GOAL_STATE.unk
         <StatusChip kind="computed" />
       </div>
       <div class="mt-1 flex flex-wrap items-baseline gap-x-2">
+        <!-- Крупная цифра монохромна. Смысл «не доедете» несут слова над ней,
+             а цвет оставлен светофору: как только красным заговорит и оценка дня,
+             и большая цифра, светофор перестанет означать что-то одно. -->
         <span
-          class="font-brand text-[2.125rem] font-bold leading-none tracking-tight"
-          :style="{ color: overshoot ? 'var(--text)' : 'var(--negative)' }"
+          class="font-brand text-[2.125rem] font-bold leading-none tracking-tight text-[var(--text)]"
         >{{ formatRub(Math.abs(short)) }}</span>
         <span class="text-[0.875rem] font-semibold text-[var(--text-secondary)]">
           {{ formatGrowth(m.landDev) }}

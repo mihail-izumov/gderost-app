@@ -3,27 +3,33 @@ import { computed } from 'vue'
 import { DOW_RU, todayISO } from '../composables/miniModel.js'
 import { weekRangeLabel, daysWord, formatPct } from '../i18n/format.js'
 
-// Виджет текущей недели. Даты настоящие и берутся из календаря устройства —
-// подставная неделя на витрине была бы первым местом, где приложение соврало.
+// Виджет недели. Работает в двух режимах и ни в одном ничего не выдумывает.
 //
-// Маркеры под днями приходят снаружи. Без них все дни пустые, и это тоже правда:
-// оценок пока нет, потому что выручки пока нет. Демонстрационных оценок здесь
-// не бывает — рисовать чужой хороший месяц, выдавая его за приглашение, нечестно.
+// Без `days` он берёт текущую календарную неделю из часов устройства — так он
+// стоит на входе, где данных ещё нет и все маркеры пустые. С `days` он рисует
+// ровно те дни, что ему дали, вместе с их оценками: неделя месяца может быть
+// неполной на его границах, и дорисовывать в неё чужие дни было бы враньём
+// о том, что в этой неделе посчитано.
 //
 // Графитовый вид — не тема, а якорь внимания: одна тёмная карточка на светлом
 // холсте держит взгляд там, где начинается разговор. Контраст текста на ней
 // посчитан формулой и живёт отдельными токенами.
 
 const props = defineProps({
-  // 7 значений Пн..Вс: 'good' | 'warn' | 'bad' | 'carry' | 'idle'
+  // Явные дни: [{ key, dow (1=Пн..7=Вс), dowRu, dd, isToday, mark }]
+  days: { type: Array, default: null },
+  // Оценки для режима без `days`: 7 значений Пн..Вс
   marks: { type: Array, default: null },
   now: { type: Date, default: () => new Date() },
-  // Своя подпись вместо диапазона дат — понадобится, когда недели получат номера.
+  // Своя подпись вместо диапазона дат.
   label: { type: String, default: null },
   // 'graphite' — герой-кадр, 'surface' — обычная карточка внутри приложения.
   // По умолчанию светлая: тёмная заливка запрашивается осознанно, иначе она
   // расползётся по экранам сама и перестанет быть акцентом.
   tone: { type: String, default: 'surface' },
+  // Нижняя строка. Без них печатается остаток месяца.
+  note: { type: String, default: null },
+  pill: { type: String, default: null },
 })
 
 const dark = computed(() => props.tone === 'graphite')
@@ -61,7 +67,7 @@ const skin = computed(() => (dark.value
     pillInk: 'var(--text-secondary)',
   }))
 
-const week = computed(() => {
+const calendarWeek = computed(() => {
   const t = new Date(props.now)
   t.setHours(0, 0, 0, 0)
   const shift = (t.getDay() + 6) % 7 // 0 = понедельник
@@ -71,23 +77,28 @@ const week = computed(() => {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday)
     d.setDate(monday.getDate() + i)
-    const kind = props.marks && props.marks[i] ? props.marks[i] : 'idle'
     return {
       key: todayISO(d),
-      dow: DOW_RU[i],
+      dow: i + 1,
+      dowRu: DOW_RU[i],
       dd: d.getDate(),
       isToday: todayISO(d) === todayIso,
-      fill: MARK_FILL[kind] || null,
+      mark: props.marks && props.marks[i] ? props.marks[i] : 'idle',
     }
   })
 })
 
+const week = computed(() => (props.days || calendarWeek.value).map((d) => ({
+  ...d,
+  fill: MARK_FILL[d.mark] || null,
+})))
+
 // Виджет говорит про неделю, значит и подписан неделей: месяц, которого
-// в этих семи днях нет, в заголовке не появляется.
+// в этих днях нет, в заголовке не появляется.
 const title = computed(() => {
   if (props.label) return props.label
   const w = week.value
-  return weekRangeLabel(w[0].key, w[6].key)
+  return weekRangeLabel(w[0].key, w[w.length - 1].key)
 })
 
 // Считается вместе с сегодняшним днём: сегодня ещё можно работать.
@@ -102,6 +113,9 @@ const leftPct = computed(() => {
   const dim = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate()
   return (daysLeft.value / dim) * 100
 })
+
+const noteText = computed(() => props.note ?? `${daysLeft.value} ${daysWord(daysLeft.value)} ост.`)
+const pillText = computed(() => props.pill ?? formatPct(leftPct.value, 0))
 </script>
 
 <template>
@@ -112,8 +126,12 @@ const leftPct = computed(() => {
     >{{ title }}</h2>
 
     <ul class="mt-3 grid grid-cols-7 gap-1">
-      <li v-for="d in week" :key="d.key" class="flex flex-col items-center gap-1.5">
-        <span class="text-[0.6875rem] font-medium" :style="{ color: skin.dow }">{{ d.dow }}</span>
+      <li
+        v-for="d in week" :key="d.key"
+        class="flex flex-col items-center gap-1.5"
+        :style="{ gridColumnStart: d.dow }"
+      >
+        <span class="text-[0.6875rem] font-medium" :style="{ color: skin.dow }">{{ d.dowRu }}</span>
         <span
           class="flex h-8 w-8 items-center justify-center rounded-full font-mono text-[0.9375rem] font-semibold tabular-nums"
           :style="d.isToday
@@ -129,16 +147,15 @@ const leftPct = computed(() => {
       </li>
     </ul>
 
-    <!-- Остаток месяца: слева счёт словами, справа доля. Разделительной точки
+    <!-- Нижняя строка: слева счёт словами, справа доля. Разделительной точки
          между ними нет — разные формы сами разводят величины. -->
-    <div class="mt-4 flex items-center justify-between gap-3 px-1">
-      <span class="text-[0.8125rem]" :style="{ color: skin.note }">
-        {{ daysLeft }} {{ daysWord(daysLeft) }} ост.
-      </span>
+    <div v-if="noteText || pillText" class="mt-4 flex items-center justify-between gap-3 px-1">
+      <span class="text-[0.8125rem]" :style="{ color: skin.note }">{{ noteText }}</span>
       <span
-        class="rounded-full border px-2 py-0.5 font-mono text-[0.75rem] tabular-nums"
+        v-if="pillText"
+        class="shrink-0 rounded-full border px-2 py-0.5 font-mono text-[0.75rem] tabular-nums"
         :style="{ borderColor: skin.pillBorder, color: skin.pillInk }"
-      >{{ formatPct(leftPct, 0) }}</span>
+      >{{ pillText }}</span>
     </div>
   </section>
 </template>

@@ -4,6 +4,9 @@ import MonthWidget from '../components/MonthWidget.vue'
 import UnitSwitch from '../components/UnitSwitch.vue'
 import StatusChip from '../components/StatusChip.vue'
 import WeekShapeCard from '../components/WeekShapeCard.vue'
+import WeekList from '../components/WeekList.vue'
+import AddReportForm from '../components/AddReportForm.vue'
+import CountersCard from '../components/CountersCard.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { shapeStatus } from '../data/weekShape.js'
 import { formatRub, monthLabel, daysWord, dayLabel } from '../i18n/format.js'
@@ -13,12 +16,16 @@ import { BRAND } from '../i18n/brand.js'
 // чтобы месяц пришёл к плану. Всё остальное на экране объясняет, откуда
 // это число взялось.
 
+const emit = defineEmits(['go'])
+
 const store = useMiniStore()
 const m = store.model
 const monthOver = store.monthOver
 const state = store.state
 
 const askReset = ref(false)
+// Дата, выбранная в таблице дней: тап по «внести» ведёт прямо в форму.
+const pickedDate = ref('')
 
 const todayNeed = computed(() => (m.value ? m.value.todayNeed : null))
 const hasDayFacts = computed(() => !!m.value && m.value.enteredCount > 0)
@@ -30,6 +37,14 @@ const shape = computed(() => shapeStatus(state.coef_src, state.days.length, stat
 function reset() {
   store.reset()
   askReset.value = false
+}
+
+// Тап по пропущенному дню в таблице переносит человека к форме с этой датой:
+// иначе он ищет её в календаре сам, зная ответ.
+function onPick(iso) {
+  pickedDate.value = iso
+  const el = typeof document !== 'undefined' ? document.getElementById('mini-add-report') : null
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 </script>
 
@@ -92,6 +107,14 @@ function reset() {
       <MonthWidget :m="m" />
     </div>
 
+    <div id="mini-add-report" class="mt-4">
+      <AddReportForm :preset="pickedDate" />
+    </div>
+
+    <div class="mt-4">
+      <WeekList :m="m" @pick="onPick" />
+    </div>
+
     <div class="mt-4">
       <WeekShapeCard />
     </div>
@@ -118,6 +141,11 @@ function reset() {
         не берётся судить, посильный ли нужный темп.
       </p>
     </section>
+
+    <!-- Счётчики работающей системы: здесь у них есть куда вести -->
+    <div class="mt-6">
+      <CountersCard clickable @open="emit('go', 'runscale')" />
+    </div>
 
     <!-- Выход не заперт: инструмент возвращаемый -->
     <footer class="mt-8 border-t border-[var(--line)] pt-4">

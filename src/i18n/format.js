@@ -104,6 +104,8 @@ export function weekRangeLabel(fromISO, toISO) {
   const fi = Number(fm)
   const ti = Number(tm)
   if (!Number.isFinite(fi) || !Number.isFinite(ti) || fi < 1 || fi > 12 || ti < 1 || ti > 12) return DASH
+  // Неделя в один день — не диапазон: «31 — 31 августа» читается как опечатка.
+  if (fromISO === toISO) return `${Number(fd)} ${MONTH_RU_OF[fi - 1]}`
   const head = fi === ti ? `${Number(fd)}` : `${Number(fd)} ${MONTH_RU_OF[fi - 1]}`
   return `${head}${NBSP}—${NBSP}${Number(td)} ${MONTH_RU_OF[ti - 1]}`
 }
