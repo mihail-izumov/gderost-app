@@ -6,6 +6,7 @@ import OnboardingScreen from './screens/OnboardingScreen.vue'
 import TodayScreen from './screens/TodayScreen.vue'
 import PowerScreen from './screens/PowerScreen.vue'
 import RunscaleScreen from './screens/RunscaleScreen.vue'
+import GoalsScreen from './screens/GoalsScreen.vue'
 import TabBar from './components/TabBar.vue'
 import { useMiniStore } from './composables/useMiniStore.js'
 
@@ -20,6 +21,9 @@ import { useMiniStore } from './composables/useMiniStore.js'
 const store = useMiniStore()
 const entered = ref(store.state.ready)
 const tab = ref('today')
+// Под-страница поверх вкладки: «Цели и планы» — не четвёртый раздел, а заход
+// вглубь «Сегодня», поэтому у неё кнопка назад, а не место в таб-баре.
+const subView = ref('')
 
 const TABS = [
   { id: 'today', label: 'Сегодня', icon: CalendarCheck },
@@ -34,8 +38,20 @@ const view = computed(() => {
 
 // Сброс данных возвращает на витрину, а не на пустой экран приложения.
 watch(() => store.state.ready, (ready) => {
-  if (!ready) { entered.value = false; tab.value = 'today' }
+  if (!ready) { entered.value = false; tab.value = 'today'; subView.value = '' }
 })
+
+// Переход из экрана: либо вкладка, либо заход вглубь.
+function go(where) {
+  if (where === 'goals') { subView.value = 'goals'; return }
+  subView.value = ''
+  tab.value = where
+}
+
+function selectTab(id) {
+  subView.value = ''
+  tab.value = id
+}
 </script>
 
 <template>
@@ -50,8 +66,9 @@ watch(() => store.state.ready, (ready) => {
                pt-[max(1rem,env(safe-area-inset-top))]"
       >
         <OnboardingScreen v-if="view === 'onboarding'" />
+        <GoalsScreen v-else-if="subView === 'goals'" @back="subView = ''" />
         <template v-else>
-          <TodayScreen v-if="tab === 'today'" @go="tab = $event" />
+          <TodayScreen v-if="tab === 'today'" @go="go" />
           <PowerScreen v-else-if="tab === 'power'" />
           <RunscaleScreen v-else />
         </template>
@@ -59,7 +76,7 @@ watch(() => store.state.ready, (ready) => {
 
       <!-- Таб-бар появляется вместе с приложением: во время подключения бизнеса
            переключаться некуда, и контрол без выбора только мешает. -->
-      <TabBar v-if="view === 'app'" :tabs="TABS" :active="tab" @select="tab = $event" />
+      <TabBar v-if="view === 'app'" :tabs="TABS" :active="tab" @select="selectTab" />
     </div>
   </div>
 </template>

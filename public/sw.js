@@ -13,10 +13,33 @@ self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE_NAME).then((c) => c.addAll(PRECACHE)).then(() => self.skipWaiting()))
 })
 
+// Оболочка со всеми её файлами кладётся в кэш сразу при активации.
+// Иначе получается ловушка: первую страницу браузер успевает загрузить до того,
+// как обработчик заработал, в кэше оказывается только index.html, и первый же
+// запуск без сети открывает пустой экран. Имена файлов взяты из самой страницы,
+// а не зашиты списком: при следующей сборке они меняются.
+async function precacheShell(cache) {
+  const res = await fetch(SHELL_URL, { cache: 'reload' })
+  const html = await res.text()
+  await cache.put(SHELL_URL, new Response(html, { headers: res.headers }))
+  const urls = []
+  const re = /(?:src|href)="([^"]+)"/g
+  let m
+  while ((m = re.exec(html)) !== null) {
+    if (m[1].startsWith(BASE + 'assets/')) urls.push(m[1])
+  }
+  if (urls.length) await cache.addAll(urls)
+}
+
 self.addEventListener('activate', (e) => {
   e.waitUntil((async () => {
     const keys = await caches.keys()
     await Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
+    try {
+      await precacheShell(await caches.open(CACHE_NAME))
+    } catch {
+      // Сети нет прямо сейчас — не беда: файлы осядут в кэше при первом обращении.
+    }
     await self.clients.claim()
     const cs = await self.clients.matchAll({ type: 'window' })
     cs.forEach((c) => c.postMessage({ type: 'SW_ACTIVATED', cacheName: CACHE_NAME }))

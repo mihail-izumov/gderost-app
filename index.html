@@ -9,11 +9,14 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Где Рост" />
     <meta name="application-name" content="Где Рост" />
-    <!-- Первый экран тёмный, поэтому первичный theme-color тёмный. -->
-    <meta name="theme-color" content="#0A0A0A" />
+    <!-- Тема одна на весь путь — светлая. Значение обязано совпадать
+         с theme_color манифеста, иначе при установке на домашний экран
+         рамка приложения окажется другого цвета, чем сам экран.
+         Литерал здесь законен: meta не понимает var(--…). -->
+    <meta name="theme-color" content="#F7F6F3" />
     <meta name="description" content="Посчитайте, куда приземлится месяц при текущем темпе, и увидите разрыв до плана. Данные остаются на вашем устройстве." />
     <title>Где Рост</title>
   </head>

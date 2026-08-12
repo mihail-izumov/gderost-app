@@ -7,6 +7,8 @@ import WeekShapeCard from '../components/WeekShapeCard.vue'
 import WeekList from '../components/WeekList.vue'
 import AddReportForm from '../components/AddReportForm.vue'
 import CountersCard from '../components/CountersCard.vue'
+import InstallBanner from '../components/InstallBanner.vue'
+import { hardReload } from '../composables/useAppRefresh.js'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { shapeStatus } from '../data/weekShape.js'
 import { formatRub, monthLabel, daysWord, dayLabel } from '../i18n/format.js'
@@ -105,6 +107,12 @@ function onPick(iso) {
 
     <div class="mt-4">
       <MonthWidget :m="m" />
+      <button
+        type="button"
+        class="mt-2 min-h-[44px] text-[0.8125rem] font-semibold"
+        :style="{ color: 'var(--action)' }"
+        @click="emit('go', 'goals')"
+      >Изменить план и цель</button>
     </div>
 
     <div id="mini-add-report" class="mt-4">
@@ -142,8 +150,12 @@ function onPick(iso) {
       </p>
     </section>
 
-    <!-- Счётчики работающей системы: здесь у них есть куда вести -->
     <div class="mt-6">
+      <InstallBanner />
+    </div>
+
+    <!-- Счётчики работающей системы: здесь у них есть куда вести -->
+    <div class="mt-4">
       <CountersCard clickable @open="emit('go', 'runscale')" />
     </div>
 
@@ -151,6 +163,14 @@ function onPick(iso) {
     <footer class="mt-8 border-t border-[var(--line)] pt-4">
       <p class="text-[0.75rem] leading-snug text-[var(--text-muted)]">
         Данные лежат на этом устройстве. Никуда не отправляются, аккаунта нет.
+      </p>
+      <button
+        type="button"
+        class="mt-1 min-h-[44px] text-[0.8125rem] font-medium text-[var(--text-secondary)] underline"
+        @click="hardReload"
+      >Обновить приложение</button>
+      <p class="text-[0.6875rem] leading-snug text-[var(--text-muted)]">
+        Загрузит свежую версию. Введённое останется на месте.
       </p>
       <button
         v-if="!askReset"

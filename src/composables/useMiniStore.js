@@ -130,9 +130,15 @@ export function useMiniStore() {
       if (!date || !Number.isFinite(value)) return false
       if (state.carry && date <= state.carry.upTo) return false
       const before = model.value ? model.value.landing : null
+      // День запоминает линейку, по которой его оценили. Поднимут план в конце
+      // месяца — прошлые дни не покраснеют задним числом: их мерили не этим.
+      const row = model.value ? model.value.days.find((d) => d.iso === date) : null
+      const planRef = row && row.plan > 0 ? row.plan : undefined
       const i = state.days.findIndex((d) => d.date === date)
-      if (i >= 0) state.days[i] = { date, rev: value }
-      else state.days.push({ date, rev: value })
+      // Правка суммы за уже внесённый день линейку не меняет: день тот же.
+      const keepRef = i >= 0 && state.days[i].planRef ? state.days[i].planRef : planRef
+      if (i >= 0) state.days[i] = { date, rev: value, planRef: keepRef }
+      else state.days.push({ date, rev: value, planRef })
       state.days.sort((a, b) => (a.date < b.date ? -1 : 1))
       const after = model.value ? model.value.landing : null
       if (after != null) {

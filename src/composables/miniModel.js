@@ -5,7 +5,10 @@
 // внешние факторы числа прогноза не двигают.
 //
 // Правила честности, зашитые в расчёт:
-//   • история не переписывается: закрытые дни задним числом не перекрашиваются;
+//   • история не переписывается: закрытые дни задним числом не перекрашиваются.
+//     День меряется против того плана, который стоял в момент ввода, и запоминает
+//     его. Поднять план в конце месяца и обнаружить, что прошлые дни покраснели
+//     задним числом, нельзя: оценка выставлялась не по этой линейке;
 //   • прошлое, внесённое одной суммой, остаётся серым — дневного факта у него
 //     не существует, поэтому оценка дню не ставится никогда;
 //   • всё введённое носит статус «со слов», посчитанное из него — «посчитано»;
@@ -48,7 +51,8 @@ export function todayISO(now = new Date()) {
  *   dow_coef: [7],                   // веса дней недели Пн..Вс
  *   coef_src: 'preset'|'user'|'data',// откуда веса: пресет · правка · свои данные
  *   carry: { upTo:'YYYY-MM-DD', amount:Number }|null, // прошлое одной суммой
- *   days: [{ date:'YYYY-MM-DD', rev:Number }],        // введённые по одному дни
+ *   // введённые по одному дни; planRef — план этого дня в момент ввода
+ *   days: [{ date:'YYYY-MM-DD', rev:Number, planRef:Number|undefined }],
  * }
  *
  * `now` передаётся в тестах, чтобы расчёт был воспроизводим.
@@ -63,10 +67,14 @@ export function computeMini(set, now = new Date()) {
     : [1, 1, 1, 1, 1, 1, 1]
 
   const byDate = {}
+  const planRefByDate = {}
   ;(set.days || []).forEach((x) => {
     // ноль — валидная выручка (бизнес был закрыт); отбрасываются только не-числа
     if (x && typeof x.date === 'string' && Number.isFinite(Number(x.rev))) {
       byDate[x.date] = Number(x.rev)
+      if (Number.isFinite(Number(x.planRef)) && Number(x.planRef) > 0) {
+        planRefByDate[x.date] = Number(x.planRef)
+      }
     }
   })
   const carry = set.carry && Number.isFinite(Number(set.carry.amount)) && set.carry.upTo
@@ -99,7 +107,13 @@ export function computeMini(set, now = new Date()) {
   // План: сумма планов дней равна плану месяца ровно.
   const T = Number(set.month_target) || 0
   const sumW = sum(days, (x) => x.weight)
-  days.forEach((x) => { x.plan = sumW ? (T * x.weight) / sumW : 0 })
+  days.forEach((x) => {
+    x.plan = sumW ? (T * x.weight) / sumW : 0
+    // Линейка, по которой день оценивался. У дней без запомненного плана
+    // (внесённых до появления этого правила) берётся текущий — иначе оценки
+    // у них не будет вовсе, а это хуже, чем оценка по нынешней линейке.
+    x.planAt = planRefByDate[x.iso] != null ? planRefByDate[x.iso] : x.plan
+  })
 
   // Цель опциональна: нет — шкала строится до плана, маркер цели не рисуется.
   const goalRaw = Number(set.month_goal)
@@ -140,7 +154,9 @@ export function computeMini(set, now = new Date()) {
   const achievable = goalState === 'ok' || goalState === 'record' || goalState === 'unknown'
 
   // Исполнение плана на закрытых днях.
-  const planRealized = sum(closed, (x) => x.plan)
+  // По линейке момента ввода: поднятый в конце месяца план не делает
+  // задним числом хуже те дни, что оценивались по прежней.
+  const planRealized = sum(closed, (x) => x.planAt)
   const onPlan = planRealized > 0 ? realizedRev / planRealized : null
   const tailCum = planRealized - realizedRev
 
@@ -168,7 +184,7 @@ export function computeMini(set, now = new Date()) {
     w.hasFact = w.factDays.length > 0
     // против плана меряются только дни с известной дневной выручкой:
     // дни, вошедшие суммой, в недельную оценку не входят
-    w.partOfPlan = sum(w.factDays, (x) => x.plan)
+    w.partOfPlan = sum(w.factDays, (x) => x.planAt)
     w.delta = w.fact - w.partOfPlan
     w.ratio = w.partOfPlan > 0 ? w.fact / w.partOfPlan : null
     w.leftDays = w.days.filter((x) => !x.closed).length
@@ -180,18 +196,18 @@ export function computeMini(set, now = new Date()) {
     prevComplete = prevComplete && w.complete
     w.rows = w.days.map((x) => ({
       dd: x.dd, dowRu: x.dowRu, weekend: x.weekend, isToday: x.isToday,
-      plan: x.plan, fact: x.fact, need: x.need,
+      plan: x.planAt, fact: x.fact, need: x.need,
       entered: x.entered, inCarry: x.inCarry, due: x.due,
-      ratio: x.entered ? x.fact / x.plan : null,
-      sig: x.inCarry ? 'carry' : x.entered ? sigClass(x.fact / x.plan) : 'idle',
-      progWidth: x.entered ? Math.min(100, (x.fact / x.plan) * 100) : 0,
+      ratio: x.entered ? x.fact / x.planAt : null,
+      sig: x.inCarry ? 'carry' : x.entered ? sigClass(x.fact / x.planAt) : 'idle',
+      progWidth: x.entered ? Math.min(100, (x.fact / x.planAt) * 100) : 0,
     }))
   })
 
   // Статистика введённых дней по светофору (суммовое прошлое не участвует).
-  const stG = enteredDays.filter((x) => x.fact / x.plan >= GOOD).length
-  const stY = enteredDays.filter((x) => { const r = x.fact / x.plan; return r >= OK && r < GOOD }).length
-  const stR = enteredDays.filter((x) => x.fact / x.plan < OK).length
+  const stG = enteredDays.filter((x) => x.fact / x.planAt >= GOOD).length
+  const stY = enteredDays.filter((x) => { const r = x.fact / x.planAt; return r >= OK && r < GOOD }).length
+  const stR = enteredDays.filter((x) => x.fact / x.planAt < OK).length
   const pctOf = (k) => (enteredDays.length ? Math.round((k / enteredDays.length) * 100) : 0)
   const dayStats = enteredDays.length
     ? { total: enteredDays.length, good: stG, warn: stY, bad: stR, pctGood: pctOf(stG), pctWarn: pctOf(stY), pctBad: pctOf(stR) }

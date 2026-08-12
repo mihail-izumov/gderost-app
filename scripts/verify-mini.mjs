@@ -98,5 +98,35 @@ const m9 = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: ca
 ok(близко(m9.days.reduce((a, x) => a + x.plan, 0), 3_100_000, 1e-6),
   'Σ план = month_target на посчитанной форме недели')
 
+// 10. История не перекрашивается: день помнит линейку, по которой его мерили.
+// Месяц из 31 дня, равные веса, план 3 100 000 → план дня 100 000.
+// День закрыт ровно в план и зелёный. Поднимаем план месяца вдвое.
+const set10 = {
+  month: '2026-08', month_target: 3_100_000, dow_coef: [1, 1, 1, 1, 1, 1, 1], carry: null,
+  days: [{ date: '2026-08-03', rev: 100_000, planRef: 100_000 }],
+}
+const m10 = computeMini(set10, NOW)
+const row10 = m10.days.find((x) => x.dd === 3)
+ok(row10.planAt === 100_000 && sigClass(row10.fact / row10.planAt) === 'good',
+  'день зелёный по линейке момента ввода')
+
+const m10b = computeMini({ ...set10, month_target: 6_200_000 }, NOW)
+const row10b = m10b.days.find((x) => x.dd === 3)
+ok(row10b.plan === 200_000, 'план дня вырос вместе с планом месяца')
+ok(row10b.planAt === 100_000 && sigClass(row10b.fact / row10b.planAt) === 'good',
+  'закрытый день не покраснел от правки плана')
+ok(m10b.weeks.flatMap((w) => w.rows).find((r) => r.dd === 3).sig === 'good',
+  'оценка дня в недельной строке та же')
+
+// Без запомненной линейки день меряется по текущей: оценка есть, а не пропадает.
+const m10c = computeMini({ ...set10, month_target: 6_200_000, days: [{ date: '2026-08-03', rev: 100_000 }] }, NOW)
+const row10c = m10c.days.find((x) => x.dd === 3)
+ok(row10c.planAt === 200_000 && sigClass(row10c.fact / row10c.planAt) === 'bad',
+  'без запомненной линейки берётся текущая')
+
+// Хвост считается по действующему плану, а не по запомненному: обязательство сегодня.
+ok(близко(m10b.days.filter((x) => !x.closed).reduce((a, x) => a + x.need, 0),
+  6_200_000 - 100_000, 1e-6), 'хвост разносит остаток действующего плана')
+
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')
 process.exit(fails ? 1 : 0)
