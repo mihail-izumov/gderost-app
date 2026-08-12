@@ -1,60 +1,53 @@
 <script setup>
+import WeekWidget from '../components/WeekWidget.vue'
 import { BRAND } from '../i18n/brand.js'
 
-// Витрина: один вопрос и один путь дальше. Ветвлений здесь быть не должно —
-// человек пришёл по ссылке и должен дойти до своих цифр без сопровождения.
+// Вход. Один путь и ни одного слова, которое пришлось бы объяснять голосом:
+// имя мелко, высказывание крупно, живая неделя, действие.
+// Виджет и кнопка объясняют друг друга — подзаголовок между ними был бы
+// признанием, что они этого не делают.
 defineEmits(['start'])
 </script>
 
 <template>
-  <!-- Тёмная витрина скоупом на экране, а не на <html>: приложение внутри
-       остаётся светлым. -->
-  <div
-    data-theme="showcase-dark"
-    class="min-h-[100dvh] w-full flex justify-center"
-    :style="{ background: 'var(--bg)', color: 'var(--text)' }"
-  >
+  <div class="min-h-[100dvh] w-full flex justify-center bg-[var(--bg)]">
     <div
-      class="w-full max-w-[430px] min-h-[100dvh] flex flex-col px-3
-             pl-[max(0.75rem,env(safe-area-inset-left))]
-             pr-[max(0.75rem,env(safe-area-inset-right))]
+      class="w-full max-w-[430px] min-h-[100dvh] flex flex-col px-4
+             pl-[max(1rem,env(safe-area-inset-left))]
+             pr-[max(1rem,env(safe-area-inset-right))]
              pt-[max(1rem,env(safe-area-inset-top))]
              pb-[max(1.5rem,env(safe-area-inset-bottom))]"
     >
-      <!-- Подпись владельца инструмента, мелко -->
       <header class="min-h-[44px] flex items-center">
-        <span
-          class="text-[0.8125rem] font-medium uppercase tracking-wide"
-          :style="{ color: 'var(--text-secondary)' }"
-        >{{ BRAND.header }}</span>
+        <span class="text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
+          {{ BRAND.header }}
+        </span>
       </header>
 
-      <!-- Один вопрос и ничего больше -->
-      <main class="flex-1 flex items-center">
+      <main class="flex-1 flex flex-col justify-center gap-7 py-4">
         <h1
-          class="font-brand text-[2.125rem] font-bold leading-tight tracking-tight bc-fade-in"
-          :style="{ color: 'var(--text)' }"
+          class="font-brand font-bold leading-[0.95] tracking-tight text-[var(--text)] bc-fade-in"
+          :style="{ fontSize: 'clamp(2.75rem, 14vw, 4rem)' }"
         >{{ BRAND.question }}</h1>
+
+        <WeekWidget />
       </main>
 
-      <footer class="flex flex-col gap-4">
+      <footer class="flex flex-col gap-3">
         <button
           type="button"
-          class="min-h-[52px] w-full rounded-xl text-[1.0625rem] font-semibold tracking-wide"
-          :style="{ background: 'var(--accent)', color: 'var(--accent-ink)' }"
+          class="min-h-[52px] w-full rounded-xl text-[1.0625rem] font-semibold"
+          :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
           @click="$emit('start')"
-        >СТАРТ</button>
-        <p class="text-[0.8125rem] leading-snug" :style="{ color: 'var(--text-secondary)' }">
-          Четыре ответа про ваш месяц — и вы увидите, куда он приземляется.
-          Без почты и без регистрации, всё считается на вашем устройстве.
+        >{{ BRAND.cta }}</button>
+
+        <p class="text-center text-[0.8125rem] text-[var(--text-secondary)]">
+          {{ BRAND.honesty }}
         </p>
-        <div class="flex flex-col gap-1">
-          <p class="text-[0.9375rem] font-medium" :style="{ color: 'var(--text)' }">
-            {{ BRAND.refrain }}
-          </p>
-          <p class="text-[0.75rem] leading-snug" :style="{ color: 'var(--text-muted)' }">
-            {{ BRAND.domain }}
-          </p>
+
+        <div class="mt-3 flex flex-col gap-0.5">
+          <p class="text-[0.9375rem] font-medium text-[var(--text)]">{{ BRAND.refrain }}</p>
+          <p class="text-[0.75rem] leading-snug text-[var(--text-muted)]">{{ BRAND.domain }}</p>
         </div>
       </footer>
     </div>
