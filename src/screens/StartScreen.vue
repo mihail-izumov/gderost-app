@@ -1,10 +1,14 @@
 <script setup>
 import { BRAND } from '../i18n/brand.js'
+
+// Витрина: один вопрос и один путь дальше. Ветвлений здесь быть не должно —
+// человек пришёл по ссылке и должен дойти до своих цифр без сопровождения.
+defineEmits(['start'])
 </script>
 
 <template>
   <!-- Тёмная витрина скоупом на экране, а не на <html>: приложение внутри
-       остаётся светлым по лекалу. Решение D-13. -->
+       остаётся светлым. -->
   <div
     data-theme="showcase-dark"
     class="min-h-[100dvh] w-full flex justify-center"
@@ -33,13 +37,25 @@ import { BRAND } from '../i18n/brand.js'
         >{{ BRAND.question }}</h1>
       </main>
 
-      <footer class="flex flex-col gap-1">
-        <p class="text-[0.9375rem] font-medium" :style="{ color: 'var(--text)' }">
-          {{ BRAND.refrain }}
+      <footer class="flex flex-col gap-4">
+        <button
+          type="button"
+          class="min-h-[52px] w-full rounded-xl text-[1.0625rem] font-semibold tracking-wide"
+          :style="{ background: 'var(--accent)', color: 'var(--accent-ink)' }"
+          @click="$emit('start')"
+        >СТАРТ</button>
+        <p class="text-[0.8125rem] leading-snug" :style="{ color: 'var(--text-secondary)' }">
+          Четыре ответа про ваш месяц — и вы увидите, куда он приземляется.
+          Без почты и без регистрации, всё считается на вашем устройстве.
         </p>
-        <p class="text-[0.75rem] leading-snug" :style="{ color: 'var(--text-muted)' }">
-          {{ BRAND.domain }}
-        </p>
+        <div class="flex flex-col gap-1">
+          <p class="text-[0.9375rem] font-medium" :style="{ color: 'var(--text)' }">
+            {{ BRAND.refrain }}
+          </p>
+          <p class="text-[0.75rem] leading-snug" :style="{ color: 'var(--text-muted)' }">
+            {{ BRAND.domain }}
+          </p>
+        </div>
       </footer>
     </div>
   </div>
