@@ -1,11 +1,16 @@
 <script setup>
 import WeekWidget from '../components/WeekWidget.vue'
+import LiveClock from '../components/LiveClock.vue'
+import CountersCard from '../components/CountersCard.vue'
 import { BRAND } from '../i18n/brand.js'
 
 // Вход. Один путь и ни одного слова, которое пришлось бы объяснять голосом:
 // имя мелко, высказывание крупно, живая неделя, действие.
-// Виджет и кнопка объясняют друг друга — подзаголовок между ними был бы
-// признанием, что они этого не делают.
+//
+// Живая строка и счётчики стоят здесь не для красоты. Первая доказывает, что
+// экран работает прямо сейчас; вторые — что за приложением есть система,
+// которая работает каждый день. Оба доказательства держатся на честной подписи:
+// время настоящее, у счётчиков стоит дата среза.
 defineEmits(['start'])
 </script>
 
@@ -18,19 +23,27 @@ defineEmits(['start'])
              pt-[max(1rem,env(safe-area-inset-top))]
              pb-[max(1.5rem,env(safe-area-inset-bottom))]"
     >
-      <header class="min-h-[44px] flex items-center">
+      <header class="min-h-[44px] flex items-center gap-2">
         <span class="text-[0.75rem] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
-          {{ BRAND.header }}
+          {{ BRAND.brandName }}
         </span>
+        <span
+          class="rounded-md px-1.5 py-0.5 text-[0.625rem] font-bold uppercase tracking-[0.1em]"
+          :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
+        >{{ BRAND.brandEdition }}</span>
       </header>
 
-      <main class="flex-1 flex flex-col justify-center gap-7 py-4">
+      <LiveClock class="mt-1" />
+
+      <main class="flex-1 flex flex-col justify-center gap-5 py-5">
         <h1
           class="font-brand font-bold leading-[0.95] tracking-tight text-[var(--text)] bc-fade-in"
           :style="{ fontSize: 'clamp(2.75rem, 14vw, 4rem)' }"
         >{{ BRAND.question }}</h1>
 
-        <WeekWidget />
+        <WeekWidget tone="graphite" />
+
+        <CountersCard />
       </main>
 
       <footer class="flex flex-col gap-3">

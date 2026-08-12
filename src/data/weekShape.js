@@ -53,8 +53,55 @@ export function shapeById(id) {
 }
 
 // Подпись под весами. Допущение обязано быть подписано допущением.
-export function shapeStatus(src, obs = 0) {
-  if (src === 'data') return { label: 'посчитано', note: `по вашим данным, наблюдений: ${obs}` }
-  if (src === 'user') return { label: 'допущение', note: 'ваше решение, не проверено данными' }
-  return { label: 'допущение', note: 'типовая форма недели, ваши данные её ещё не подтверждали' }
+export function shapeStatus(src, obs = 0, shapeId = 'neutral') {
+  if (src === 'data') return { kind: 'computed', label: 'посчитано', note: `по вашим данным, наблюдений: ${obs}` }
+  if (src === 'user') return { kind: 'assumption', label: 'допущение', note: 'ваше решение, данными пока не проверено' }
+  if (shapeId === 'neutral') {
+    return { kind: 'assumption', label: 'допущение', note: 'все дни считаются равными — про ваш бизнес это пока не известно' }
+  }
+  return { kind: 'assumption', label: 'допущение', note: 'типовая форма отрасли, ваши данные её ещё не подтверждали' }
+}
+
+/** Сколько раз каждый день недели встретился в введённых по одному днях. */
+export function observationsByDow(days = []) {
+  const counts = [0, 0, 0, 0, 0, 0, 0]
+  days.forEach((d) => {
+    if (!d || typeof d.date !== 'string' || !Number.isFinite(Number(d.rev))) return
+    const dt = new Date(`${d.date}T00:00:00`)
+    if (Number.isNaN(dt.getTime())) return
+    counts[(dt.getDay() + 6) % 7] += 1
+  })
+  return counts
+}
+
+/**
+ * Пересчёт формы недели из собственной выручки пользователя.
+ *
+ * Считается по средней выручке каждого дня недели, нормируется так, чтобы
+ * средний вес равнялся единице: важны пропорции дней между собой, а не масштаб.
+ *
+ * Возвращает null, пока каждый день недели не встретился достаточно раз.
+ * Половина недели из данных, половина из допущения — форма, про которую нельзя
+ * сказать ни «посчитано», ни «допущение», поэтому такой не бывает.
+ * Дни, вошедшие стартовой суммой, сюда не попадают: дневной выручки у них нет.
+ */
+export function calibrateFromDays(days = [], minObs = OBS_FOR_DATA) {
+  const sums = [0, 0, 0, 0, 0, 0, 0]
+  const counts = observationsByDow(days)
+  days.forEach((d) => {
+    if (!d || typeof d.date !== 'string' || !Number.isFinite(Number(d.rev))) return
+    const dt = new Date(`${d.date}T00:00:00`)
+    if (Number.isNaN(dt.getTime())) return
+    sums[(dt.getDay() + 6) % 7] += Number(d.rev)
+  })
+  if (counts.some((c) => c < minObs)) return null
+
+  const avg = sums.map((s, i) => s / counts[i])
+  const mean = avg.reduce((a, x) => a + x, 0) / 7
+  if (!(mean > 0)) return null
+
+  // Ноль как вес запрещён: он вычеркнул бы день из плана навсегда, а закрытый
+  // день недели — это ноль выручки, а не отсутствие дня.
+  const coef = avg.map((v) => Math.max(0.05, Math.round((v / mean) * 100) / 100))
+  return { coef, observations: counts.reduce((a, x) => a + x, 0) }
 }

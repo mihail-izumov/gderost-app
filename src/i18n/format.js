@@ -75,6 +75,39 @@ export function dayLabel(iso) {
   return `${Number(d)} ${MONTH_RU_OF[mi - 1]}`
 }
 
+const MONTH_RU_ABBR = [
+  'янв', 'фев', 'мар', 'апр', 'мая', 'июн',
+  'июл', 'авг', 'сен', 'окт', 'ноя', 'дек',
+]
+const DOW_RU_SHORT = ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
+
+// «Ср, 12 авг.» — календарная часть живой строки.
+export function stampDateLabel(d = new Date()) {
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return DASH
+  return `${DOW_RU_SHORT[d.getDay()]},${NBSP}${d.getDate()}${NBSP}${MONTH_RU_ABBR[d.getMonth()]}.`
+}
+
+// Часы и минуты порознь: двоеточие между ними живёт своей жизнью и пульсирует.
+export function stampTimeParts(d = new Date()) {
+  if (!(d instanceof Date) || Number.isNaN(d.getTime())) return { hh: '--', mm: '--' }
+  const p = (n) => String(n).padStart(2, '0')
+  return { hh: p(d.getHours()), mm: p(d.getMinutes()) }
+}
+
+// Диапазон недели: «10 — 16 августа», «27 июля — 2 августа», «29 декабря — 4 января».
+// Месяц у первой даты печатается только когда он отличается от второго: неделя
+// не должна стоять под шапкой месяца, которого в ней нет.
+export function weekRangeLabel(fromISO, toISO) {
+  if (typeof fromISO !== 'string' || typeof toISO !== 'string') return DASH
+  const [, fm, fd] = fromISO.split('-')
+  const [, tm, td] = toISO.split('-')
+  const fi = Number(fm)
+  const ti = Number(tm)
+  if (!Number.isFinite(fi) || !Number.isFinite(ti) || fi < 1 || fi > 12 || ti < 1 || ti > 12) return DASH
+  const head = fi === ti ? `${Number(fd)}` : `${Number(fd)} ${MONTH_RU_OF[fi - 1]}`
+  return `${head}${NBSP}—${NBSP}${Number(td)} ${MONTH_RU_OF[ti - 1]}`
+}
+
 // «5 дней» / «1 день» / «22 дня» — без этого подписи читаются как машинный вывод.
 export function plural(n, one, few, many) {
   const v = Math.abs(Math.round(safeNum(n) ?? 0))

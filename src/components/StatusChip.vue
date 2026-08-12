@@ -7,9 +7,13 @@ import { computed } from 'vue'
 //   «✓ проверено» — данные прошли собственный сбор и проверки.
 // Третья ступень здесь не выдаётся никогда: ставить галочку на непроверенном —
 // первое место, где система соврала бы.
+//
+// Отдельно стоит «допущение»: это не то, что человек сказал про свой бизнес,
+// а то, что приложение приняло за него, не имея данных. Такое обязано быть
+// названо своим словом, иначе допущение читается как знание.
 
 const props = defineProps({
-  kind: { type: String, default: 'said' }, // said | computed | verified
+  kind: { type: String, default: 'said' }, // said | computed | verified | assumption
   title: { type: String, default: '' },
 })
 
@@ -17,6 +21,7 @@ const MAP = {
   said: { label: 'со слов', hint: 'вы ввели, никто не проверял' },
   computed: { label: 'посчитано', hint: 'выведено из введённого вами' },
   verified: { label: '✓ проверено', hint: 'данные прошли сбор и проверки' },
+  assumption: { label: 'допущение', hint: 'принято без данных о вашем бизнесе' },
 }
 const s = computed(() => MAP[props.kind] || MAP.said)
 </script>

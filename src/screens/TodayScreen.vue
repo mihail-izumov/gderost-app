@@ -3,7 +3,9 @@ import { computed, ref } from 'vue'
 import MonthWidget from '../components/MonthWidget.vue'
 import UnitSwitch from '../components/UnitSwitch.vue'
 import StatusChip from '../components/StatusChip.vue'
+import WeekShapeCard from '../components/WeekShapeCard.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
+import { shapeStatus } from '../data/weekShape.js'
 import { formatRub, monthLabel, daysWord, dayLabel } from '../i18n/format.js'
 import { BRAND } from '../i18n/brand.js'
 
@@ -20,6 +22,10 @@ const askReset = ref(false)
 
 const todayNeed = computed(() => (m.value ? m.value.todayNeed : null))
 const hasDayFacts = computed(() => !!m.value && m.value.enteredCount > 0)
+
+// Требование на день целиком стоит на форме недели. Пока она допущение,
+// число рядом обязано носить ту же подпись — иначе допущение выдаётся за знание.
+const shape = computed(() => shapeStatus(state.coef_src, state.days.length, state.shape_id))
 
 function reset() {
   store.reset()
@@ -73,10 +79,21 @@ function reset() {
           Выручка за сегодня уже внесена. Следующее требование появится завтра.
         </template>
       </p>
+      <p
+        v-if="todayNeed !== null"
+        class="mt-3 border-t pt-2 text-[0.75rem] leading-snug"
+        :style="{ borderColor: 'var(--text-muted)', opacity: 0.7 }"
+      >
+        Форма недели — {{ shape.label }}: {{ shape.note }}.
+      </p>
     </section>
 
     <div class="mt-4">
       <MonthWidget :m="m" />
+    </div>
+
+    <div class="mt-4">
+      <WeekShapeCard />
     </div>
 
     <!-- Как приложение узнало про прошлое: суммой или по дням -->

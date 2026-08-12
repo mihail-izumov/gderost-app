@@ -1,6 +1,7 @@
 // verify-mini.mjs — самопроверка расчётного ядра: регрессия выпадает сразу.
 // Запуск: node scripts/verify-mini.mjs (из app/).
 import { computeMini, sigClass } from '../src/composables/miniModel.js'
+import { calibrateFromDays, observationsByDow } from '../src/data/weekShape.js'
 
 let fails = 0
 const ok = (cond, name) => {
@@ -71,6 +72,31 @@ const days8 = []
 for (let d = 1; d <= 10; d++) days8.push({ date: `2026-08-${String(d).padStart(2, '0')}`, rev: 10_000 })
 const m8 = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: [1,1,1,1,1,1,1], carry: null, days: days8 }, NOW)
 ok(m8.goalState === 'out', 'нужный темп выше лучшего дня → out')
+
+// 9. Форма недели из собственных данных: пока каждый день недели не встретился
+// достаточно раз, пересчёта не бывает — полусчитанной формы не существует.
+const days9 = []
+for (let d = 1; d <= 13; d++) days9.push({ date: `2026-08-${String(d).padStart(2, '0')}`, rev: 100_000 })
+ok(calibrateFromDays(days9) === null, 'неполные наблюдения → пересчёта нет')
+
+// 14 дней = по два наблюдения на каждый день недели. Выходные вдвое сильнее буден.
+const days9b = []
+for (let d = 1; d <= 14; d++) {
+  const dow = (new Date(2026, 7, d).getDay() + 6) % 7
+  days9b.push({ date: `2026-08-${String(d).padStart(2, '0')}`, rev: dow >= 5 ? 200_000 : 100_000 })
+}
+const cal = calibrateFromDays(days9b)
+ok(cal !== null, 'два наблюдения на каждый день недели → форма считается')
+ok(близко(cal.coef.slice(0, 5).reduce((a, x) => a + x, 0) / 5 * 2,
+  cal.coef.slice(5).reduce((a, x) => a + x, 0) / 2, 0.02), 'выходные вдвое тяжелее буден')
+ok(близко(cal.coef.reduce((a, x) => a + x, 0) / 7, 1, 0.02), 'средний вес нормирован к единице')
+ok(observationsByDow(days9b).every((c) => c === 2), 'наблюдения считаются по дням недели')
+
+// Пересчитанная форма не ломает главный инвариант плана.
+const m9 = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: cal.coef,
+  carry: null, days: [] }, NOW)
+ok(близко(m9.days.reduce((a, x) => a + x.plan, 0), 3_100_000, 1e-6),
+  'Σ план = month_target на посчитанной форме недели')
 
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')
 process.exit(fails ? 1 : 0)
