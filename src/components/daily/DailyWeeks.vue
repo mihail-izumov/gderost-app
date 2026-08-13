@@ -1,6 +1,9 @@
 <script setup>
+import { computed } from 'vue'
 import { ChevronDown, Lock } from 'lucide-vue-next'
 import { mln, ths, thsSigned, dayGen, L, SIG_VAR } from '../../i18n/daily.js'
+import { useMiniStore } from '../../composables/useMiniStore.js'
+import { shapeStatus } from '../../data/weekShape.js'
 
 // Недели Пн–Вс: раскрывающийся блок с таблицей дней (план · факт · надо).
 // Перенесено из рабочего Ранскейла вместе с решениями и их причинами.
@@ -22,10 +25,20 @@ import { mln, ths, thsSigned, dayGen, L, SIG_VAR } from '../../i18n/daily.js'
 // Раскрыта только текущая неделя. В оригинале открывалась каждая неделя
 // с фактом, и месяц разворачивался в тридцать одну строку: искать в ней ту,
 // в которой живёшь, приходится глазами. Прошлые недели открываются тапом.
+//
+// Добавлено против оригинала: статус формы недели в шапке блока. Колонка
+// «надо» разносит остаток плана по весам дней, и с первого дня работы эти
+// веса — допущение. Раньше узнать об этом можно было, только долистав до
+// последнего блока экрана; теперь статус стоит там, где стоит и число,
+// и открывает ту же настройку.
 
 const props = defineProps({ m: { type: Object, required: true } })
-const emit = defineEmits(['pick'])
+const emit = defineEmits(['pick', 'tune'])
 const monthGen = (dd) => dayGen(dd, props.m.month)
+
+const state = useMiniStore().state
+const shapeLabel = computed(() =>
+  shapeStatus(state.coef_src, 0, state.shape_id, state.shape_from).label)
 
 function progFill(r) {
   const c = SIG_VAR[r.sig]
@@ -38,7 +51,19 @@ function progFill(r) {
 
 <template>
   <section>
-    <h2 class="mb-3 mt-2 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">{{ L.by_weeks }}</h2>
+    <div class="mb-3 mt-2 flex items-center gap-3">
+      <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">{{ L.by_weeks }}</h2>
+      <!-- Статус весов, по которым посчитана колонка «надо». Тап открывает
+           ту же настройку, что имя формы в блоке «Дни недели». -->
+      <button
+        type="button"
+        class="ml-auto inline-flex min-h-[36px] items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-3 text-[0.8125rem] font-medium text-[var(--text)]"
+        @click="emit('tune')"
+      >
+        {{ L.coef }}: {{ shapeLabel }}
+        <ChevronDown class="h-4 w-4 text-[var(--text-muted)]" :stroke-width="2" aria-hidden="true" />
+      </button>
+    </div>
 
     <details
       v-for="w in m.weeks"

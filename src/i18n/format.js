@@ -107,6 +107,14 @@ export function monthLabel(ym) {
   return `${MONTH_RU[mi - 1]} ${y}`
 }
 
+// 'YYYY-MM' → 'августа' — для подписей вида «перенесено из августа»
+export function monthOf(ym) {
+  if (typeof ym !== 'string') return DASH
+  const mi = Number(ym.split('-')[1])
+  if (!Number.isFinite(mi) || mi < 1 || mi > 12) return ym
+  return MONTH_RU_OF[mi - 1]
+}
+
 // 'YYYY-MM-DD' → '11 августа'
 export function dayLabel(iso) {
   if (typeof iso !== 'string') return DASH

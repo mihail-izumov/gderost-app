@@ -1,7 +1,7 @@
 // verify-mini.mjs — самопроверка расчётного ядра: регрессия выпадает сразу.
 // Запуск: node scripts/verify-mini.mjs (из app/).
-import { computeMini, sigClass } from '../src/composables/miniModel.js'
-import { calibrateFromDays, observationsByDow } from '../src/data/weekShape.js'
+import { computeMini, nextMonthState, sigClass } from '../src/composables/miniModel.js'
+import { calibrateFromDays, observationsByDow, shapeStatus, shapeName } from '../src/data/weekShape.js'
 
 let fails = 0
 const ok = (cond, name) => {
@@ -127,6 +127,105 @@ ok(row10c.planAt === 200_000 && sigClass(row10c.fact / row10c.planAt) === 'bad',
 // Хвост считается по действующему плану, а не по запомненному: обязательство сегодня.
 ok(близко(m10b.days.filter((x) => !x.closed).reduce((a, x) => a + x.need, 0),
   6_200_000 - 100_000, 1e-6), 'хвост разносит остаток действующего плана')
+
+// 11. Разнос стартовой суммы: раскладка, а не замер.
+// Сумма по 10 августа раскладывается по весам своих дней; такие дни оценки
+// не получают, в статистику дней не входят и исполнение плана не двигают.
+const shape11 = [0.85, 0.9, 0.95, 1.0, 1.2, 1.15, 0.95]
+const set11 = {
+  month: '2026-08', month_target: 3_100_000, dow_coef: shape11,
+  carry: { upTo: '2026-08-10', amount: 1_000_000, spread: true },
+  days: [{ date: '2026-08-11', rev: 120_000, planRef: 100_000 }],
+}
+const m11 = computeMini(set11, NOW)
+const m11off = computeMini({ ...set11, carry: { ...set11.carry, spread: false } }, NOW)
+const spreadDays = m11.days.filter((x) => x.spread)
+ok(spreadDays.length === 10, 'разнос покрывает ровно дни стартовой суммы')
+ok(близко(spreadDays.reduce((a, x) => a + x.fact, 0), 1_000_000, 1e-6),
+  'сумма разложенного равна стартовой сумме')
+ok(spreadDays.every((x) => !x.entered), 'разложенный день не считается внесённым')
+ok(m11.dayStats.total === 1 && m11off.dayStats.total === 1,
+  'разложенные дни в dayStats не входят')
+ok(m11.weeks.flatMap((w) => w.rows).filter((r) => r.spread).every((r) => r.sig === 'carry' && r.ratio === null),
+  'разложенному дню светофор не ставится')
+ok(близко(m11.onPlan, m11off.onPlan, 1e-9) && близко(m11.landing, m11off.landing, 1e-6),
+  'разнос не меняет ни исполнение плана, ни приземление')
+ok(близко(m11.realizedRev, m11off.realizedRev, 1e-6)
+  && m11off.days.filter((x) => x.spread).length === 0,
+  'выключение разноса возвращает модель к прежнему состоянию до значения')
+
+// 12. Журнал прогноза: строка хранит состояние своего момента.
+// Достижимость записана вместе со строкой; правка плана задним числом
+// меняет сегодняшнюю достижимость и не трогает старые строки.
+const set12 = {
+  month: '2026-08', month_target: 3_100_000, dow_coef: [1, 1, 1, 1, 1, 1, 1], carry: null,
+  days: [{ date: '2026-08-03', rev: 100_000, planRef: 100_000 }],
+  forecastLog: [{ at: '2026-08-03', after: '2026-08-03', landing: 3_100_000, was: null, goalState: 'ok' }],
+}
+const m12 = computeMini(set12, NOW)
+ok(m12.journal.length === 1 && m12.journal[0].goalState === 'ok',
+  'строка журнала хранит достижимость момента')
+const m12b = computeMini({ ...set12, month_target: 20_000_000 }, NOW)
+ok(m12b.goalState === 'out' && m12b.journal[0].goalState === 'ok',
+  'правка плана задним числом старую строку журнала не перекрашивает')
+const m12c = computeMini({ ...set12, dow_coef: [0.5, 0.6, 0.7, 1, 1.5, 1.9, 0.8] }, NOW)
+ok(m12c.journal[0].goalState === 'ok' && m12c.journal[0].landing === 3_100_000,
+  'правка формы недели старую строку журнала не трогает')
+const m12d = computeMini({ ...set12, forecastLog: [{ after: '2026-08-03', landing: 3_100_000 }] }, NOW)
+ok(m12d.journal[0].goalState === null, 'у старой записи без состояния его и нет')
+
+// 13. На день приходится одна строка журнала, и это последняя запись дня.
+const m13 = computeMini({
+  ...set12,
+  forecastLog: [
+    { after: '2026-08-03', landing: 3_100_000, goalState: 'ok' },
+    { after: '2026-08-03', landing: 2_900_000, goalState: 'record' },
+    { after: '2026-08-04', landing: 2_800_000, goalState: 'record' },
+  ],
+}, NOW)
+ok(m13.journal.length === 2 && m13.journal[0].landing === 2_900_000
+  && m13.journal[0].goalState === 'record', 'одна строка на день, значение последнее')
+
+// 14. Подпись формы недели знает все свои состояния.
+ok(shapeStatus('off').kind === 'off' && shapeStatus('off').label === 'выключено',
+  'выключенная поправка подписана выключенной, а не формой отрасли')
+ok(shapeStatus('moved', 0, 'default', '2026-08').label === 'перенесено'
+  && shapeStatus('moved', 0, 'default', '2026-08').note.includes('августа'),
+  'перенесённая форма подписана переносом и месяцем')
+ok(shapeStatus('data', 14).label === 'посчитано' && shapeStatus('preset').label === 'допущение',
+  'посчитанное и допущение подписаны как прежде')
+ok(shapeName('off') === 'Выключено' && shapeName('moved', 'default', '2026-08') === 'Перенесено из августа',
+  'имя формы совпадает с её состоянием')
+
+// 15. Мягкий перенос месяца.
+const set15 = {
+  month: '2026-08', month_target: 3_100_000, month_goal: 3_500_000,
+  dow_coef: [0.9, 0.95, 1, 1.05, 1.2, 1.1, 0.8], coef_src: 'data', shape_id: 'default',
+  carry: { upTo: '2026-08-10', amount: 1_000_000, spread: true },
+  days: [{ date: '2026-08-11', rev: 120_000, planRef: 100_000 }],
+  forecastLog: [{ after: '2026-08-11', landing: 3_000_000, goalState: 'ok' }],
+}
+const n15 = nextMonthState(set15, { month: '2026-09', target: 3_300_000, goal: null })
+ok(n15.month === '2026-09' && n15.month_target === 3_300_000 && n15.month_goal === null,
+  'перенос ставит подтверждённые план и цель')
+ok(n15.days.length === 0 && n15.forecastLog.length === 0 && n15.carry === null,
+  'дни, журнал и стартовая сумма в новый месяц не переезжают')
+ok(n15.dow_coef.join() === set15.dow_coef.join(), 'форма недели переезжает значениями')
+ok(n15.coef_src === 'moved' && n15.shape_from === '2026-08',
+  'посчитанная форма становится перенесённой из своего месяца')
+ok(shapeStatus(n15.coef_src, 0, n15.shape_id, n15.shape_from).label === 'перенесено',
+  'после переноса подпись формы честна')
+const m15 = computeMini(n15, new Date(2026, 8, 3, 12, 0, 0))
+ok(близко(m15.days.reduce((a, x) => a + x.plan, 0), 3_300_000, 1e-6),
+  'Σ план = новому плану месяца')
+ok(m15.realizedRev === 0 && m15.journal.length === 0 && m15.dayStats === null,
+  'новый месяц начинается с чистых дней')
+ok(m15.coefRows.every((r) => r.n === 0), 'наблюдения в новом месяце копятся заново')
+const n15b = nextMonthState({ ...set15, coef_src: 'user' }, { month: '2026-09', target: 3_300_000 })
+ok(n15b.coef_src === 'user' && n15b.shape_from === '',
+  'своя настройка переносится собой: перекрашивать нечего')
+ok(nextMonthState(set15, { month: '2026-09', target: 0 }) === null,
+  'перенос без плана не происходит')
 
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')
 process.exit(fails ? 1 : 0)

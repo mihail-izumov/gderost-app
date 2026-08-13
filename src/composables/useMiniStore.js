@@ -7,8 +7,9 @@
 // и об этом честнее сказать в интерфейсе, чем делать вид, что есть облако.
 
 import { reactive, computed, watch } from 'vue'
-import { computeMini, todayISO } from './miniModel.js'
+import { computeMini, nextMonthState, todayISO } from './miniModel.js'
 import { DEFAULT } from '../data/weekShape.js'
+import { shapeName, shapeStatus } from '../data/weekShape.js'
 
 const KEY = 'gderost.mini.v1'
 
@@ -23,9 +24,11 @@ function emptyState() {
     dow_coef: [...DEFAULT],
     coef_src: 'preset',
     shape_id: 'default',
-    carry: null,         // { upTo:'YYYY-MM-DD', amount:Number }
-    days: [],            // [{ date:'YYYY-MM-DD', rev:Number }]
-    forecastLog: [],     // [{ at:'YYYY-MM-DD', after:'YYYY-MM-DD', landing:Number }]
+    shape_from: '',      // 'YYYY-MM' — из какого месяца переехали веса
+    carry: null,         // { upTo:'YYYY-MM-DD', amount:Number, spread:Boolean }
+    days: [],            // [{ date:'YYYY-MM-DD', rev:Number, planRef:Number }]
+    // [{ at, after, landing, was, goalState }] — по одной записи на день
+    forecastLog: [],
   }
 }
 
@@ -127,6 +130,9 @@ export function useMiniStore() {
       if (Array.isArray(coef) && coef.length === 7) state.dow_coef = coef.map(Number)
       if (src) state.coef_src = src
       if (shapeId) state.shape_id = shapeId
+      // Форма перестала быть перенесённой — месяц, из которого она приехала,
+      // больше ничего не объясняет.
+      if (src && src !== 'moved') state.shape_from = ''
     },
 
     /** Первый день, который можно внести по отдельности. */
@@ -161,8 +167,35 @@ export function useMiniStore() {
       state.days.sort((a, b) => (a.date < b.date ? -1 : 1))
       const after = model.value ? model.value.landing : null
       if (after != null) {
-        state.forecastLog.push({ at: todayISO(), after: date, landing: after, was: before })
+        // На день приходится одна запись: правка того же дня переписывает её,
+        // а не кладёт вторую. Иначе журнал растёт от каждой опечатки, а на
+        // экране всё равно виден один день — расхождение, которого не видно.
+        // Точка отсчёта `was` при этом остаётся первой: она про то, каким был
+        // прогноз до того, как этот день внесли впервые.
+        const i = state.forecastLog.findIndex((e) => e && e.after === date)
+        const was = i >= 0 && state.forecastLog[i].was !== undefined ? state.forecastLog[i].was : before
+        // Достижимость запоминается вместе со строкой: колонка журнала
+        // показывает состояние момента, а не сегодняшнее.
+        const entry = { at: todayISO(), after: date, landing: after, was, goalState: model.value.goalState }
+        if (i >= 0) state.forecastLog[i] = entry
+        else state.forecastLog.push(entry)
       }
+      return true
+    },
+
+    /**
+     * Мягкий перенос месяца.
+     *
+     * Календарь ушёл вперёд — приложение предлагает начать следующий месяц.
+     * План и цель приходят сюда подтверждёнными владельцем: обязательство
+     * не копируется молча. Веса дней недели переезжают значениями, дни,
+     * стартовая сумма и журнал прогноза стираются — выгрузка предлагается
+     * до этого, а не после: другой копии старого месяца нигде нет.
+     */
+    startNextMonth({ month, target, goal }) {
+      const next = nextMonthState(state, { month: month || currentMonth(), target, goal })
+      if (!next) return false
+      Object.assign(state, next)
       return true
     },
 
@@ -172,30 +205,74 @@ export function useMiniStore() {
     },
 
     /**
-     * Выгрузка всего введённого текстом.
+     * Выгрузка месяца текстом.
      *
      * Данных нет нигде, кроме этого устройства, — значит и унести их человек
-     * должен уметь без нас. Разметка простая: таблица читается глазами,
-     * вставляется в заметки и открывается таблицей.
+     * должен уметь без нас. Разметка простая: таблицы читаются глазами,
+     * вставляются в заметки и открываются таблицей.
+     *
+     * Выгружается всё состояние, а не то, что видно на экранах: линейка дня,
+     * форма недели с её источником, разнос стартовой суммы, журнал прогноза.
+     * Раньше половина этого оставалась в хранилище, и выгрузку можно было
+     * прочитать, но нельзя было по ней восстановить месяц. С переносом месяца
+     * это перестало быть мелочью: после переноса другой копии не существует.
      */
     exportText() {
       const s = state
       const pad = (n) => String(n).padStart(2, '0')
+      const now = new Date()
       const lines = [
         `# ${s.unit || s.company || 'Бизнес'} — ${s.month}`,
+        `Выгружено ${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${now.getFullYear()}`,
         '',
+        '## Месяц',
+        `Компания: ${s.company || '—'}`,
+        `Бизнес-юнит: ${s.unit || '—'}`,
+        `Месяц: ${s.month}`,
         `План месяца: ${s.month_target}`,
         s.month_goal ? `Цель месяца: ${s.month_goal}` : 'Цель месяца: не поставлена',
         '',
+        '## Стартовая сумма',
       ]
       if (s.carry) {
-        lines.push(`Заработано с начала месяца по ${s.carry.upTo}: ${s.carry.amount}`, '')
+        lines.push(
+          `Заработано с начала месяца по ${s.carry.upTo} включительно: ${s.carry.amount}`,
+          `Разнесено по дням: ${s.carry.spread ? 'да' : 'нет'}`,
+        )
+      } else {
+        lines.push('Стартовой суммы нет: месяц ведётся с первого числа')
       }
-      lines.push('| дата | выручка |', '| --- | --- |')
-      s.days.forEach((d) => lines.push(`| ${d.date} | ${d.rev} |`))
-      lines.push('', `Веса дней недели (Пн–Вс): ${s.dow_coef.join(', ')}`)
-      const now = new Date()
-      lines.push('', `Выгружено ${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${now.getFullYear()}`)
+
+      lines.push(
+        '',
+        '## Форма недели',
+        `Веса Пн–Вс: ${(s.dow_coef || []).join(', ')}`,
+        `Источник: ${shapeName(s.coef_src, s.shape_id, s.shape_from)} (${shapeStatus(s.coef_src, 0, s.shape_id, s.shape_from).label})`,
+        `Служебные значения: coef_src=${s.coef_src}, shape_id=${s.shape_id}${s.shape_from ? `, shape_from=${s.shape_from}` : ''}`,
+        '',
+        '## Дни',
+        '| дата | выручка | план дня в момент ввода |',
+        '| --- | --- | --- |',
+      )
+      if (s.days.length) {
+        s.days.forEach((d) => lines.push(`| ${d.date} | ${d.rev} | ${d.planRef != null ? d.planRef : '—'} |`))
+      } else {
+        lines.push('| — | — | — |')
+      }
+
+      lines.push(
+        '',
+        '## Журнал прогноза',
+        '| день | приземление после него | было до него | достижимость | записано |',
+        '| --- | --- | --- | --- | --- |',
+      )
+      if (s.forecastLog.length) {
+        s.forecastLog.forEach((e) => lines.push(
+          `| ${e.after} | ${e.landing} | ${e.was != null ? e.was : '—'} | ${e.goalState || '—'} | ${e.at || '—'} |`,
+        ))
+      } else {
+        lines.push('| — | — | — | — | — |')
+      }
       return lines.join('\n')
     },
 

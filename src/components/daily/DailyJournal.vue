@@ -15,7 +15,10 @@ import { mln, dayGenIso, pctWhole, L, SIG_VAR, GOAL_STATE } from '../../i18n/dai
 const props = defineProps({ m: { type: Object, required: true } })
 const rows = computed(() => props.m.journal || [])
 const arrowChar = (a) => (a === 'up' ? '▲' : a === 'down' ? '▼' : '→')
-const gsOf = (s) => GOAL_STATE[s.goalState] || GOAL_STATE.ok
+// Достижимость строки — из момента записи. У строк, записанных до того,
+// как это состояние стало запоминаться, его нет, и вместо него стоит прочерк:
+// подставить сегодняшнее значило бы перекрасить историю.
+const gsOf = (s) => GOAL_STATE[s.goalState] || GOAL_STATE.none
 </script>
 
 <template>

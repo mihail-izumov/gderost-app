@@ -6,7 +6,8 @@ import HomeWidget from '../components/home/HomeWidget.vue'
 import InstallBanner from '../components/InstallBanner.vue'
 import TryWeekCard from '../components/TryWeekCard.vue'
 import SiteFooter from '../components/SiteFooter.vue'
-import { useMiniStore } from '../composables/useMiniStore.js'
+import NextMonthSheet from '../components/NextMonthSheet.vue'
+import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
 import { mlnRub, mlnSigned, pct1, pctDelta, monthCap } from '../i18n/home.js'
 
 // Главная — дека виджетов. Устройство взято у рабочего Ранскейла:
@@ -27,6 +28,8 @@ const m = store.model
 const monthOver = store.monthOver
 
 const infoOpen = ref(false)
+const nextOpen = ref(false)
+const nextMonth = computed(() => currentMonth())
 
 const slides = computed(() => (m.value ? [{
   key: 'unit',
@@ -69,14 +72,22 @@ const paceInfo = computed(() => {
 
 <template>
   <div v-if="m" class="px-4 pb-8">
-    <!-- Календарь ушёл вперёд: делать вид, что месяц идёт, приложение не станет -->
-    <p
+    <!-- Календарь ушёл вперёд: делать вид, что месяц идёт, приложение не станет.
+         Рядом с сообщением стоит и выход из него — перенос на новый месяц. -->
+    <div
       v-if="monthOver"
-      class="mb-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-[0.8125rem] leading-snug text-[var(--text-secondary)]"
+      class="mb-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3"
     >
-      {{ monthCap(m.month) }} закончился. Числа ниже — итог того месяца.
-      Новый месяц заводится вводом нового плана.
-    </p>
+      <p class="text-[0.8125rem] leading-snug text-[var(--text-secondary)]">
+        {{ monthCap(m.month) }} закончился. Числа ниже — итог того месяца.
+      </p>
+      <button
+        type="button"
+        class="mt-3 min-h-[44px] w-full rounded-xl text-[0.9375rem] font-semibold"
+        :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
+        @click="nextOpen = true"
+      >Начать {{ monthCap(nextMonth) }}</button>
+    </div>
 
     <MonthProgressCard class="mb-3" :slides="slides" :month="m.month" :days-left="m.daysLeft" />
 
@@ -140,5 +151,22 @@ const paceInfo = computed(() => {
     </div>
 
     <SiteFooter />
+
+    <!-- Перенос месяца: шторка той же формы, что ввод отчёта -->
+    <Teleport to="body">
+      <div
+        v-if="nextOpen"
+        class="fixed inset-0 z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm"
+        role="presentation"
+        @click.self="nextOpen = false"
+      >
+        <div
+          class="max-h-[88svh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4
+                 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        >
+          <NextMonthSheet @close="nextOpen = false" />
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

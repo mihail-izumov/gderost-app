@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { ChevronDown } from 'lucide-vue-next'
 import { L } from '../../i18n/daily.js'
 import { useMiniStore } from '../../composables/useMiniStore.js'
-import { shapeName, calibrateFromDays, OBS_FOR_DATA } from '../../data/weekShape.js'
+import { shapeName, shapeStatus, calibrateFromDays, OBS_FOR_DATA } from '../../data/weekShape.js'
 
 // Дни недели: чем именно разносится остаток плана.
 //
@@ -22,9 +22,14 @@ const state = store.state
 
 const midPos = computed(() => (props.m.maxCoef ? (1 / props.m.maxCoef) * 100 : 0))
 const rows = computed(() => props.m.coefRows || [])
-const title = computed(() => (state.coef_src === 'off'
-  ? 'Выключено'
-  : shapeName(state.coef_src, state.shape_id)))
+
+// Имя формы и её статус берутся из одного места. Своих веток «выключено»
+// и «перенесено» у этого блока нет: два описания одного состояния рано или
+// поздно расходятся, и расходятся молча.
+const title = computed(() => shapeName(state.coef_src, state.shape_id, state.shape_from))
+const obsTotal = computed(() => rows.value.reduce((a, r) => a + (r.n || 0), 0))
+const status = computed(() =>
+  shapeStatus(state.coef_src, obsTotal.value, state.shape_id, state.shape_from))
 
 // Пересчёт из собственных дней возможен, только когда КАЖДЫЙ день недели
 // встретился в данных нужное число раз. Полусчитанной формы не существует:
@@ -34,10 +39,11 @@ const calibration = computed(() => calibrateFromDays(state.days))
 const shortDays = computed(() => rows.value.filter((r) => r.n < OBS_FOR_DATA).length)
 
 const note = computed(() => {
-  if (state.coef_src === 'off') return 'Поправка выключена: остаток плана разносится по дням ровно.'
-  if (state.coef_src === 'data') return 'Посчитано по вашим дням. Пересчитывается, когда данных становится больше.'
-  if (calibration.value) return 'Данных уже хватает на расчёт по вашим дням — можно пересчитать.'
-  return `Допущение: веса поставлены без ваших данных. Пересчёт станет возможен, когда каждый день недели встретится дважды — не хватает ${shortDays.value} из 7.`
+  const label = status.value.label
+  const head = `${label.charAt(0).toUpperCase()}${label.slice(1)} — ${status.value.note}.`
+  if (state.coef_src === 'off' || state.coef_src === 'data') return head
+  if (calibration.value) return `${head} Данных уже хватает на расчёт по вашим дням.`
+  return `${head} Пересчёт станет возможен, когда каждый день недели встретится дважды — не хватает ${shortDays.value} из 7.`
 })
 
 function recalc() {

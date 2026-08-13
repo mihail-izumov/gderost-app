@@ -39,7 +39,6 @@ const rows = computed(() => {
 
 // Цель ниже плана — не цель, а второй план. Называем это в той же шторке,
 // где человек её и правит.
-const goalError = computed(() => '')
 function goalErrorFor(v) {
   return Number(v) > 0 && Number(v) < Number(state.month_target)
     ? `Цель ниже плана ${formatRub(state.month_target)}.`

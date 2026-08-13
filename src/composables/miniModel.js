@@ -57,6 +57,41 @@ export function todayISO(now = new Date()) {
  *
  * `now` передаётся в тестах, чтобы расчёт был воспроизводим.
  */
+/**
+ * Мягкий перенос месяца: что от старого месяца остаётся в новом.
+ *
+ * Чистая функция — принимает состояние и возвращает поля нового месяца,
+ * ничего не сохраняя. Правило переноса одно: переезжает то, что владелец
+ * подтвердил или назвал сам, и не переезжает ничего посчитанного на днях,
+ * которых в новом месяце больше нет.
+ *
+ *   • план и цель приходят подтверждёнными — молча скопировать обязательство
+ *     нельзя, поэтому они аргументы, а не значения по умолчанию;
+ *   • веса дней недели переезжают значениями. Форма, посчитанная по дням,
+ *     становится перенесённой: наблюдения стёрты вместе с днями, и подпись
+ *     «посчитано, N наблюдений» после переноса была бы враньём. Калибровка
+ *     в новом месяце копится заново;
+ *   • дни, стартовая сумма и журнал прогноза не переезжают — это замеры
+ *     того месяца, и в этом их смысл. Их место — в выгрузке у владельца.
+ */
+export function nextMonthState(set, { month, target, goal }) {
+  const T = Number(target)
+  if (!set || !month || !Number.isFinite(T) || T <= 0) return null
+  const wasComputed = (set.coef_src || 'preset') === 'data'
+  return {
+    month: String(month),
+    month_target: T,
+    month_goal: Number(goal) > 0 ? Number(goal) : null,
+    dow_coef: [...(set.dow_coef || [])],
+    coef_src: wasComputed ? 'moved' : (set.coef_src || 'preset'),
+    shape_id: set.shape_id || 'default',
+    shape_from: wasComputed ? String(set.month || '') : (set.shape_from || ''),
+    carry: null,
+    days: [],
+    forecastLog: [],
+  }
+}
+
 export function computeMini(set, now = new Date()) {
   if (!set || typeof set !== 'object') return null
   const [Y, M] = String(set.month || '').split('-').map(Number)
@@ -270,15 +305,28 @@ export function computeMini(set, now = new Date()) {
   // Ряд не перестраивается задним числом — каждая строка хранит прогноз,
   // каким он был в момент ввода того дня. Пересчитать его по сегодняшним
   // весам значит стереть ровно ту историю, ради которой журнал и ведётся.
+  //
+  // Достижимость строки — тоже из момента записи, а не сегодняшняя. Раньше
+  // всем строкам ставилось одно нынешнее состояние, и колонка перекрашивала
+  // прошлое от правки плана: журнал показывал, что месяц был вне досягаемости
+  // ещё третьего числа, хотя тогда он был достижим. У записей, сделанных до
+  // появления этого поля, состояния нет — тогда его и не показывают.
+  //
+  // На день приходится одна строка: повторный ввод той же даты правит запись,
+  // а не кладёт вторую. Карта по дате держит это и на чтении.
   const logByDay = new Map()
   ;(set.forecastLog || []).forEach((e) => {
     if (e && typeof e.after === 'string' && Number.isFinite(Number(e.landing))) {
-      logByDay.set(e.after, Number(e.landing))
+      logByDay.set(e.after, {
+        landing: Number(e.landing),
+        goalState: typeof e.goalState === 'string' ? e.goalState : null,
+      })
     }
   })
   const journal = [...logByDay.keys()].sort().map((iso, i, arr) => {
-    const value = logByDay.get(iso)
-    const prev = i > 0 ? logByDay.get(arr[i - 1]) : null
+    const rec = logByDay.get(iso)
+    const value = rec.landing
+    const prev = i > 0 ? logByDay.get(arr[i - 1]).landing : null
     const landingPct = T ? value / T : null
     return {
       date: iso,
@@ -288,7 +336,7 @@ export function computeMini(set, now = new Date()) {
       arrow: prev == null ? 'flat'
         : value > prev * 1.001 ? 'up'
         : value < prev * 0.999 ? 'down' : 'flat',
-      goalState,
+      goalState: rec.goalState,
     }
   })
 
@@ -297,12 +345,13 @@ export function computeMini(set, now = new Date()) {
   // данных, обязано быть названо своим словом.
   const obs = [0, 0, 0, 0, 0, 0, 0]
   enteredDays.forEach((x) => { obs[x.dow - 1] += 1 })
-  const fromData = (set.coef_src || 'preset') === 'data'
+  const src = set.coef_src || 'preset'
+  const fromData = src === 'data'
   const coefRows = coefArr.map((c, i) => ({
     dowRu: DOW_RU[i],
     coef: c,
     n: obs[i],
-    src: fromData ? 'данные' : 'допущение',
+    src: fromData ? 'данные' : src === 'moved' ? 'перенесено' : 'допущение',
     assume: !fromData,
   }))
   const maxCoef = Math.max(...coefArr, 0.01)

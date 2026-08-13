@@ -69,7 +69,7 @@ onBeforeUnmount(() => { if (io) { io.disconnect(); io = null } })
     <div class="flex flex-col gap-3">
       <DailyHero :m="m" />
       <DailyKpis :m="m" />
-      <DailyWeeks :m="m" @pick="openSheet" />
+      <DailyWeeks :m="m" @pick="openSheet" @tune="tune = true" />
       <DailySummary :m="m" />
       <DailyJournal :m="m" />
       <DailyCoef :m="m" @tune="tune = true" />

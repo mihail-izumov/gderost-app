@@ -4,7 +4,7 @@ import { Check, X } from 'lucide-vue-next'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { DOW_RU } from '../composables/miniModel.js'
 import {
-  WEEK_SHAPES, shapeById, calibrateFromDays, observationsByDow, OBS_FOR_DATA, DEFAULT,
+  WEEK_SHAPES, shapeById, shapeStatus, calibrateFromDays, observationsByDow, OBS_FOR_DATA, DEFAULT,
 } from '../data/weekShape.js'
 
 // Настройка формы недели — эквалайзер, а не столбики.
@@ -37,7 +37,14 @@ const PAD_Y = 16
 // движение пальца — иначе цифры под рукой пляшут и выбрать что-либо нельзя.
 const draft = ref([...state.dow_coef])
 const enabled = ref(state.coef_src !== 'off')
-const pickedPreset = ref(state.coef_src === 'user' ? 'user' : state.shape_id)
+// Посчитанная, перенесённая и своя формы галочки пресета не получают: их веса
+// с пресетом не совпадают. Пока окно открывалось с отметкой на пресете, выход
+// по «Применить» без единого касания молча понижал посчитанную форму
+// до допущения — статус менялся, а веса оставались прежними.
+const PICKED_AS_IS = ['user', 'moved', 'data']
+const pickedPreset = ref(
+  PICKED_AS_IS.includes(state.coef_src) ? state.coef_src : state.shape_id,
+)
 
 const obs = computed(() => observationsByDow(state.days))
 const calibration = computed(() => calibrateFromDays(state.days))
@@ -116,6 +123,7 @@ function apply() {
     return
   }
   const src = pickedPreset.value === 'data' ? 'data'
+    : pickedPreset.value === 'moved' ? 'moved'
     : pickedPreset.value === 'user' ? 'user' : 'preset'
   const shapeId = src === 'preset' ? pickedPreset.value : state.shape_id
   store.setWeekShape(draft.value, src, shapeId)
@@ -127,7 +135,16 @@ function apply() {
 const note = computed(() => {
   if (!enabled.value) return 'Поправка на день недели выключена: остаток плана разносится ровно.'
   if (pickedPreset.value === 'data') {
-    return `Посчитано по вашим дням: ${calibration.value ? calibration.value.observations : 0} наблюдений. Это единственная форма, которая держится на факте.`
+    // Числа наблюдений может не быть: форму посчитали раньше, а дни с тех пор
+    // менялись. «0 наблюдений» под посчитанной формой — ложь, поэтому счёт
+    // печатается только тогда, когда он есть.
+    const n = calibration.value ? calibration.value.observations : 0
+    const head = n ? `Посчитано по вашим дням: ${n} наблюдений.` : 'Посчитано по вашим дням.'
+    return `${head} Это единственная форма, которая держится на факте.`
+  }
+  if (pickedPreset.value === 'moved') {
+    const st = shapeStatus('moved', 0, state.shape_id, state.shape_from)
+    return `Перенесено: ${st.note}.`
   }
   if (pickedPreset.value === 'user') {
     const top = DOW_RU[draft.value.indexOf(Math.max(...draft.value))]
