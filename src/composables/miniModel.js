@@ -296,7 +296,12 @@ export function computeMini(set, now = new Date()) {
   const factPct = T ? Math.min(100, (realizedRev / T) * 100) : 0
   const landPct = T ? Math.min(100, (landing / T) * 100) : 0
   const gap = Math.max(0, T - landing)
-  const daysLeft = days.filter((x) => x.iso >= tISO).length
+  // Дни, за которые ещё предстоит заработать остаток. Сегодняшний день входит
+  // сюда, только пока он не закрыт: внёс сегодняшнюю выручку — и «осталось
+  // за N дней» обязано уменьшиться. Пока считались все дни от сегодняшнего,
+  // закрытый сегодня день считался дважды: и в закрытых, и в оставшихся,
+  // и сумма «закрыто 13 + осталось 19» давала 32 дня в месяце из 31.
+  const daysLeft = days.filter((x) => !x.closed && x.iso >= tISO).length
 
   // Сегодняшний день — для «сколько надо сегодня».
   const todayRow = days.find((x) => x.isToday) || null

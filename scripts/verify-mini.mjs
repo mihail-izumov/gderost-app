@@ -128,6 +128,15 @@ ok(row10c.planAt === 200_000 && sigClass(row10c.fact / row10c.planAt) === 'bad',
 ok(близко(m10b.days.filter((x) => !x.closed).reduce((a, x) => a + x.need, 0),
   6_200_000 - 100_000, 1e-6), 'хвост разносит остаток действующего плана')
 
+// 10б. Закрытый день не считается дважды: закрыто + осталось не больше длины месяца.
+const days10d = []
+for (let d = 1; d <= 15; d++) days10d.push({ date: `2026-08-${String(d).padStart(2, '0')}`, rev: 100_000 })
+const m10d = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: [1,1,1,1,1,1,1], carry: null, days: days10d }, NOW)
+ok(m10d.realizedCount + m10d.daysLeft <= m10d.DIM, 'закрытые и оставшиеся дни не пересекаются')
+ok(m10d.daysLeft === 16, 'сегодняшний день внесён → в оставшиеся не входит')
+const m10e = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: [1,1,1,1,1,1,1], carry: null, days: days10d.slice(0, 14) }, NOW)
+ok(m10e.daysLeft === 17, 'сегодняшний день не внесён → входит в оставшиеся')
+
 // 11. Разнос стартовой суммы: раскладка, а не замер.
 // Сумма по 10 августа раскладывается по весам своих дней; такие дни оценки
 // не получают, в статистику дней не входят и исполнение плана не двигают.
