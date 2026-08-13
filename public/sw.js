@@ -3,10 +3,15 @@ const CACHE_NAME = 'gderost-' + BUILD_ID
 const BASE = '/'
 const SHELL_URL = BASE + 'index.html'
 
+// Знаки бренда перечислены поимённо: они подключаются CSS-маской, поэтому
+// в разметке страницы их адресов нет и вынуть их оттуда, как имена файлов
+// сборки, невозможно. Без этой строки первый запуск без сети открывался бы
+// с пустыми местами вместо имени продукта и знака системы.
 const PRECACHE = [
   BASE, SHELL_URL,
   BASE + 'manifest.json',
   BASE + 'icon-192.png', BASE + 'icon-512.png',
+  BASE + 'runscale_chevron.svg', BASE + 'runscale_logo.svg',
 ]
 
 self.addEventListener('install', (e) => {

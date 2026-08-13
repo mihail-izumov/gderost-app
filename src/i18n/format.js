@@ -48,6 +48,47 @@ export function formatRubCompact(n) {
   return `${formatInt(v)}${NBSP}₽`
 }
 
+// Плотные деньги для плиток и таблиц: 412k · 1,2 млн · 900 ₽.
+// Латинская «k» взята из рабочего Ранскейла: в колонке из восьми чисел
+// «412 тыс ₽» ломает ряд, а «412k» держит ширину и читается с одного взгляда.
+export function formatK(n) {
+  const v = safeNum(n)
+  if (v === null) return DASH
+  const abs = Math.abs(v)
+  const sign = v < 0 ? '−' : ''
+  if (abs >= 1_000_000) return `${sign}${(abs / 1_000_000).toFixed(1).replace('.', ',')}${NBSP}млн`
+  if (abs >= 1_000) return `${sign}${Math.round(abs / 1_000)}k`
+  return `${sign}${formatInt(abs)}`
+}
+
+// Деньги для карточек-виджетов: «₽15,4 млн» — знак валюты впереди, как
+// в рабочем Ранскейле, где эти карточки и живут.
+export function formatRubBig(n) {
+  const v = safeNum(n)
+  if (v === null) return DASH
+  const abs = Math.abs(v)
+  const sign = v < 0 ? '−' : ''
+  if (abs >= 1_000_000) return `${sign}₽${(abs / 1_000_000).toFixed(1).replace('.', ',')}${NBSP}млн`
+  if (abs >= 1_000) return `${sign}₽${Math.round(abs / 1_000)}${NBSP}тыс`
+  return `${sign}₽${formatInt(abs)}`
+}
+
+// «17,70 млн» — крупные числа шапки контроля дня, два знака после запятой.
+export function formatMln(n) {
+  const v = safeNum(n)
+  if (v === null) return DASH
+  return `${(v / 1_000_000).toFixed(2).replace('.', ',')}${NBSP}млн`
+}
+
+// 'YYYY-MM-DD' → '12.08.2026'. Дата среза данных печатается цифрами:
+// подпись под заголовком читают взглядом, а не вслух.
+export function stampISO(iso) {
+  if (typeof iso !== 'string') return DASH
+  const [y, m, d] = iso.split('-')
+  if (!y || !m || !d) return iso
+  return `${d}.${m}.${y}`
+}
+
 const MONTH_RU = [
   'январь', 'февраль', 'март', 'апрель', 'май', 'июнь',
   'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь',

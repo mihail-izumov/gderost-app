@@ -103,15 +103,10 @@ function weekPill(w) {
 </script>
 
 <template>
+  <!-- Заголовок раздела ставит экран, который список показывает: две подписи
+       подряд про одно и то же не добавляют смысла. -->
   <section class="rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-4">
-    <h2 class="text-[0.8125rem] font-medium uppercase tracking-wide text-[var(--text-muted)]">
-      Недели месяца
-    </h2>
-    <p class="mt-1 text-[0.75rem] leading-snug text-[var(--text-muted)]">
-      Неделя — рабочий такт: недобор видно, пока его ещё можно отработать.
-    </p>
-
-    <ul class="mt-3 flex flex-col gap-2">
+    <ul class="flex flex-col gap-2">
       <li
         v-for="w in weeks" :key="w.idx"
         class="rounded-xl border"

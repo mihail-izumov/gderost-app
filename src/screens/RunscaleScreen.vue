@@ -21,7 +21,7 @@ import CountersCard from '../components/CountersCard.vue'
     </header>
 
     <div class="mt-5">
-      <CountersCard />
+      <CountersCard caption />
     </div>
 
     <section class="mt-4 rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-4">

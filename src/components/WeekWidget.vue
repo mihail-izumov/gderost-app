@@ -23,7 +23,7 @@ const props = defineProps({
   now: { type: Date, default: () => new Date() },
   // Своя подпись вместо диапазона дат.
   label: { type: String, default: null },
-  // 'graphite' — герой-кадр, 'surface' — обычная карточка внутри приложения.
+  // 'black' — герой-кадр входа, 'surface' — обычная карточка внутри приложения.
   // По умолчанию светлая: тёмная заливка запрашивается осознанно, иначе она
   // расползётся по экранам сама и перестанет быть акцентом.
   tone: { type: String, default: 'surface' },
@@ -32,7 +32,7 @@ const props = defineProps({
   pill: { type: String, default: null },
 })
 
-const dark = computed(() => props.tone === 'graphite')
+const dark = computed(() => props.tone === 'black')
 
 const MARK_FILL = {
   good: 'var(--positive)',
@@ -43,7 +43,7 @@ const MARK_FILL = {
 
 const skin = computed(() => (dark.value
   ? {
-    card: { background: 'var(--graphite)', color: 'var(--ink-on-color)' },
+    card: { background: 'var(--surface-black)', color: 'var(--ink-on-color)' },
     title: 'var(--ink-on-color-muted)',
     dow: 'var(--ink-on-color-muted)',
     num: 'var(--ink-on-color)',
@@ -120,12 +120,26 @@ const pillText = computed(() => props.pill ?? formatPct(leftPct.value, 0))
 
 <template>
   <section class="rounded-2xl px-3 py-4" :style="skin.card">
-    <h2
-      class="px-1 text-[0.8125rem] font-medium uppercase tracking-wide"
-      :style="{ color: skin.title }"
-    >{{ title }}</h2>
+    <!-- Шапка: слева период, справа остаток. Обе величины про месяц, поэтому
+         стоят в одной строке; разные формы — текст и пилюля — разводят их
+         без разделительных знаков. -->
+    <div class="flex items-start justify-between gap-3 px-1">
+      <h2
+        class="text-[0.9375rem] font-semibold"
+        :style="{ color: skin.title }"
+      >{{ title }}</h2>
 
-    <ul class="mt-3 grid grid-cols-7 gap-1">
+      <div v-if="noteText || pillText" class="flex shrink-0 items-center gap-2">
+        <span v-if="noteText" class="text-[0.75rem]" :style="{ color: skin.note }">{{ noteText }}</span>
+        <span
+          v-if="pillText"
+          class="rounded-full border px-2 py-0.5 text-[0.75rem] tabular-nums"
+          :style="{ borderColor: skin.pillBorder, color: skin.pillInk }"
+        >{{ pillText }}</span>
+      </div>
+    </div>
+
+    <ul class="mt-4 grid grid-cols-7 gap-1">
       <li
         v-for="d in week" :key="d.key"
         class="flex flex-col items-center gap-1.5"
@@ -133,7 +147,7 @@ const pillText = computed(() => props.pill ?? formatPct(leftPct.value, 0))
       >
         <span class="text-[0.6875rem] font-medium" :style="{ color: skin.dow }">{{ d.dowRu }}</span>
         <span
-          class="flex h-8 w-8 items-center justify-center rounded-full font-mono text-[0.9375rem] font-semibold tabular-nums"
+          class="flex h-8 w-8 items-center justify-center rounded-full text-[0.9375rem] font-semibold tabular-nums"
           :style="d.isToday
             ? { background: skin.todayBg, color: skin.todayInk }
             : { color: skin.num }"
@@ -147,15 +161,5 @@ const pillText = computed(() => props.pill ?? formatPct(leftPct.value, 0))
       </li>
     </ul>
 
-    <!-- Нижняя строка: слева счёт словами, справа доля. Разделительной точки
-         между ними нет — разные формы сами разводят величины. -->
-    <div v-if="noteText || pillText" class="mt-4 flex items-center justify-between gap-3 px-1">
-      <span class="text-[0.8125rem]" :style="{ color: skin.note }">{{ noteText }}</span>
-      <span
-        v-if="pillText"
-        class="shrink-0 rounded-full border px-2 py-0.5 font-mono text-[0.75rem] tabular-nums"
-        :style="{ borderColor: skin.pillBorder, color: skin.pillInk }"
-      >{{ pillText }}</span>
-    </div>
   </section>
 </template>

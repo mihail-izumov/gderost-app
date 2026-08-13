@@ -1,22 +1,21 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { Gauge, Target, RotateCw, Info } from 'lucide-vue-next'
 import MonthWidget from '../components/MonthWidget.vue'
-import UnitSwitch from '../components/UnitSwitch.vue'
-import StatusChip from '../components/StatusChip.vue'
-import WeekShapeCard from '../components/WeekShapeCard.vue'
-import WeekList from '../components/WeekList.vue'
-import AddReportForm from '../components/AddReportForm.vue'
+import WidgetCard from '../components/WidgetCard.vue'
 import CountersCard from '../components/CountersCard.vue'
 import InstallBanner from '../components/InstallBanner.vue'
 import { hardReload } from '../composables/useAppRefresh.js'
 import { useMiniStore } from '../composables/useMiniStore.js'
-import { shapeStatus } from '../data/weekShape.js'
-import { formatRub, monthLabel, daysWord, dayLabel } from '../i18n/format.js'
-import { BRAND } from '../i18n/brand.js'
+import { formatRubBig, formatPct, formatGrowth, monthLabel } from '../i18n/format.js'
 
-// «Сегодня» отвечает на один вопрос владельца: сколько надо сделать сегодня,
-// чтобы месяц пришёл к плану. Всё остальное на экране объясняет, откуда
-// это число взялось.
+// «Сегодня» — дека виджетов. Каждый показывает главное число своего раздела
+// и открывается тапом; глубина живёт внутри, а не здесь.
+//
+// Устройство взято у рабочего Ранскейла и держится на одном правиле: экран
+// не рассказывает, он показывает состояние. Владелец открывает приложение,
+// чтобы за пять секунд понять, куда идёт месяц, — и заходит вглубь только
+// тогда, когда состояние ему не нравится.
 
 const emit = defineEmits(['go'])
 
@@ -26,151 +25,138 @@ const monthOver = store.monthOver
 const state = store.state
 
 const askReset = ref(false)
-// Дата, выбранная в таблице дней: тап по «внести» ведёт прямо в форму.
-const pickedDate = ref('')
+const showHelp = ref(false)
 
-const todayNeed = computed(() => (m.value ? m.value.todayNeed : null))
-const hasDayFacts = computed(() => !!m.value && m.value.enteredCount > 0)
+const SIG = { good: 'var(--positive)', warn: 'var(--warning)', bad: 'var(--negative)', idle: 'var(--text)' }
 
-// Требование на день целиком стоит на форме недели. Пока она допущение,
-// число рядом обязано носить ту же подпись — иначе допущение выдаётся за знание.
-const shape = computed(() => shapeStatus(state.coef_src, state.days.length, state.shape_id))
+const onPlanTone = computed(() => {
+  const r = m.value ? m.value.onPlan : null
+  if (r == null) return SIG.idle
+  return r >= 1 ? SIG.good : r >= 0.85 ? SIG.warn : SIG.bad
+})
+const fcTone = computed(() => (m.value ? SIG[m.value.fcSig] || SIG.idle : SIG.idle))
+
+// Разрыв — деньгами и со знаком: «не доедем на 0,9 млн» тянет за собой решение,
+// «минус 13 %» не тянет.
+const gapValue = computed(() => {
+  if (!m.value) return '—'
+  const short = m.value.T - m.value.landing
+  return `${short > 0 ? '− ' : short < 0 ? '+ ' : ''}${formatRubBig(Math.abs(short))}`
+})
 
 function reset() {
   store.reset()
   askReset.value = false
 }
-
-// Тап по пропущенному дню в таблице переносит человека к форме с этой датой:
-// иначе он ищет её в календаре сам, зная ответ.
-function onPick(iso) {
-  pickedDate.value = iso
-  const el = typeof document !== 'undefined' ? document.getElementById('mini-add-report') : null
-  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
-}
 </script>
 
 <template>
   <div v-if="m" class="w-full pb-10">
-    <header class="pt-2">
-      <h1 class="font-brand text-[1.75rem] font-bold leading-tight tracking-tight text-[var(--text)]">
-        Сегодня
-      </h1>
-      <p class="mt-1 text-[0.8125rem] text-[var(--text-muted)]">
-        {{ monthLabel(m.month) }} · {{ BRAND.header }}
-      </p>
+    <header class="flex items-center justify-between gap-2 pt-1">
+      <span class="min-w-0 truncate rounded-full bg-[var(--graphite)] px-4 py-2 text-[0.875rem]
+                   font-semibold uppercase tracking-wide text-[var(--ink-on-color)]">
+        {{ state.unit || state.company || 'Ваш бизнес' }}
+      </span>
+      <button
+        type="button"
+        class="flex h-11 w-11 shrink-0 items-center justify-center"
+        aria-label="Обновить приложение"
+        @click="hardReload"
+      >
+        <RotateCw class="h-5 w-5 text-[var(--text-secondary)]" aria-hidden="true" />
+      </button>
     </header>
-
-    <div class="mt-4">
-      <UnitSwitch :company="state.company" :unit="state.unit" />
-    </div>
 
     <!-- Календарь ушёл вперёд: делать вид, что месяц идёт, приложение не станет -->
     <p
       v-if="monthOver"
-      class="mt-4 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3
+      class="mt-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3
              text-[0.8125rem] leading-snug text-[var(--text-secondary)]"
     >
-      {{ monthLabel(m.month) }} закончился. Числа ниже — итог того месяца, а не
-      сегодняшнего дня. Новый месяц заводится вводом нового плана.
+      {{ monthLabel(m.month) }} закончился. Числа ниже — итог того месяца.
+      Новый месяц заводится вводом нового плана.
     </p>
 
-    <!-- Число дня: требование к сегодняшнему дню с учётом силы дня недели -->
-    <section
-      v-if="!monthOver"
-      class="mt-4 rounded-2xl p-4"
-      :style="{ background: 'var(--text)', color: 'var(--ink-on-color)' }"
-    >
-      <div class="text-[0.75rem] uppercase tracking-wide" :style="{ opacity: 0.7 }">
-        Сегодня нужно сделать
-      </div>
-      <div class="mt-1 font-brand text-[2rem] font-bold leading-none tracking-tight">
-        {{ todayNeed === null ? 'день уже закрыт' : formatRub(todayNeed) }}
-      </div>
-      <p class="mt-2 text-[0.8125rem] leading-snug" :style="{ opacity: 0.75 }">
-        <template v-if="todayNeed !== null">
-          Столько выпадает на сегодня, если разнести остаток плана по оставшимся дням
-          с поправкой на силу дня недели. Внесёте вчерашний день — число пересчитается.
-        </template>
-        <template v-else>
-          Выручка за сегодня уже внесена. Следующее требование появится завтра.
-        </template>
-      </p>
-      <p
-        v-if="todayNeed !== null"
-        class="mt-3 border-t pt-2 text-[0.75rem] leading-snug"
-        :style="{ borderColor: 'var(--text-muted)', opacity: 0.7 }"
-      >
-        Форма недели — {{ shape.label }}: {{ shape.note }}.
-      </p>
-    </section>
+    <div class="mt-3">
+      <CountersCard clickable @open="emit('go', 'runscale')" />
+    </div>
 
-    <div class="mt-4">
+    <div class="mt-3">
       <MonthWidget :m="m" />
+    </div>
+
+    <div class="mt-3 grid grid-cols-2 gap-3">
+      <WidgetCard
+        title="Контроль Дня"
+        :icon="Gauge"
+        ratio-label="План/Факт"
+        :ratio-value="m.onPlan === null ? '—' : formatPct(m.onPlan * 100, 1)"
+        :ratio-tone="onPlanTone"
+        foot-label="Разрыв"
+        :foot-value="gapValue"
+        @open="emit('go', 'day')"
+      />
+      <WidgetCard
+        title="Цели и планы"
+        :icon="Target"
+        ratio-label="Прогноз/План"
+        :ratio-value="formatGrowth(m.landDev)"
+        :ratio-tone="fcTone"
+        foot-label="Прогноз выручки"
+        :foot-value="formatRubBig(m.landing)"
+        @open="emit('go', 'goals')"
+      />
+    </div>
+
+    <div class="mt-4 flex justify-center">
       <button
         type="button"
-        class="mt-2 min-h-[44px] text-[0.8125rem] font-semibold"
-        :style="{ color: 'var(--action)' }"
-        @click="emit('go', 'goals')"
-      >Изменить план и цель</button>
+        class="flex min-h-[44px] items-center gap-2 text-[0.9375rem] text-[var(--text-secondary)]"
+        @click="showHelp = !showHelp"
+      >
+        <Info class="h-4 w-4" aria-hidden="true" />
+        <span>Как читать виджеты</span>
+      </button>
     </div>
 
-    <div id="mini-add-report" class="mt-4">
-      <AddReportForm :preset="pickedDate" />
-    </div>
-
-    <div class="mt-4">
-      <WeekList :m="m" @pick="onPick" />
-    </div>
-
-    <div class="mt-4">
-      <WeekShapeCard />
-    </div>
-
-    <!-- Как приложение узнало про прошлое: суммой или по дням -->
-    <section
-      v-if="m.carry"
-      class="mt-4 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"
+    <!-- Расшифровка по запросу: на экране состояния объяснению не место,
+         но человек, который спросил, обязан получить ответ здесь же -->
+    <dl
+      v-if="showHelp"
+      class="mt-1 flex flex-col gap-3 rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-4
+             text-[0.8125rem] leading-snug"
     >
-      <div class="flex items-center gap-2">
-        <h2 class="text-[0.8125rem] font-medium uppercase tracking-wide text-[var(--text-muted)]">
-          Начало месяца
-        </h2>
-        <StatusChip kind="said" />
+      <div>
+        <dt class="font-semibold text-[var(--text)]">Факт · Прогноз · План · Цель</dt>
+        <dd class="text-[var(--text-secondary)]">
+          Сделано · куда приземлится месяц при нынешнем темпе · что обязаны сделать ·
+          к чему стремитесь сверх плана.
+        </dd>
       </div>
-      <p class="mt-2 text-[0.875rem] leading-snug text-[var(--text-secondary)]">
-        {{ formatRub(m.carry.amount) }} вошли одной суммой по {{ dayLabel(m.carry.upTo) }} —
-        это {{ m.carryDays }} {{ daysWord(m.carryDays) }} без дневной выручки.
-        Оценку таким дням приложение не ставит и задним числом не поставит:
-        оценивать нечего.
-      </p>
-      <p v-if="!hasDayFacts" class="mt-2 text-[0.875rem] leading-snug text-[var(--text-secondary)]">
-        Пока внесена только эта сумма, лучший день неизвестен — поэтому приложение
-        не берётся судить, посильный ли нужный темп.
-      </p>
-    </section>
+      <div>
+        <dt class="font-semibold text-[var(--text)]">План/Факт</dt>
+        <dd class="text-[var(--text-secondary)]">
+          Выручка закрытых дней против плана этих же дней. Зелёный — от 100 %,
+          жёлтый — от 85 %, красный — ниже.
+        </dd>
+      </div>
+      <div>
+        <dt class="font-semibold text-[var(--text)]">Прогноз/План</dt>
+        <dd class="text-[var(--text-secondary)]">
+          Насколько приземление расходится с обязательством. Прогноз один и
+          меняется только от внесённых дней.
+        </dd>
+      </div>
+    </dl>
 
     <div class="mt-6">
       <InstallBanner />
-    </div>
-
-    <!-- Счётчики работающей системы: здесь у них есть куда вести -->
-    <div class="mt-4">
-      <CountersCard clickable @open="emit('go', 'runscale')" />
     </div>
 
     <!-- Выход не заперт: инструмент возвращаемый -->
     <footer class="mt-8 border-t border-[var(--line)] pt-4">
       <p class="text-[0.75rem] leading-snug text-[var(--text-muted)]">
         Данные лежат на этом устройстве. Никуда не отправляются, аккаунта нет.
-      </p>
-      <button
-        type="button"
-        class="mt-1 min-h-[44px] text-[0.8125rem] font-medium text-[var(--text-secondary)] underline"
-        @click="hardReload"
-      >Обновить приложение</button>
-      <p class="text-[0.6875rem] leading-snug text-[var(--text-muted)]">
-        Загрузит свежую версию. Введённое останется на месте.
       </p>
       <button
         v-if="!askReset"

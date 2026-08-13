@@ -7,6 +7,7 @@ import TodayScreen from './screens/TodayScreen.vue'
 import PowerScreen from './screens/PowerScreen.vue'
 import RunscaleScreen from './screens/RunscaleScreen.vue'
 import GoalsScreen from './screens/GoalsScreen.vue'
+import DayControlScreen from './screens/DayControlScreen.vue'
 import TabBar from './components/TabBar.vue'
 import { useMiniStore } from './composables/useMiniStore.js'
 
@@ -42,8 +43,15 @@ watch(() => store.state.ready, (ready) => {
 })
 
 // Переход из экрана: либо вкладка, либо заход вглубь.
+const SUBVIEWS = ['goals', 'day']
 function go(where) {
-  if (where === 'goals') { subView.value = 'goals'; return }
+  if (SUBVIEWS.includes(where)) {
+    subView.value = where
+    // Заход вглубь начинается сверху: экран, открытый с середины, читается
+    // как продолжение предыдущего.
+    if (typeof window !== 'undefined') window.scrollTo({ top: 0 })
+    return
+  }
   subView.value = ''
   tab.value = where
 }
@@ -67,6 +75,7 @@ function selectTab(id) {
       >
         <OnboardingScreen v-if="view === 'onboarding'" />
         <GoalsScreen v-else-if="subView === 'goals'" @back="subView = ''" />
+        <DayControlScreen v-else-if="subView === 'day'" @back="subView = ''" />
         <template v-else>
           <TodayScreen v-if="tab === 'today'" @go="go" />
           <PowerScreen v-else-if="tab === 'power'" />
