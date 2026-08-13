@@ -8,7 +8,7 @@ import PowerScreen from './screens/PowerScreen.vue'
 import RunscaleScreen from './screens/RunscaleScreen.vue'
 import GoalsScreen from './screens/GoalsScreen.vue'
 import DayControlScreen from './screens/DayControlScreen.vue'
-import TabBar from './components/TabBar.vue'
+import AppShell from './components/AppShell.vue'
 import { useMiniStore } from './composables/useMiniStore.js'
 
 // Три состояния входа: витрина → подключение бизнеса → свои цифры.
@@ -18,19 +18,36 @@ import { useMiniStore } from './composables/useMiniStore.js'
 // Вкладки повторяют лестницу доверия к числу — «вы сказали», «мы посчитали»,
 // «проверено». Навигация тем самым сама рассказывает, как устроен продукт,
 // и не требует отдельного экрана-объяснения.
+//
+// Заголовка на Главной нет вовсе: имя продукта внутри приложения не пишется
+// нигде, а экран и так подписан «Сегодня» в таб-баре. Вместо заголовка в шапке
+// живёт чип бизнеса — постоянный контекст экрана.
 
 const store = useMiniStore()
 const entered = ref(store.state.ready)
 const tab = ref('today')
-// Под-страница поверх вкладки: «Цели и планы» — не четвёртый раздел, а заход
-// вглубь «Сегодня», поэтому у неё кнопка назад, а не место в таб-баре.
+// Под-страница поверх вкладки: заход вглубь «Сегодня», поэтому у неё
+// кнопка назад, а не место в таб-баре.
 const subView = ref('')
 
-const TABS = [
-  { id: 'today', label: 'Сегодня', icon: CalendarCheck },
-  { id: 'power', label: 'Сила роста', icon: ShieldCheck },
-  { id: 'runscale', label: 'Ранскейл', icon: Activity },
-]
+const TABS = computed(() => [
+  {
+    id: 'today',
+    label: 'Сегодня',
+    icon: CalendarCheck,
+    title: '',
+    leadingAction: 'hardReload',
+    eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
+    eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
+  },
+  { id: 'power', label: 'Сила роста', icon: ShieldCheck, title: 'Сила роста' },
+  { id: 'runscale', label: 'Ранскейл', icon: Activity, title: 'Ранскейл' },
+])
+
+const SUB_VIEWS = {
+  day: { title: 'Контроль Дня', showBack: true, backLabel: 'Главная' },
+  goals: { title: 'Цели и планы', showBack: true, backLabel: 'Главная' },
+}
 
 const view = computed(() => {
   if (store.state.ready) return 'app'
@@ -42,16 +59,8 @@ watch(() => store.state.ready, (ready) => {
   if (!ready) { entered.value = false; tab.value = 'today'; subView.value = '' }
 })
 
-// Переход из экрана: либо вкладка, либо заход вглубь.
-const SUBVIEWS = ['goals', 'day']
 function go(where) {
-  if (SUBVIEWS.includes(where)) {
-    subView.value = where
-    // Заход вглубь начинается сверху: экран, открытый с середины, читается
-    // как продолжение предыдущего.
-    if (typeof window !== 'undefined') window.scrollTo({ top: 0 })
-    return
-  }
+  if (SUB_VIEWS[where]) { subView.value = where; return }
   subView.value = ''
   tab.value = where
 }
@@ -65,27 +74,34 @@ function selectTab(id) {
 <template>
   <StartScreen v-if="view === 'showcase'" @start="entered = true" />
 
-  <div v-else class="min-h-[100dvh] w-full flex justify-center bg-[var(--bg)]">
-    <div class="flex w-full max-w-[430px] min-h-[100dvh] flex-col">
-      <main
-        class="flex-1 px-3
-               pl-[max(0.75rem,env(safe-area-inset-left))]
-               pr-[max(0.75rem,env(safe-area-inset-right))]
-               pt-[max(1rem,env(safe-area-inset-top))]"
-      >
-        <OnboardingScreen v-if="view === 'onboarding'" />
-        <GoalsScreen v-else-if="subView === 'goals'" @back="subView = ''" />
-        <DayControlScreen v-else-if="subView === 'day'" @back="subView = ''" />
-        <template v-else>
-          <TodayScreen v-if="tab === 'today'" @go="go" />
-          <PowerScreen v-else-if="tab === 'power'" />
-          <RunscaleScreen v-else />
-        </template>
-      </main>
-
-      <!-- Таб-бар появляется вместе с приложением: во время подключения бизнеса
-           переключаться некуда, и контрол без выбора только мешает. -->
-      <TabBar v-if="view === 'app'" :tabs="TABS" :active="tab" @select="selectTab" />
+  <!-- Подключение бизнеса идёт без оболочки: переключаться некуда,
+       и таб-бар с шапкой во время ввода только мешают. -->
+  <div v-else-if="view === 'onboarding'" class="min-h-[100dvh] w-full flex justify-center bg-[var(--bg)]">
+    <div
+      class="w-full max-w-[430px] px-4
+             pl-[max(1rem,env(safe-area-inset-left))]
+             pr-[max(1rem,env(safe-area-inset-right))]
+             pt-[max(1rem,env(safe-area-inset-top))]"
+    >
+      <OnboardingScreen />
     </div>
   </div>
+
+  <AppShell
+    v-else
+    :tabs="TABS"
+    :active="tab"
+    :sub-view="subView"
+    :sub-views="SUB_VIEWS"
+    @update:active="selectTab"
+    @back="subView = ''"
+  >
+    <DayControlScreen v-if="subView === 'day'" />
+    <GoalsScreen v-else-if="subView === 'goals'" @back="subView = ''" />
+    <template v-else>
+      <TodayScreen v-if="tab === 'today'" @go="go" />
+      <PowerScreen v-else-if="tab === 'power'" />
+      <RunscaleScreen v-else />
+    </template>
+  </AppShell>
 </template>

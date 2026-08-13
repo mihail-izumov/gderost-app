@@ -1,36 +1,39 @@
 <script setup>
-import { computed, ref } from 'vue'
-import { ChevronLeft, Plus, X } from 'lucide-vue-next'
-import StatTile from '../components/StatTile.vue'
-import WeekList from '../components/WeekList.vue'
-import WeekSummary from '../components/WeekSummary.vue'
-import ForecastLog from '../components/ForecastLog.vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { Plus, X } from 'lucide-vue-next'
+import DailyHero from '../components/daily/DailyHero.vue'
+import DailyKpis from '../components/daily/DailyKpis.vue'
+import DailyWeeks from '../components/daily/DailyWeeks.vue'
+import DailySummary from '../components/daily/DailySummary.vue'
+import DailyJournal from '../components/daily/DailyJournal.vue'
+import DailyCoef from '../components/daily/DailyCoef.vue'
 import WeekShapeCard from '../components/WeekShapeCard.vue'
 import AddReportForm from '../components/AddReportForm.vue'
-import StatusChip from '../components/StatusChip.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
+import { useNavCaption } from '../composables/useNavCaption.js'
 import { todayISO } from '../composables/miniModel.js'
-import {
-  formatK, formatMln, formatPct, formatGrowth, stampISO, daysWord,
-} from '../i18n/format.js'
+import { stampISO } from '../i18n/format.js'
+import { L } from '../i18n/daily.js'
 
-// Контроль дня — вся глубина месяца по дням.
+// «Контроль Дня» — композиция секций в том же порядке, что в рабочем Ранскейле:
+// шапка → плитки → недели → сводка → журнал → коэффициенты.
 //
-// Порядок сверху вниз повторяет вопрос владельца: куда приземлимся → чем
-// это набрано → как шли недели → каким был прогноз вчера → на чём вообще
-// стоит разнос по дням. Каждый следующий блок объясняет предыдущий, поэтому
-// человек может остановиться на любом и уйти с ответом.
-
-defineEmits(['back'])
+// Порядок повторяет вопрос владельца: куда приземлимся → чем это набрано →
+// как шли недели → каким был прогноз вчера → на чём вообще стоит разнос
+// по дням. Человек может остановиться на любом блоке и уйти с ответом.
 
 const store = useMiniStore()
 const m = store.model
 const state = store.state
+const { setCaption, clearCaption } = useNavCaption()
 
-const SIG = { good: 'var(--positive)', warn: 'var(--warning)', bad: 'var(--negative)', idle: 'var(--text-muted)' }
+const sheet = ref(false)
+const tune = ref(false)
+const pickedDate = ref('')
 
-// Данные приложения — ровно то, что внесено. Дата среза честная: последний
-// день, о котором приложение что-то знает, а не сегодняшнее число.
+// Дата среза — последний закрытый день, а не сегодняшнее число: приложение
+// знает ровно то, что внесено, и подпись сегодняшним числом означала бы,
+// что данные свежие, когда последний отчёт трёхдневной давности.
 const asOf = computed(() => {
   const mm = m.value
   if (!mm) return todayISO()
@@ -38,19 +41,8 @@ const asOf = computed(() => {
   return closed.length ? closed[closed.length - 1].iso : `${mm.month}-01`
 })
 
-const fcColor = computed(() => SIG[m.value.fcSig] || SIG.idle)
-const onPlanColor = computed(() => {
-  const r = m.value.onPlan
-  if (r == null) return SIG.idle
-  return r >= 1 ? SIG.good : r >= 0.85 ? SIG.warn : SIG.bad
-})
-
-// Хвост: сколько недобрано против плана на уже закрытых днях. Плюс означает
-// опережение — знак несёт направление, цвет остаётся за светофором.
-const tail = computed(() => -m.value.tailCum)
-
-const sheet = ref(false)
-const pickedDate = ref('')
+onMounted(() => setCaption(`данные от ${stampISO(asOf.value)}`))
+onUnmounted(() => clearCaption())
 
 function openSheet(iso = '') {
   pickedDate.value = iso
@@ -59,160 +51,71 @@ function openSheet(iso = '') {
 </script>
 
 <template>
-  <div v-if="m" class="w-full pb-24">
-    <header class="pt-1">
-      <div class="grid grid-cols-[1fr_auto_1fr] items-center">
-        <button
-          type="button"
-          class="-ml-2 flex h-11 items-center gap-0.5 pr-2 text-[1.0625rem] text-[var(--action)]"
-          @click="$emit('back')"
-        >
-          <ChevronLeft class="h-5 w-5" aria-hidden="true" />
-          <span>Главная</span>
-        </button>
-        <p class="text-center text-[0.75rem] tabular-nums text-[var(--text-muted)]">
-          данные от {{ stampISO(asOf) }}
-        </p>
-        <span />
-      </div>
-
-      <h1 class="mt-2 text-center font-brand text-[2rem] font-bold leading-tight tracking-tight text-[var(--text)]">
-        Контроль Дня
-      </h1>
-
-      <div class="mt-3 flex justify-center">
-        <span class="rounded-full bg-[var(--surface-2)] px-4 py-2 text-[0.9375rem] font-medium text-[var(--text)]">
-          {{ state.unit || state.company || 'Ваш бизнес' }}
-        </span>
-      </div>
-    </header>
-
-    <!-- Шапка чисел: обязательство · куда приземлимся · что уже сделано -->
-    <section class="mt-4 rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-4"
-             :style="{ boxShadow: 'var(--card-shadow)' }">
-      <div class="flex items-center gap-2">
-        <span class="text-[0.8125rem] text-[var(--text-muted)]">план месяца</span>
-        <StatusChip kind="said" />
-      </div>
-      <div class="mt-0.5 text-[2rem] font-bold leading-none tabular-nums text-[var(--text)]">
-        {{ formatMln(m.T) }}
-      </div>
-
-      <div class="mt-4 flex items-end justify-between gap-3">
-        <div class="min-w-0">
-          <div class="flex items-center gap-2">
-            <span class="text-[0.8125rem] text-[var(--text-muted)]">прогноз</span>
-            <StatusChip kind="computed" />
-          </div>
-          <div class="mt-0.5 flex items-center gap-2">
-            <i class="h-2.5 w-2.5 shrink-0 rounded-full" :style="{ background: fcColor }" aria-hidden="true" />
-            <span class="text-[1.5rem] font-bold leading-none tabular-nums text-[var(--text)]">
-              {{ formatMln(m.landing) }}
-            </span>
-          </div>
-          <div class="mt-1 text-[0.875rem] font-semibold tabular-nums text-[var(--text-secondary)]">
-            {{ formatGrowth(m.landDev) }}
-          </div>
-        </div>
-
-        <div class="shrink-0 text-right">
-          <div class="text-[0.8125rem] text-[var(--text-muted)]">заработано</div>
-          <div class="mt-0.5 text-[1.5rem] font-bold leading-none tabular-nums text-[var(--text)]">
-            {{ formatMln(m.realizedRev) }}
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Четыре плитки: чем набран месяц и что требуется дальше -->
-    <div class="mt-3 grid grid-cols-2 gap-3">
-      <StatTile
-        label="Заработано"
-        :value="formatK(m.realizedRev)"
-        :note="`${m.T ? Math.round((m.realizedRev / m.T) * 100) : 0} % плана — ${m.realizedCount} дн из ${m.DIM}`"
-      />
-      <StatTile
-        label="Идём к плану"
-        :value="m.onPlan === null ? '—' : formatPct(m.onPlan * 100, 0)"
-        :tone="onPlanColor"
-        :note="m.onPlan === null ? 'дневной выручки пока нет'
-          : m.onPlan >= 1 ? 'идём выше плана по прошедшим дням'
-          : 'отстаём по прошедшим дням'"
-      />
-      <StatTile
-        label="Хвост накоплен"
-        :value="formatK(tail)"
-        :tone="tail < 0 ? SIG.bad : SIG.good"
-        :note="tail < 0
-          ? `по +${formatK(Math.abs(m.spread))} к плану каждого из оставшихся дней`
-          : `оставшимся дням нужно на ${formatK(Math.abs(m.spread))} меньше плана`"
-      />
-      <StatTile
-        label="Нужный темп на остаток"
-        :value="`${formatK(m.needPerDay)}/день`"
-        :tone="m.goalState === 'out' ? SIG.bad : m.goalState === 'record' ? SIG.warn : SIG.good"
-        :note="`текущий ~${formatK(m.currentPace)}/день · нужен ${formatGrowth(m.paceGap)}`"
-      />
+  <div v-if="m" class="px-4 pb-28">
+    <div class="flex flex-col gap-3">
+      <DailyHero :m="m" />
+      <DailyKpis :m="m" />
+      <DailyWeeks :m="m" @pick="openSheet" />
+      <DailySummary :m="m" />
+      <DailyJournal :m="m" />
+      <DailyCoef :m="m" @tune="tune = true" />
     </div>
 
-    <!-- Недели месяца с таблицей дней -->
-    <div class="mt-5">
-      <h2 class="px-1 text-[0.75rem] font-medium uppercase tracking-wide text-[var(--text-muted)]">
-        По неделям
-      </h2>
-      <div class="mt-2">
-        <WeekList :m="m" @pick="openSheet" />
-      </div>
-    </div>
-
-    <div class="mt-5">
-      <WeekSummary :m="m" />
-    </div>
-
-    <div class="mt-5">
-      <ForecastLog :log="state.forecastLog" :target="m.T" />
-    </div>
-
-    <div class="mt-5">
-      <WeekShapeCard />
-    </div>
-
-    <p class="mt-5 px-1 text-[0.75rem] leading-snug text-[var(--text-muted)]">
-      Осталось {{ m.daysLeft }} {{ daysWord(m.daysLeft) }}. Все числа посчитаны
-      на том, что внесли вы; ничего не отправляется в сеть.
+    <p class="mt-4 px-1 text-[0.75rem] leading-snug text-[var(--text-muted)]">
+      Все числа посчитаны на том, что внесли вы. Ничего не отправляется в сеть.
     </p>
 
-    <!-- Ввод отчёта: действие живёт на том же экране, где виден его результат -->
-    <button
-      type="button"
-      class="fixed bottom-24 right-4 z-20 flex h-14 w-14 items-center justify-center rounded-full"
-      :style="{ background: 'var(--accent)', boxShadow: '0 6px 20px rgba(0,0,0,0.18)' }"
-      aria-label="Добавить отчёт"
-      @click="openSheet('')"
-    >
-      <Plus class="h-7 w-7" :style="{ color: 'var(--accent-ink)' }" aria-hidden="true" />
-    </button>
-
-    <div
-      v-if="sheet"
-      class="fixed inset-0 z-30 flex items-end justify-center"
-      :style="{ background: 'var(--scrim)' }"
-      @click.self="sheet = false"
-    >
-      <div class="max-h-[88dvh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4
-                  pb-[max(1rem,env(safe-area-inset-bottom))]">
-        <div class="mb-3 flex justify-end">
-          <button
-            type="button"
-            class="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-2)]"
-            aria-label="Закрыть"
-            @click="sheet = false"
-          >
-            <X class="h-5 w-5 text-[var(--text-secondary)]" aria-hidden="true" />
-          </button>
-        </div>
-        <AddReportForm :preset="pickedDate" />
-      </div>
+    <!-- Кнопка ввода — внизу по центру и липкая. Действие живёт там же, где
+         виден его результат: внести день и тут же увидеть, как сдвинулся
+         прогноз, — это и есть петля, ради которой экран существует.
+         Круглая кнопка дублирует ту же команду для большого пальца. -->
+    <div class="mt-6">
+      <button
+        type="button"
+        class="min-h-[52px] w-full rounded-2xl text-[1.0625rem] font-bold"
+        :style="{ background: 'var(--accent)', color: 'var(--accent-ink)' }"
+        @click="openSheet('')"
+      >{{ L.add_report }}</button>
     </div>
+
+    <div class="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] z-20 flex justify-center">
+      <button
+        type="button"
+        class="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full"
+        :style="{ background: 'var(--accent)', boxShadow: '0 6px 20px rgba(0,0,0,0.18)' }"
+        :aria-label="L.add_report"
+        @click="openSheet('')"
+      >
+        <Plus class="h-7 w-7" :style="{ color: 'var(--accent-ink)' }" :stroke-width="2.5" aria-hidden="true" />
+      </button>
+    </div>
+
+    <!-- Шторка ввода -->
+    <Teleport to="body">
+      <div
+        v-if="sheet || tune"
+        class="fixed inset-0 z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm"
+        role="presentation"
+        @click.self="sheet = false; tune = false"
+      >
+        <div
+          class="max-h-[88svh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4
+                 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        >
+          <div class="mb-3 flex justify-end">
+            <button
+              type="button"
+              class="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-2)]"
+              aria-label="Закрыть"
+              @click="sheet = false; tune = false"
+            >
+              <X class="h-5 w-5 text-[var(--text-secondary)]" :stroke-width="2" aria-hidden="true" />
+            </button>
+          </div>
+          <AddReportForm v-if="sheet" :preset="pickedDate" />
+          <WeekShapeCard v-else />
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>

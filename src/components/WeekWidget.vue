@@ -3,17 +3,20 @@ import { computed } from 'vue'
 import { DOW_RU, todayISO } from '../composables/miniModel.js'
 import { weekRangeLabel, daysWord, formatPct } from '../i18n/format.js'
 
-// Виджет недели. Работает в двух режимах и ни в одном ничего не выдумывает.
+// Виджет недели на входе. Работает в двух режимах и ни в одном ничего
+// не выдумывает.
 //
 // Без `days` он берёт текущую календарную неделю из часов устройства — так он
-// стоит на входе, где данных ещё нет и все маркеры пустые. С `days` он рисует
+// стоит на витрине, где данных ещё нет и все маркеры пустые. С `days` он рисует
 // ровно те дни, что ему дали, вместе с их оценками: неделя месяца может быть
-// неполной на его границах, и дорисовывать в неё чужие дни было бы враньём
+// неполной на своих границах, и дорисовывать в неё чужие дни было бы враньём
 // о том, что в этой неделе посчитано.
 //
-// Графитовый вид — не тема, а якорь внимания: одна тёмная карточка на светлом
-// холсте держит взгляд там, где начинается разговор. Контраст текста на ней
-// посчитан формулой и живёт отдельными токенами.
+// Чёрный вид — не тема, а якорь внимания: одна тёмная карточка на светлом
+// холсте держит взгляд там, где начинается разговор. Заливка сплошная, без
+// градиента: градиент на карточке-герое читается как эффект, а не как форма.
+// Моноширинного набора внутри нет — цифры держит tabular-nums, а машинное
+// начертание в герое выглядит выводом программы, а не календарём.
 
 const props = defineProps({
   // Явные дни: [{ key, dow (1=Пн..7=Вс), dowRu, dd, isToday, mark }]
@@ -21,11 +24,9 @@ const props = defineProps({
   // Оценки для режима без `days`: 7 значений Пн..Вс
   marks: { type: Array, default: null },
   now: { type: Date, default: () => new Date() },
-  // Своя подпись вместо диапазона дат.
+  // Своя подпись вместо диапазона дат
   label: { type: String, default: null },
-  // 'black' — герой-кадр входа, 'surface' — обычная карточка внутри приложения.
-  // По умолчанию светлая: тёмная заливка запрашивается осознанно, иначе она
-  // расползётся по экранам сама и перестанет быть акцентом.
+  // 'black' — герой-кадр входа, 'surface' — обычная карточка внутри приложения
   tone: { type: String, default: 'surface' },
   // Нижняя строка. Без них печатается остаток месяца.
   note: { type: String, default: null },
@@ -44,19 +45,19 @@ const MARK_FILL = {
 const skin = computed(() => (dark.value
   ? {
     card: { background: 'var(--surface-black)', color: 'var(--ink-on-color)' },
-    title: 'var(--ink-on-color-muted)',
+    title: 'var(--ink-on-color)',
     dow: 'var(--ink-on-color-muted)',
     num: 'var(--ink-on-color)',
     todayBg: 'var(--ink-on-color)',
-    todayInk: 'var(--graphite)',
+    todayInk: 'var(--surface-black)',
     emptyMark: 'var(--line-on-color)',
-    note: 'var(--ink-on-color)',
+    note: 'var(--ink-on-color-muted)',
     pillBorder: 'var(--line-on-color)',
     pillInk: 'var(--ink-on-color)',
   }
   : {
     card: { background: 'var(--surface)', color: 'var(--text)', boxShadow: 'var(--card-shadow)' },
-    title: 'var(--text-muted)',
+    title: 'var(--text)',
     dow: 'var(--text-muted)',
     num: 'var(--text)',
     todayBg: 'var(--text)',
@@ -93,8 +94,6 @@ const week = computed(() => (props.days || calendarWeek.value).map((d) => ({
   fill: MARK_FILL[d.mark] || null,
 })))
 
-// Виджет говорит про неделю, значит и подписан неделей: месяц, которого
-// в этих днях нет, в заголовке не появляется.
 const title = computed(() => {
   if (props.label) return props.label
   const w = week.value
@@ -124,10 +123,7 @@ const pillText = computed(() => props.pill ?? formatPct(leftPct.value, 0))
          стоят в одной строке; разные формы — текст и пилюля — разводят их
          без разделительных знаков. -->
     <div class="flex items-start justify-between gap-3 px-1">
-      <h2
-        class="text-[0.9375rem] font-semibold"
-        :style="{ color: skin.title }"
-      >{{ title }}</h2>
+      <h2 class="text-[0.9375rem] font-semibold" :style="{ color: skin.title }">{{ title }}</h2>
 
       <div v-if="noteText || pillText" class="flex shrink-0 items-center gap-2">
         <span v-if="noteText" class="text-[0.75rem]" :style="{ color: skin.note }">{{ noteText }}</span>
@@ -160,6 +156,5 @@ const pillText = computed(() => props.pill ?? formatPct(leftPct.value, 0))
         />
       </li>
     </ul>
-
   </section>
 </template>

@@ -47,8 +47,10 @@ const logo = logoStyle(24)
         <CountersCard />
       </div>
 
-      <!-- Герой прижат вниз: кнопка обязана попадать в зону пальца -->
-      <main class="flex flex-1 flex-col justify-end gap-4 pb-1 pt-6">
+      <!-- Герой стоит по центру оставшейся высоты: воздух над ним и под ним
+           делится поровну, поэтому блок дышит и на 375, и на 430. Кнопка при
+           этом остаётся в нижней половине экрана — в зоне большого пальца. -->
+      <main class="flex flex-1 flex-col justify-center gap-4 py-6">
         <BrandLockup :size="26" tone="var(--text)" />
 
         <h1
@@ -74,7 +76,7 @@ const logo = logoStyle(24)
            тач-таргет до 44pt: сам знак 24px высотой.
            rel="noopener noreferrer" обязателен при target="_blank" —
            иначе открытая страница получает доступ к window.opener. -->
-      <footer class="flex justify-center pt-4">
+      <footer class="flex justify-center pt-1">
         <a
           :href="BRAND.siteUrl"
           target="_blank"

@@ -194,10 +194,19 @@ export function computeMini(set, now = new Date()) {
     w.isCurrent = w.days.some((x) => x.isToday)
     w.open = prevComplete
     prevComplete = prevComplete && w.complete
+    // Полоса недели — доля факта от плана тех же дней. Меряем против плана
+    // дней с дневной выручкой: делить на план всей недели значит занижать
+    // неделю, которая ещё не кончилась.
+    w.faWidth = w.partOfPlan > 0 ? Math.max(0, Math.min(100, (w.fact / w.partOfPlan) * 100)) : 0
     w.rows = w.days.map((x) => ({
       dd: x.dd, dowRu: x.dowRu, weekend: x.weekend, isToday: x.isToday,
       plan: x.planAt, fact: x.fact, need: x.need,
       entered: x.entered, inCarry: x.inCarry, due: x.due,
+      // `full` — день с известной дневной выручкой: только у него бывает
+      // заливка и оценка. `status` отделяет его от дня, вошедшего суммой,
+      // и от дня, которого ещё не было: три разных пустоты, три разных вида.
+      full: x.entered,
+      status: x.entered ? 'full' : x.inCarry ? 'carry' : null,
       ratio: x.entered ? x.fact / x.planAt : null,
       sig: x.inCarry ? 'carry' : x.entered ? sigClass(x.fact / x.planAt) : 'idle',
       progWidth: x.entered ? Math.min(100, (x.fact / x.planAt) * 100) : 0,
@@ -223,6 +232,47 @@ export function computeMini(set, now = new Date()) {
   // Сегодняшний день — для «сколько надо сегодня».
   const todayRow = days.find((x) => x.isToday) || null
 
+  // Журнал прогноза: куда приземлялся месяц после каждого внесённого дня.
+  // Ряд не перестраивается задним числом — каждая строка хранит прогноз,
+  // каким он был в момент ввода того дня. Пересчитать его по сегодняшним
+  // весам значит стереть ровно ту историю, ради которой журнал и ведётся.
+  const logByDay = new Map()
+  ;(set.forecastLog || []).forEach((e) => {
+    if (e && typeof e.after === 'string' && Number.isFinite(Number(e.landing))) {
+      logByDay.set(e.after, Number(e.landing))
+    }
+  })
+  const journal = [...logByDay.keys()].sort().map((iso, i, arr) => {
+    const value = logByDay.get(iso)
+    const prev = i > 0 ? logByDay.get(arr[i - 1]) : null
+    const landingPct = T ? value / T : null
+    return {
+      date: iso,
+      landing: value,
+      landingPct,
+      sig: sigClass(landingPct),
+      arrow: prev == null ? 'flat'
+        : value > prev * 1.001 ? 'up'
+        : value < prev * 0.999 ? 'down' : 'flat',
+      goalState,
+    }
+  })
+
+  // Коэффициенты дней недели с источником и числом наблюдений. Пресет и правка
+  // человека подписаны допущением: то, что приложение приняло за него без
+  // данных, обязано быть названо своим словом.
+  const obs = [0, 0, 0, 0, 0, 0, 0]
+  enteredDays.forEach((x) => { obs[x.dow - 1] += 1 })
+  const fromData = (set.coef_src || 'preset') === 'data'
+  const coefRows = coefArr.map((c, i) => ({
+    dowRu: DOW_RU[i],
+    coef: c,
+    n: obs[i],
+    src: fromData ? 'данные' : 'допущение',
+    assume: !fromData,
+  }))
+  const maxCoef = Math.max(...coefArr, 0.01)
+
   return {
     month: set.month, Y, M, DIM,
     T, goal, coefSrc: set.coef_src || 'preset',
@@ -235,6 +285,6 @@ export function computeMini(set, now = new Date()) {
     spread: remaining.length ? Math.abs(tailCum) / remaining.length : 0,
     currentPace, needPerDay, paceGap, futureCount: futureDays.length,
     daysLeft, todayNeed: todayRow && !todayRow.closed ? todayRow.need : null,
-    days, weeks, dayStats,
+    days, weeks, dayStats, journal, coefRows, maxCoef,
   }
 }

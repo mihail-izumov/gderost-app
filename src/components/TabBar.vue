@@ -1,7 +1,11 @@
 <script setup>
-// Таб-бар. Индикатор активной вкладки — жёлтая пилюля под иконкой; подписи
-// монохромные, цвет несёт только индикатор. Фон с размытием всегда: под ним
-// проезжает контент, и без размытия подписи теряются на пёстром.
+// Таб-бар. Перенесён из рабочего Ранскейла: активная вкладка помечена жёлтой
+// пилюлей-заливкой под иконкой, подписи монохромные. Цветом здесь говорит
+// только состояние «здесь вы сейчас».
+//
+// Стекло на фоне — Tailwind-утилита backdrop-blur, а не своё свойство:
+// autoprefixer добавляет -webkit-backdrop-filter, без которого на iOS Safari
+// размытие не рисуется вовсе.
 defineProps({
   tabs: { type: Array, required: true },
   active: { type: String, required: true },
@@ -12,9 +16,7 @@ defineEmits(['select'])
 <template>
   <nav
     role="tablist"
-    class="flex shrink-0 items-stretch gap-1 border-t border-[var(--line)] px-2
-           pb-[env(safe-area-inset-bottom)] backdrop-blur
-           bg-[color-mix(in_srgb,var(--bg)_82%,transparent)]"
+    class="flex shrink-0 items-stretch gap-1 border-t border-[var(--line)] px-2 pb-[env(safe-area-inset-bottom)] backdrop-blur bg-[color-mix(in_srgb,var(--bg)_82%,transparent)]"
   >
     <button
       v-for="tab in tabs"
