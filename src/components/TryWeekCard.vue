@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
+import { saveText } from '../composables/saveFile.js'
 
 // Карточка «Попробовать неделю».
 //
@@ -15,21 +16,28 @@ import { useMiniStore } from '../composables/useMiniStore.js'
 
 const store = useMiniStore()
 
-const copied = ref(false)
-const copyFailed = ref(false)
+const saved = ref(false)
+const saveFailed = ref(false)
 const askReset = ref(false)
 
-async function copyData() {
+// Выгрузка уходит файлом, а не в буфер: на телефоне длинный текст при вставке
+// обрывается молча, а заметки подменяют дефисы на тире и ломают таблицу.
+// Буфер остаётся запасным путём — если браузер не дал сохранить файл.
+async function saveData() {
   const text = store.exportText()
-  copyFailed.value = false
+  saveFailed.value = false
+  if (saveText(text, store.exportFileName())) {
+    saved.value = true
+    setTimeout(() => { saved.value = false }, 2000)
+    return
+  }
   try {
     await navigator.clipboard.writeText(text)
-    copied.value = true
-    setTimeout(() => { copied.value = false }, 2000)
+    saved.value = true
+    setTimeout(() => { saved.value = false }, 2000)
   } catch {
-    // Буфер обмена может быть закрыт настройками браузера. Молчать нельзя:
-    // человек нажал и обязан узнать результат.
-    copyFailed.value = true
+    // Молчать нельзя: человек нажал и обязан узнать результат.
+    saveFailed.value = true
   }
 }
 
@@ -53,16 +61,16 @@ function reset() {
       type="button"
       class="mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl text-[1.0625rem] font-bold"
       :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
-      @click="copyData"
+      @click="saveData"
     >
-      {{ copied ? 'Скопировано' : 'Скопировать данные' }}
+      {{ saved ? 'Готово' : 'Скачать' }}
       <span
         class="rounded px-1.5 py-0.5 text-[0.6875rem] font-bold"
         :style="{ background: 'var(--action-ink)', color: 'var(--action)' }"
       >MD</span>
     </button>
-    <p v-if="copyFailed" class="mt-2 text-[0.8125rem] text-[var(--negative)]">
-      Браузер не дал доступ к буферу обмена.
+    <p v-if="saveFailed" class="mt-2 text-[0.8125rem] text-[var(--negative)]">
+      Браузер не дал сохранить файл.
     </p>
 
     <button

@@ -5,6 +5,7 @@ import MoneyField from './MoneyField.vue'
 import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
 import { monthLabel, monthOf, plural } from '../i18n/format.js'
 import { shapeName } from '../data/weekShape.js'
+import { saveText } from '../composables/saveFile.js'
 
 // Начать следующий месяц — мягкий перенос.
 //
@@ -28,8 +29,8 @@ const to = currentMonth()
 const target = ref(state.month_target || null)
 const goal = ref(state.month_goal || null)
 
-const copied = ref(false)
-const copyFailed = ref(false)
+const saved = ref(false)
+const saveFailed = ref(false)
 const asking = ref(false)
 
 const targetOk = computed(() => Number(target.value) > 0)
@@ -46,14 +47,21 @@ const dayCount = computed(() => state.days.length)
 const daysLabel = computed(() => `${dayCount.value} ${plural(dayCount.value, 'день', 'дня', 'дней')}`)
 const hasData = computed(() => dayCount.value > 0 || !!state.carry)
 
-async function copyData() {
-  copyFailed.value = false
+// Файлом, а не в буфер: это последняя копия месяца, и обрыв длинного текста
+// при вставке на телефоне здесь стоил бы всей истории. Буфер — запасной путь.
+async function saveData() {
+  const text = store.exportText()
+  saveFailed.value = false
+  if (saveText(text, store.exportFileName())) {
+    saved.value = true
+    return true
+  }
   try {
-    await navigator.clipboard.writeText(store.exportText())
-    copied.value = true
+    await navigator.clipboard.writeText(text)
+    saved.value = true
     return true
   } catch {
-    copyFailed.value = true
+    saveFailed.value = true
     return false
   }
 }
@@ -66,12 +74,12 @@ function apply() {
 
 function start() {
   if (!targetOk.value || goalConflict.value) return
-  if (hasData.value && !copied.value) { asking.value = true; return }
+  if (hasData.value && !saved.value) { asking.value = true; return }
   apply()
 }
 
-async function copyAndStart() {
-  if (await copyData()) apply()
+async function saveAndStart() {
+  if (await saveData()) apply()
 }
 </script>
 
@@ -124,16 +132,16 @@ async function copyAndStart() {
       type="button"
       class="mt-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border text-[1.0625rem] font-semibold"
       :style="{ borderColor: 'var(--line)', color: 'var(--text)' }"
-      @click="copyData"
+      @click="saveData"
     >
-      {{ copied ? 'Скопировано' : `Скопировать данные ${monthOf(from)}` }}
+      {{ saved ? 'Готово' : `Скачать ${monthOf(from)}` }}
       <span
         class="rounded px-1.5 py-0.5 text-[0.6875rem] font-bold"
         :style="{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }"
       >MD</span>
     </button>
-    <p v-if="copyFailed" class="mt-2 text-[0.8125rem] text-[var(--negative)]">
-      Браузер не дал доступ к буферу обмена.
+    <p v-if="saveFailed" class="mt-2 text-[0.8125rem] text-[var(--negative)]">
+      Браузер не дал сохранить файл.
     </p>
 
     <template v-if="!asking">
@@ -150,19 +158,19 @@ async function copyAndStart() {
          и оставляет оба выхода открытыми. -->
     <div v-else class="mt-3 flex flex-col gap-2">
       <p class="text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
-        Дни {{ monthOf(from) }} стираются. Копия не сделана.
+        Дни {{ monthOf(from) }} стираются. Файл не скачан.
       </p>
       <button
         type="button"
         class="min-h-[52px] w-full rounded-2xl text-[1.0625rem] font-bold"
         :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
-        @click="copyAndStart"
-      >Скопировать и начать</button>
+        @click="saveAndStart"
+      >Скачать и начать</button>
       <button
         type="button"
         class="min-h-[48px] w-full rounded-2xl border border-[var(--line)] text-[1rem] font-medium text-[var(--text-secondary)]"
         @click="apply"
-      >Начать без копии</button>
+      >Начать без файла</button>
     </div>
   </div>
 </template>
