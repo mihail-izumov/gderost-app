@@ -9,6 +9,7 @@ import DailyJournal from '../components/daily/DailyJournal.vue'
 import DailyCoef from '../components/daily/DailyCoef.vue'
 import WeekShapeSheet from '../components/WeekShapeSheet.vue'
 import AddReportForm from '../components/AddReportForm.vue'
+import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { useNavCaption } from '../composables/useNavCaption.js'
 import { todayISO } from '../composables/miniModel.js'
@@ -74,10 +75,6 @@ onBeforeUnmount(() => { if (io) { io.disconnect(); io = null } })
       <DailyCoef :m="m" @tune="tune = true" />
     </div>
 
-    <p class="mt-4 px-1 text-[0.75rem] leading-snug text-[var(--text-muted)]">
-      Все числа посчитаны на том, что внесли вы. Ничего не отправляется в сеть.
-    </p>
-
     <!-- Вход в ввод отчёта. Перенесено из оригинала: светлая кнопка во всю
          ширину с жёлтым кружком-иконкой слева, а не сплошная жёлтая плашка. -->
     <button
@@ -111,6 +108,8 @@ onBeforeUnmount(() => { if (io) { io.disconnect(); io = null } })
         <Plus class="h-7 w-7 text-[var(--accent-ink)]" :stroke-width="2.75" aria-hidden="true" />
       </button>
     </div>
+
+    <SiteFooter />
 
     <!-- Шторка ввода -->
     <Teleport to="body">

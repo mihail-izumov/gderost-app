@@ -23,22 +23,30 @@ const gap = computed(() => `${Math.round(props.size * 0.26)}px`)
 </script>
 
 <template>
+  <!-- Все три элемента выровнены по центру строки, а не по базовой линии:
+       у плашки собственная высота с полями, и по базовой линии она садилась
+       ниже слова на толщину нижнего поля. -->
   <div class="flex items-center" :style="{ gap: gap }" role="img" :aria-label="BRAND.header">
     <span class="block shrink-0" :style="{ ...chevron, background: tone }" aria-hidden="true" />
     <span
-      class="font-brand whitespace-nowrap uppercase leading-none"
+      class="font-brand flex items-center whitespace-nowrap uppercase leading-none"
       :style="{ fontSize: size + 'px', letterSpacing: '0.02em', color: tone }"
       aria-hidden="true"
     >{{ BRAND.brandName }}</span>
+    <!-- Плашка издания: поля сверху и снизу равные, текст в ней центрируется
+         флексом. Вертикальные паддинги на строке с leading-none давали
+         оптический перекос вверх — надпись садилась выше середины плашки. -->
     <span
-      class="font-brand whitespace-nowrap rounded-md uppercase leading-none"
+      class="font-brand flex shrink-0 items-center justify-center whitespace-nowrap rounded-md uppercase leading-none"
       :style="{
-        fontSize: Math.round(size * 0.72) + 'px',
+        fontSize: Math.round(size * 0.7) + 'px',
         letterSpacing: '0.02em',
         background: 'var(--action)',
         color: 'var(--action-ink)',
-        padding: `${Math.round(size * 0.13)}px ${Math.round(size * 0.22)}px`,
-        marginLeft: `${Math.round(size * 0.12)}px`,
+        height: Math.round(size * 1.06) + 'px',
+        paddingLeft: Math.round(size * 0.24) + 'px',
+        paddingRight: Math.round(size * 0.24) + 'px',
+        marginLeft: Math.round(size * 0.1) + 'px',
       }"
       aria-hidden="true"
     >{{ BRAND.brandEdition }}</span>

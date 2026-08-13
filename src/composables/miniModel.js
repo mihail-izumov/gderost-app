@@ -78,7 +78,7 @@ export function computeMini(set, now = new Date()) {
     }
   })
   const carry = set.carry && Number.isFinite(Number(set.carry.amount)) && set.carry.upTo
-    ? { upTo: String(set.carry.upTo), amount: Number(set.carry.amount) }
+    ? { upTo: String(set.carry.upTo), amount: Number(set.carry.amount), spread: !!set.carry.spread }
     : null
 
   const tISO = todayISO(now)
@@ -102,6 +102,28 @@ export function computeMini(set, now = new Date()) {
       due: iso < tISO && !entered && !inCarry,
       isToday: iso === tISO,
     })
+  }
+
+  // Разнос стартовой суммы по дням.
+  //
+  // Задача: неделя, целиком вошедшая в стартовую сумму, в сводке стоит пустой —
+  // дневной выручки у неё нет, мерить нечего. Владелец при этом знает, сколько
+  // заработал, и хочет видеть недели заполненными.
+  //
+  // Приложение не додумывает за него: оно предлагает разнести его же сумму
+  // по его же форме недели и подписывает такие дни отдельным словом.
+  // Это не факт и не оценка — это раскладка, о которой владелец попросил сам.
+  // Светофор таким дням не ставится никогда: оценивать разложенное значит
+  // оценивать собственную арифметику, а не работу бизнеса.
+  if (carry && carry.spread) {
+    const inCarryDays = days.filter((x) => x.inCarry)
+    const wCarry = sum(inCarryDays, (x) => x.weight)
+    if (wCarry > 0) {
+      inCarryDays.forEach((x) => {
+        x.fact = (carry.amount * x.weight) / wCarry
+        x.spread = true
+      })
+    }
   }
 
   // План: сумма планов дней равна плану месяца ровно.
@@ -182,6 +204,14 @@ export function computeMini(set, now = new Date()) {
     w.factDays = w.days.filter((x) => x.entered)
     w.fact = sum(w.factDays, (x) => x.fact)
     w.hasFact = w.factDays.length > 0
+    // Разложенное складывается отдельно от внесённого и в оценку недели
+    // не входит: против плана меряется только то, что человек действительно
+    // измерил, а не то, что приложение по его просьбе разложило.
+    w.spreadDays = w.days.filter((x) => x.spread)
+    w.spreadFact = sum(w.spreadDays, (x) => x.fact)
+    w.hasSpread = w.spreadDays.length > 0
+    w.shownFact = w.fact + w.spreadFact
+    w.shownPlan = sum(w.factDays.concat(w.spreadDays), (x) => x.planAt)
     // против плана меряются только дни с известной дневной выручкой:
     // дни, вошедшие суммой, в недельную оценку не входят
     w.partOfPlan = sum(w.factDays, (x) => x.planAt)
@@ -198,6 +228,9 @@ export function computeMini(set, now = new Date()) {
     // дней с дневной выручкой: делить на план всей недели значит занижать
     // неделю, которая ещё не кончилась.
     w.faWidth = w.partOfPlan > 0 ? Math.max(0, Math.min(100, (w.fact / w.partOfPlan) * 100)) : 0
+    // Полоса разложенной недели строится по её же плану: показать длину можно,
+    // покрасить в светофор — нет.
+    w.spreadWidth = w.shownPlan > 0 ? Math.max(0, Math.min(100, (w.shownFact / w.shownPlan) * 100)) : 0
     w.rows = w.days.map((x) => ({
       dd: x.dd, dowRu: x.dowRu, weekend: x.weekend, isToday: x.isToday,
       plan: x.planAt, fact: x.fact, need: x.need,
@@ -206,6 +239,7 @@ export function computeMini(set, now = new Date()) {
       // заливка и оценка. `status` отделяет его от дня, вошедшего суммой,
       // и от дня, которого ещё не было: три разных пустоты, три разных вида.
       full: x.entered,
+      spread: !!x.spread,
       status: x.entered ? 'full' : x.inCarry ? 'carry' : null,
       ratio: x.entered ? x.fact / x.planAt : null,
       sig: x.inCarry ? 'carry' : x.entered ? sigClass(x.fact / x.planAt) : 'idle',

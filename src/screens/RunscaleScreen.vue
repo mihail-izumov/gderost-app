@@ -1,4 +1,5 @@
 <script setup>
+import SiteFooter from '../components/SiteFooter.vue'
 import CountersCard from '../components/CountersCard.vue'
 
 // «Ранскейл» — витрина работающей системы. Не реклама и не описание планов:
@@ -66,5 +67,6 @@ import CountersCard from '../components/CountersCard.vue'
         чем на них смотреть.
       </p>
     </section>
+    <SiteFooter />
   </div>
 </template>

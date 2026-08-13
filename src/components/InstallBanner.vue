@@ -71,21 +71,21 @@ const steps = [
     <div class="relative flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-lg">
       <span
         class="relative flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center overflow-hidden rounded-2xl"
-        :style="{ background: 'var(--surface-black)' }"
+        :style="{ background: 'var(--action)' }"
       >
         <span class="block" :style="{ ...chevron, background: 'var(--ink-on-color)' }" aria-hidden="true" />
         <span class="bc-shine" aria-hidden="true" />
       </span>
       <div class="flex min-w-0 flex-1 flex-col gap-1 pr-8">
         <span class="text-[0.9375rem] font-semibold leading-[1.15] text-[var(--text)]">
-          Откройте Ранскейл<br>как приложение
+          Откройте Ранскейл Мини<br>как приложение
         </span>
         <button
           type="button"
           class="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--text)] px-2.5 py-0.5 text-[0.75rem] font-medium text-[var(--ink-on-color)] active:opacity-90"
           @click="openModal"
         >
-          Подробнее
+          Как установить
           <ChevronDown class="h-3.5 w-3.5" :stroke-width="2" aria-hidden="true" />
         </button>
       </div>

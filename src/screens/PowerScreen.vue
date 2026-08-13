@@ -1,4 +1,5 @@
 <script setup>
+import SiteFooter from '../components/SiteFooter.vue'
 import StatusChip from '../components/StatusChip.vue'
 
 // «Сила роста» — ступень, на которой введённое перестаёт быть словами.
@@ -79,5 +80,6 @@ import StatusChip from '../components/StatusChip.vue'
         что посчитаны на ваших словах.
       </p>
     </section>
+    <SiteFooter />
   </div>
 </template>

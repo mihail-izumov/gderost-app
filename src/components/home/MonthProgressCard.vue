@@ -41,7 +41,7 @@ const resetToken = ref(0)
 
 const screens = computed(() => {
   const list = props.slides.map((s) => ({ ...s, locked: false }))
-  if (props.lockedSlot) list.push({ key: '__locked__', title: 'Второй бизнес-юнит', locked: true })
+  if (props.lockedSlot) list.push({ key: '__locked__', title: 'Все бизнес-юниты', locked: true })
   return list
 })
 const many = computed(() => screens.value.length > 1)

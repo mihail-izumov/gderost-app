@@ -147,7 +147,7 @@ const shortDays = computed(() => obs.value.filter((c) => c < OBS_FOR_DATA).lengt
     @touchmove.prevent="move" @touchend="onUp"
   >
     <header class="flex items-center gap-3 pb-3">
-      <h2 class="text-[1.25rem] font-bold text-[var(--text)]">Форма недели</h2>
+      <h2 class="text-[1.25rem] font-bold text-[var(--text)]">Дни недели</h2>
       <button
         type="button"
         class="ml-auto flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-2)]"
@@ -160,6 +160,18 @@ const shortDays = computed(() => obs.value.filter((c) => c < OBS_FOR_DATA).lengt
 
     <!-- Кривая. Точки тянутся пальцем; активная зона у каждой шире самой точки. -->
     <div class="rounded-2xl bg-[var(--surface)] p-3" :class="enabled ? '' : 'opacity-40'">
+      <!-- Дни и значения стоят НАД графиком: под ним их закрывает рука,
+           которая тянет точку, и человек правит вслепую именно тот день,
+           который хотел посмотреть. -->
+      <div class="mb-2 grid grid-cols-7">
+        <div v-for="(v, i) in draft" :key="i" class="flex flex-col items-center gap-0.5">
+          <span class="text-[0.75rem] font-medium text-[var(--text-secondary)]">{{ DOW_RU[i] }}</span>
+          <span class="text-[0.8125rem] font-semibold tabular-nums text-[var(--text)]">
+            {{ v.toFixed(2).replace('.', ',') }}
+          </span>
+        </div>
+      </div>
+
       <svg
         ref="svgRef"
         :viewBox="`0 0 ${W} ${H}`"
@@ -167,9 +179,16 @@ const shortDays = computed(() => obs.value.filter((c) => c < OBS_FOR_DATA).lengt
         role="group"
         aria-label="Форма недели по дням"
       >
+        <!-- Вертикали по дням: без них кривая читается как один поток,
+             и непонятно, за какую точку тянуть, чтобы поправить среду. -->
+        <line
+          v-for="(v, i) in draft" :key="'ax' + i"
+          :x1="x(i)" :x2="x(i)" :y1="PAD_Y - 6" :y2="H - PAD_Y + 6"
+          stroke="var(--line)" stroke-width="1"
+        />
         <line
           :x1="PAD_X" :x2="W - PAD_X" :y1="midY" :y2="midY"
-          stroke="var(--line)" stroke-width="1" stroke-dasharray="3 3"
+          stroke="var(--text-muted)" stroke-width="1" stroke-dasharray="3 3" opacity="0.5"
         />
         <path :d="path" fill="none" stroke="var(--accent)" stroke-width="3"
               stroke-linecap="round" stroke-linejoin="round" />
@@ -186,15 +205,6 @@ const shortDays = computed(() => obs.value.filter((c) => c < OBS_FOR_DATA).lengt
           />
         </g>
       </svg>
-
-      <div class="mt-1 grid grid-cols-7">
-        <div v-for="(v, i) in draft" :key="i" class="flex flex-col items-center gap-0.5">
-          <span class="text-[0.75rem] font-medium text-[var(--text-secondary)]">{{ DOW_RU[i] }}</span>
-          <span class="text-[0.6875rem] tabular-nums text-[var(--text-muted)]">
-            {{ v.toFixed(2).replace('.', ',') }}
-          </span>
-        </div>
-      </div>
     </div>
 
     <label class="mt-3 flex min-h-[52px] items-center gap-3 rounded-2xl bg-[var(--surface)] px-4">

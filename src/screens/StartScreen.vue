@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import WeekWidget from '../components/WeekWidget.vue'
 import LiveClock from '../components/LiveClock.vue'
+import CountersCard from '../components/CountersCard.vue'
 import BrandLockup from '../components/BrandLockup.vue'
 import { logoStyle } from '../composables/brandMask.js'
 import { BRAND } from '../i18n/brand.js'
@@ -41,23 +42,28 @@ const logo = logoStyle(24)
              pt-[max(1rem,env(safe-area-inset-top))]
              pb-[max(1rem,env(safe-area-inset-bottom))]"
     >
-      <header class="flex flex-col items-center gap-2">
-        <BrandLockup :size="30" tone="var(--text)" />
+      <header class="flex flex-col items-center gap-3">
         <LiveClock />
+        <CountersCard class="w-full" />
       </header>
 
       <!-- Герой по центру оставшейся высоты: воздух над ним и под ним делится
            поровну, поэтому блок дышит и на 375, и на 430. Кнопка при этом
            остаётся в нижней половине экрана — в зоне большого пальца. -->
       <main class="flex flex-1 flex-col justify-center gap-4 py-6">
-        <!-- Высказывание набирается по ширине плашки: 20vw при колонке 430
-             даёт строку впритык к её краям, ниже 375 срабатывает нижняя
-             граница clamp и строка сжимается вместе с экраном. -->
-        <h1
-          class="font-brand w-full text-center font-bold uppercase leading-[0.86] tracking-[-0.01em]
-                 text-[var(--text)] bc-fade-in"
-          :style="{ fontSize: 'clamp(3.25rem, 21vw, 5.5rem)' }"
-        >{{ BRAND.question }}</h1>
+        <!-- Имя продукта стоит непосредственно над высказыванием: связка
+             читается как подпись автора над репликой, а не как отдельная
+             шапка страницы. -->
+        <div class="flex flex-col gap-2">
+          <BrandLockup :size="26" tone="var(--text)" />
+          <h1
+            class="font-brand font-bold leading-[0.95] tracking-tight text-[var(--text)] bc-fade-in"
+            :style="{ fontSize: 'clamp(2.75rem, 14vw, 4rem)' }"
+          >{{ BRAND.question }}</h1>
+          <p class="text-[1.25rem] font-semibold leading-tight text-[var(--text-secondary)]">
+            {{ BRAND.promise }}
+          </p>
+        </div>
 
         <WeekWidget tone="black" :label="monthTitle" />
 

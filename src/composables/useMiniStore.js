@@ -98,6 +98,25 @@ export function useMiniStore() {
       state.ready = true
     },
 
+    /**
+     * Разнести стартовую сумму по дням её периода — или убрать разнос.
+     *
+     * Ничего не додумывает: берётся сумма, которую назвал владелец, и его же
+     * форма недели. Дни помечаются как разложенные и оценки не получают.
+     * Выключается тем же переключателем: раскладка обратима, как и всё здесь.
+     */
+    setCarrySpread(on) {
+      if (state.carry) state.carry = { ...state.carry, spread: !!on }
+    },
+
+    /** Правка стартовой суммы: месяц мог начаться не с первого числа. */
+    setCarry({ amount, upTo }) {
+      const v = Number(amount)
+      if (!Number.isFinite(v) || v < 0 || !upTo) return false
+      state.carry = { upTo: String(upTo), amount: v, spread: !!(state.carry && state.carry.spread) }
+      return true
+    },
+
     /** План и цель правятся в любой момент: обязательство живое, а не бетонное. */
     setTargets({ target, goal }) {
       if (target !== undefined) state.month_target = Number(target) || 0
@@ -150,6 +169,34 @@ export function useMiniStore() {
     removeDay(date) {
       const i = state.days.findIndex((d) => d.date === date)
       if (i >= 0) state.days.splice(i, 1)
+    },
+
+    /**
+     * Выгрузка всего введённого текстом.
+     *
+     * Данных нет нигде, кроме этого устройства, — значит и унести их человек
+     * должен уметь без нас. Разметка простая: таблица читается глазами,
+     * вставляется в заметки и открывается таблицей.
+     */
+    exportText() {
+      const s = state
+      const pad = (n) => String(n).padStart(2, '0')
+      const lines = [
+        `# ${s.unit || s.company || 'Бизнес'} — ${s.month}`,
+        '',
+        `План месяца: ${s.month_target}`,
+        s.month_goal ? `Цель месяца: ${s.month_goal}` : 'Цель месяца: не поставлена',
+        '',
+      ]
+      if (s.carry) {
+        lines.push(`Заработано с начала месяца по ${s.carry.upTo}: ${s.carry.amount}`, '')
+      }
+      lines.push('| дата | выручка |', '| --- | --- |')
+      s.days.forEach((d) => lines.push(`| ${d.date} | ${d.rev} |`))
+      lines.push('', `Веса дней недели (Пн–Вс): ${s.dow_coef.join(', ')}`)
+      const now = new Date()
+      lines.push('', `Выгружено ${pad(now.getDate())}.${pad(now.getMonth() + 1)}.${now.getFullYear()}`)
+      return lines.join('\n')
     },
 
     /** Полная очистка: инструмент возвращаемый, выход не заперт. */

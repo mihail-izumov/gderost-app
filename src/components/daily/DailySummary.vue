@@ -1,18 +1,35 @@
 <script setup>
+import { computed } from 'vue'
 import { mln, pctSigned, L, SIG_VAR } from '../../i18n/daily.js'
 import { sigClass } from '../../composables/miniModel.js'
+import { useMiniStore } from '../../composables/useMiniStore.js'
 
-// Сводка по неделям: полоса, суммы, отклонение · строка «Месяц» (прогноз
-// к плану) · распределение внесённых дней по светофору.
-// Перенесено из рабочего Ранскейла. Полосы цветные, текст монохромный.
+// Сводка по неделям: полоса, суммы, отклонение · строка «Месяц» · распределение
+// внесённых дней по светофору. Перенесено из рабочего Ранскейла.
 //
-// Отличие от оригинала одно: пустая неделя различается двумя словами. Там
-// «ждём» стоит у любой недели без факта; здесь неделя, целиком вошедшая
-// в стартовую сумму, уже прошла — сказать про неё «ждём» было бы неправдой.
+// РАЗНОС СТАРТОВОЙ СУММЫ. Недели, целиком вошедшие в стартовую сумму, стояли
+// пустыми: дневной выручки у них нет, мерить нечего. Владелец при этом знает,
+// сколько заработал, и видит в сводке дыру там, где месяц шёл.
+//
+// Приложение не додумывает за него — оно предлагает разнести его же сумму
+// по его же форме недели одним переключателем. Разложенные недели рисуются
+// серой полосой в штриховку и подписаны словом «разнесено»: это раскладка,
+// а не замер. Отклонения у них нет и светофор им не ставится — оценивать
+// собственную арифметику приложение не станет.
 
 const props = defineProps({ m: { type: Object, required: true } })
+const store = useMiniStore()
+
 const wSig = (w) => sigClass(w.ratio)
-const emptyWord = (w) => (w.days.every((d) => d.closed) ? 'суммой' : 'ждём')
+const HATCH = {
+  backgroundColor: 'var(--surface-2)',
+  backgroundImage: 'repeating-linear-gradient(-45deg, transparent 0 2px, var(--text-muted) 2px 3px)',
+}
+
+const spreadOn = computed(() => !!(store.state.carry && store.state.carry.spread))
+const carryWeeks = computed(() => props.m.weeks.filter(
+  (w) => !w.hasFact && w.days.some((d) => d.inCarry),
+).length)
 </script>
 
 <template>
@@ -29,14 +46,27 @@ const emptyWord = (w) => (w.days.every((d) => d.closed) ? 'суммой' : 'жд
           Неделя {{ w.idx }}<span class="block text-[0.6875rem] font-normal text-[var(--text-muted)]">{{ w.from }}–{{ w.to }}</span>
         </div>
         <div class="relative h-3 overflow-hidden rounded-full bg-[var(--surface-2)]">
-          <i class="absolute bottom-0 left-0 top-0 rounded-full" :style="{ width: w.faWidth + '%', background: SIG_VAR[wSig(w)] }" />
+          <i
+            v-if="w.hasFact"
+            class="absolute bottom-0 left-0 top-0 rounded-full"
+            :style="{ width: w.faWidth + '%', background: SIG_VAR[wSig(w)] }"
+          />
+          <i
+            v-else-if="w.hasSpread"
+            class="absolute bottom-0 left-0 top-0 rounded-full"
+            :style="{ width: w.spreadWidth + '%', ...HATCH }"
+          />
         </div>
-        <div class="text-right [font-variant-numeric:tabular-nums] text-[var(--text-muted)]">
+        <div class="text-right tabular-nums text-[var(--text-muted)]">
           <template v-if="w.hasFact"><b class="font-semibold text-[var(--text)]">{{ mln(w.fact) }}</b></template>
-          <template v-else><span class="text-[var(--text-muted)]">{{ emptyWord(w) }}</span></template>
-          <span class="block text-[0.625rem]">план {{ mln(w.plan) }}</span>
+          <template v-else-if="w.hasSpread"><b class="font-semibold text-[var(--text-secondary)]">{{ mln(w.spreadFact) }}</b></template>
+          <template v-else><span>ждём</span></template>
+          <span class="block text-[0.625rem]">
+            <template v-if="!w.hasFact && w.hasSpread">разнесено</template>
+            <template v-else>план {{ mln(w.plan) }}</template>
+          </span>
         </div>
-        <div class="text-right font-bold [font-variant-numeric:tabular-nums] text-[var(--text-secondary)]">
+        <div class="text-right font-bold tabular-nums text-[var(--text-secondary)]">
           {{ w.hasFact ? pctSigned(w.delta / (w.partOfPlan || 1)) : '—' }}
         </div>
       </div>
@@ -50,16 +80,40 @@ const emptyWord = (w) => (w.days.every((d) => d.closed) ? 'суммой' : 'жд
         <div class="relative h-3 overflow-hidden rounded-full bg-[var(--surface)]">
           <i class="absolute bottom-0 left-0 top-0 rounded-full" :style="{ width: m.landPct + '%', background: SIG_VAR[m.fcSig] }" />
         </div>
-        <div class="text-right [font-variant-numeric:tabular-nums] text-[var(--text)]">
+        <div class="text-right tabular-nums text-[var(--text)]">
           {{ mln(m.landing) }}<span class="block text-[0.625rem] font-normal text-[var(--text-muted)]">план {{ mln(m.T) }}</span>
         </div>
-        <div class="text-right [font-variant-numeric:tabular-nums] text-[var(--text)]">{{ pctSigned(m.landDev) }}</div>
+        <div class="text-right tabular-nums text-[var(--text)]">{{ pctSigned(m.landDev) }}</div>
       </div>
+
+      <!-- Переключатель разноса: появляется, только когда есть что разносить -->
+      <label
+        v-if="carryWeeks > 0 || spreadOn"
+        class="flex items-center gap-3 border-t border-[var(--line)] px-4 py-3"
+      >
+        <span class="min-w-0 flex-1">
+          <span class="block text-[0.9375rem] text-[var(--text)]">Разнести стартовую сумму по дням</span>
+          <span class="block text-[0.75rem] leading-snug text-[var(--text-muted)]">
+            По вашей форме недели. Оценку таким дням приложение не ставит.
+          </span>
+        </span>
+        <input :checked="spreadOn" type="checkbox" class="sr-only" >
+        <span
+          class="relative block h-[31px] w-[51px] shrink-0 rounded-full transition-colors"
+          :style="{ background: spreadOn ? 'var(--accent)' : 'var(--line)' }"
+          @click="store.setCarrySpread(!spreadOn)"
+        >
+          <span
+            class="absolute top-[2px] block h-[27px] w-[27px] rounded-full bg-[var(--surface)] transition-all"
+            :style="{ left: spreadOn ? '22px' : '2px', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }"
+          />
+        </span>
+      </label>
 
       <!-- Распределение дней -->
       <div v-if="m.dayStats" class="border-t border-[var(--line)] px-4 py-3">
         <div class="mb-2 text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-          {{ L.days_by_plan }} <span class="font-normal">· факт — {{ m.dayStats.total }} дн</span>
+          {{ L.days_by_plan }} <span class="font-normal normal-case">({{ m.dayStats.total }} дн с фактом)</span>
         </div>
         <div class="flex h-4 gap-0.5 overflow-hidden rounded-lg bg-[var(--surface-2)]">
           <i v-if="m.dayStats.good" :style="{ width: m.dayStats.pctGood + '%', background: 'var(--positive)' }" />
@@ -67,9 +121,9 @@ const emptyWord = (w) => (w.days.every((d) => d.closed) ? 'суммой' : 'жд
           <i v-if="m.dayStats.bad" :style="{ width: m.dayStats.pctBad + '%', background: 'var(--negative)' }" />
         </div>
         <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[0.8125rem] text-[var(--text-muted)]">
-          <span class="inline-flex items-center gap-1.5"><i class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--positive)" /><b class="font-semibold text-[var(--text)]">{{ m.dayStats.good }}</b> {{ L.above }} · {{ m.dayStats.pctGood }}%</span>
-          <span class="inline-flex items-center gap-1.5"><i class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--warning)" /><b class="font-semibold text-[var(--text)]">{{ m.dayStats.warn }}</b> {{ L.close }} · {{ m.dayStats.pctWarn }}%</span>
-          <span class="inline-flex items-center gap-1.5"><i class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--negative)" /><b class="font-semibold text-[var(--text)]">{{ m.dayStats.bad }}</b> {{ L.below }} · {{ m.dayStats.pctBad }}%</span>
+          <span class="inline-flex items-center gap-1.5"><i class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--positive)" /><b class="font-semibold text-[var(--text)]">{{ m.dayStats.good }}</b> {{ L.above }} ({{ m.dayStats.pctGood }}%)</span>
+          <span class="inline-flex items-center gap-1.5"><i class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--warning)" /><b class="font-semibold text-[var(--text)]">{{ m.dayStats.warn }}</b> {{ L.close }} ({{ m.dayStats.pctWarn }}%)</span>
+          <span class="inline-flex items-center gap-1.5"><i class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--negative)" /><b class="font-semibold text-[var(--text)]">{{ m.dayStats.bad }}</b> {{ L.below }} ({{ m.dayStats.pctBad }}%)</span>
         </div>
       </div>
     </div>

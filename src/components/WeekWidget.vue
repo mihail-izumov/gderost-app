@@ -142,16 +142,24 @@ const pillText = computed(() => props.pill ?? formatPct(leftPct.value, 0))
         :style="{ gridColumnStart: d.dow }"
       >
         <span class="text-[0.6875rem] font-medium" :style="{ color: skin.dow }">{{ d.dowRu }}</span>
-        <!-- Цифра центрируется по кругу через leading-none: с наследованной
-             высотой строки она садилась на базовую линию и висела ниже центра
-             на пиксель-два, а в ряду из семи кругов это видно сразу. -->
+        <!-- Цифра в круге центрируется оптически, а не по коробке строки.
+             Флекс центрирует ЕМ-квадрат шрифта, но цифра занимает в нём только
+             высоту прописной и стоит выше середины: у шрифта под ней остаётся
+             место под выносные элементы, которых у цифр нет. Отсюда сдвиг
+             вниз на 0,06 em — он и есть разница между серединой ЕМ-квадрата
+             и серединой самой цифры. Без него весь ряд из семи кругов
+             читается приподнятым. -->
         <span
-          class="flex h-8 w-8 items-center justify-center rounded-full text-[0.9375rem] font-semibold
-                 leading-none tabular-nums"
+          class="flex h-8 w-8 items-center justify-center rounded-full"
           :style="d.isToday
             ? { background: skin.todayBg, color: skin.todayInk }
             : { color: skin.num }"
-        >{{ d.dd }}</span>
+        >
+          <span
+            class="block text-[0.9375rem] font-semibold leading-none tabular-nums"
+            style="transform: translateY(0.06em)"
+          >{{ d.dd }}</span>
+        </span>
         <span
           class="block h-2.5 w-2.5 rounded-full border"
           :style="d.fill

@@ -58,9 +58,15 @@ function progFill(r) {
           <Lock v-if="!w.open" class="ml-auto h-4 w-4 text-[var(--text-muted)]" :stroke-width="2" />
           <ChevronDown v-else class="ml-auto h-4 w-4 text-[var(--text-muted)]" :stroke-width="2" />
         </div>
+        <!-- Свёрнутая неделя показывает план и то, что по ней известно.
+             «Надо» печаталось у недель, целиком вошедших в стартовую сумму,
+             и выходило «план 0,29 млн · надо 0,00 млн» — про неделю, которая
+             давно прошла и в которой ничего делать уже не надо. -->
         <div class="flex flex-wrap gap-x-5 gap-y-1 text-[0.75rem]">
           <span><span class="text-[var(--text-muted)]">план </span><b class="font-semibold text-[var(--text)]">{{ mln(w.plan) }}</b></span>
           <span v-if="w.hasFact"><span class="text-[var(--text-muted)]">факт </span><b class="font-semibold text-[var(--text)]">{{ mln(w.fact) }}</b></span>
+          <span v-else-if="w.hasSpread"><span class="text-[var(--text-muted)]">разнесено </span><b class="font-semibold text-[var(--text)]">{{ mln(w.spreadFact) }}</b></span>
+          <span v-else-if="w.days.every((d) => d.closed)"><span class="text-[var(--text-muted)]">вошла суммой</span></span>
           <span v-else><span class="text-[var(--text-muted)]">надо </span><b class="font-semibold text-[var(--text)]">{{ mln(w.need) }}</b></span>
           <span v-if="w.hasFact"><span class="text-[var(--text-muted)]">откл. </span><b class="font-semibold text-[var(--text-secondary)]">{{ thsSigned(w.delta) }}</b></span>
         </div>
@@ -101,12 +107,16 @@ function progFill(r) {
                   class="inline-flex w-full items-center justify-end gap-1 whitespace-nowrap rounded-full px-2 py-0.5"
                   :style="{ background: progFill(r) }"
                 >{{ ths(r.fact) }}</span>
-                <!-- День, вошедший в стартовую сумму: дневной выручки у него нет,
-                     поэтому нет ни заливки, ни оценки — и не будет задним числом. -->
+                <!-- День, вошедший в стартовую сумму. Разложен — показываем
+                     его долю пунктирной плашкой: это раскладка, а не замер,
+                     и заливки светофора у неё не бывает. -->
                 <span
                   v-else-if="r.status === 'carry'"
-                  class="inline-flex w-full items-center justify-end whitespace-nowrap rounded-full border border-dashed border-[var(--line)] px-2 py-0.5 text-[0.6875rem] text-[var(--text-muted)]"
-                >суммой</span>
+                  class="inline-flex w-full items-center justify-end gap-1 whitespace-nowrap rounded-full border border-dashed border-[var(--line)] px-2 py-0.5 text-[var(--text-secondary)]"
+                >
+                  <template v-if="r.spread">{{ ths(r.fact) }}</template>
+                  <template v-else><span class="text-[0.6875rem] text-[var(--text-muted)]">суммой</span></template>
+                </span>
                 <button
                   v-else-if="r.due"
                   type="button"

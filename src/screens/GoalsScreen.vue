@@ -1,174 +1,172 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
-import { AlertCircle } from 'lucide-vue-next'
-import MoneyField from '../components/MoneyField.vue'
-import StatusChip from '../components/StatusChip.vue'
+import { ref, computed } from 'vue'
+import { ChevronRight, HelpCircle } from 'lucide-vue-next'
+import WeekWidget from '../components/WeekWidget.vue'
+import ValueSheet from '../components/ValueSheet.vue'
+import HowItWorksSheet from '../components/HowItWorksSheet.vue'
+import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
-import { formatRub, formatGrowth, monthLabel } from '../i18n/format.js'
+import { formatRub, formatGrowth } from '../i18n/format.js'
 
-// Цели и планы. Четыре сущности стоят здесь в своём порядке — факт, прогноз,
-// план, цель, — и порядок этот не украшение, а весь метод:
+// Цели и планы — четыре величины, четыре плашки, ни одного абзаца.
 //
-//   факт — что уже произошло, спорить не с чем;
-//   прогноз — куда несёт текущий темп, считается и не выбирается;
-//   план — обязательство, его ставит владелец;
-//   цель — то, ради чего стараются сверх обязательства.
+// Каждая плашка показывает имя и число и открывается тапом. Что это за
+// величина, откуда берётся и можно ли её поменять — внутри, там же и правка,
+// и только по отдельной кнопке: тап по цифре открывал бы клавиатуру раньше,
+// чем человек решил менять.
 //
-// План и цель правятся в любой момент: обязательство живое. Но правка плана
-// не переписывает прошлое — закрытые дни остались измеренными по той линейке,
-// что стояла в момент ввода.
+// Плашки чёрные: это не карточки данных, а входы. Их четыре, они одинаковые
+// и стоят в порядке метода — факт, прогноз, план, цель.
+//
+// Всё, что раньше объяснялось абзацами вокруг полей, собрано в «Как это
+// работает» и открывается с любого места.
 
 const store = useMiniStore()
 const m = store.model
 const state = store.state
-const emit = defineEmits(['back'])
 
-const target = ref(state.month_target || null)
-const goal = ref(state.month_goal)
+const sheet = ref('')
 
-watch(() => state.month_target, (v) => { target.value = v || null })
-watch(() => state.month_goal, (v) => { goal.value = v })
+const rows = computed(() => {
+  if (!m.value) return []
+  return [
+    { key: 'fact', label: 'Факт', value: m.value.realizedRev, extra: '' },
+    { key: 'forecast', label: 'Прогноз', value: m.value.landing, extra: formatGrowth(m.value.landDev) },
+    { key: 'plan', label: 'План', value: m.value.T, extra: '' },
+    { key: 'goal', label: 'Цель', value: m.value.goal, extra: '' },
+  ]
+})
 
-const targetOk = computed(() => Number(target.value) > 0)
-const goalConflict = computed(() =>
-  Number(goal.value) > 0 && targetOk.value && Number(goal.value) < Number(target.value))
-const dirty = computed(() =>
-  Number(target.value || 0) !== Number(state.month_target || 0)
-  || Number(goal.value || 0) !== Number(state.month_goal || 0))
-const canSave = computed(() => targetOk.value && !goalConflict.value && dirty.value)
+// Цель ниже плана — не цель, а второй план. Называем это в той же шторке,
+// где человек её и правит.
+const goalError = computed(() => '')
+function goalErrorFor(v) {
+  return Number(v) > 0 && Number(v) < Number(state.month_target)
+    ? `Цель ниже плана ${formatRub(state.month_target)}.`
+    : ''
+}
 
-// Прогноз уже выше плана — предупреждение, а не запрет: план ставит владелец,
-// и запрещать ему занижать обязательство мы не вправе. Назвать это обязаны.
-const planBelowForecast = computed(() =>
-  targetOk.value && m.value && m.value.landing > Number(target.value) * 1.001)
+const planDraftError = ref('')
+const goalDraftError = ref('')
 
-function save() {
-  if (!canSave.value) return
-  store.setTargets({ target: target.value, goal: goal.value })
+function savePlan(v) {
+  if (!(Number(v) > 0)) { planDraftError.value = 'План не может быть пустым.'; return }
+  planDraftError.value = ''
+  store.setTargets({ target: v })
+  sheet.value = ''
+}
+function saveGoal(v) {
+  const err = goalErrorFor(v)
+  if (err) { goalDraftError.value = err; return }
+  goalDraftError.value = ''
+  store.setTargets({ goal: v })
+  sheet.value = ''
+}
+function saveCarry(v) {
+  if (!state.carry) return
+  store.setCarry({ amount: v, upTo: state.carry.upTo })
+  sheet.value = ''
 }
 </script>
 
 <template>
-  <div v-if="m" class="w-full px-4 pb-10">
-    <!-- Ни заголовка, ни кнопки назад: и то и другое стоит в шапке приложения.
-         Своя пара здесь давала два «Цели и планы» подряд и две ссылки назад. -->
-    <header>
-      <p class="text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
-        {{ monthLabel(m.month) }}. План — обязательство, цель — то, ради чего стараются
-        сверх него. Прогноз не ставится, он считается.
-      </p>
-    </header>
+  <div v-if="m" class="px-4 pb-4">
+    <!-- Тот же виджет, что на входе: месяц, в котором человек живёт, выглядит
+         одинаково везде, где про него говорят. -->
+    <WeekWidget tone="black" label="Этот месяц" />
 
-    <!-- Порядок четырёх сущностей, как он есть сейчас -->
-    <section class="mt-5 rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-4">
-      <h2 class="text-[0.8125rem] font-medium uppercase tracking-wide text-[var(--text-muted)]">
-        Где вы сейчас
-      </h2>
-      <dl class="mt-3 flex flex-col gap-3">
-        <div class="flex items-baseline justify-between gap-3">
-          <dt class="flex items-center gap-1.5 text-[0.875rem] text-[var(--text-secondary)]">
-            Факт <StatusChip kind="said" />
-          </dt>
-          <dd class="font-mono text-[0.9375rem] tabular-nums text-[var(--text)]">
-            {{ formatRub(m.realizedRev) }}
-          </dd>
-        </div>
-        <div class="flex items-baseline justify-between gap-3">
-          <dt class="flex items-center gap-1.5 text-[0.875rem] text-[var(--text-secondary)]">
-            Прогноз <StatusChip kind="computed" />
-          </dt>
-          <dd class="text-right">
-            <span class="font-mono text-[0.9375rem] tabular-nums text-[var(--text)]">
-              {{ formatRub(m.landing) }}
-            </span>
-            <span class="ml-1.5 font-mono text-[0.75rem] tabular-nums text-[var(--text-muted)]">
-              {{ formatGrowth(m.landDev) }}
-            </span>
-          </dd>
-        </div>
-        <div class="flex items-baseline justify-between gap-3">
-          <dt class="text-[0.875rem] text-[var(--text-secondary)]">План</dt>
-          <dd class="font-mono text-[0.9375rem] tabular-nums text-[var(--text)]">
-            {{ formatRub(m.T) }}
-          </dd>
-        </div>
-        <div class="flex items-baseline justify-between gap-3">
-          <dt class="text-[0.875rem] text-[var(--text-secondary)]">Цель</dt>
-          <dd class="font-mono text-[0.9375rem] tabular-nums text-[var(--text)]">
-            {{ m.goal ? formatRub(m.goal) : 'не поставлена' }}
-          </dd>
-        </div>
-      </dl>
-    </section>
-
-    <!-- Правка -->
-    <form class="mt-4 flex flex-col gap-5" @submit.prevent="save">
-      <MoneyField
-        id="mini-goals-target"
-        v-model="target"
-        label="План месяца"
-        hint="Сумма, которую вы обязаны сделать"
-        placeholder="3 000 000"
-      />
-
-      <div>
-        <MoneyField
-          id="mini-goals-goal"
-          v-model="goal"
-          label="Цель"
-          hint="Сверх плана. Оставьте пустой, если её нет"
-          placeholder="Можно без цели"
-        />
-        <p
-          v-if="goalConflict"
-          class="mt-2 flex items-start gap-1.5 text-[0.8125rem] leading-snug text-[var(--negative)]"
-        >
-          <AlertCircle class="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>
-            Цель ниже плана — тогда это не цель, а другой план.
-            Порядок один: прогноз, план, цель.
-          </span>
-        </p>
-      </div>
-
-      <p v-if="planBelowForecast" class="text-[0.8125rem] leading-snug text-[var(--text-secondary)]">
-        Прогноз уже выше плана. Так бывает, и запрещать это мы не станем —
-        план ваш. Но обязательство ниже того, что и так произойдёт,
-        перестаёт быть обязательством.
-      </p>
-
-      <p class="text-[0.75rem] leading-snug text-[var(--text-muted)]">
-        Правка плана меняет то, что осталось разнести по открытым дням.
-        Закрытые дни остаются с той оценкой, что получили: их мерили
-        по плану, который стоял тогда, и переписывать это задним числом
-        приложение не станет.
-      </p>
-
+    <div class="mt-3 flex flex-col gap-2">
       <button
-        type="submit"
-        class="min-h-[52px] w-full rounded-xl text-[1.0625rem] font-semibold transition-opacity disabled:opacity-40"
-        :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
-        :disabled="!canSave"
-      >Сохранить</button>
-    </form>
+        v-for="r in rows" :key="r.key"
+        type="button"
+        class="flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left"
+        :style="{ background: 'var(--surface-black)', color: 'var(--ink-on-color)' }"
+        @click="sheet = r.key"
+      >
+        <span class="min-w-0 flex-1">
+          <span class="block text-[0.8125rem]" :style="{ color: 'var(--ink-on-color-muted)' }">{{ r.label }}</span>
+          <span class="mt-0.5 flex items-baseline gap-2">
+            <span class="text-[1.5rem] font-bold leading-none tabular-nums">
+              {{ r.value ? formatRub(r.value) : 'не поставлена' }}
+            </span>
+            <span v-if="r.extra" class="text-[0.875rem] font-semibold" :style="{ color: 'var(--ink-on-color-muted)' }">
+              {{ r.extra }}
+            </span>
+          </span>
+        </span>
+        <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: 'var(--ink-on-color-muted)' }" :stroke-width="2" aria-hidden="true" />
+      </button>
+    </div>
 
-    <!-- Место переключателя сценариев занято честно: контрол здесь будет,
-         но выдумывать за него содержимое — то же враньё, что фейковое превью. -->
-    <section class="mt-6 rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-4">
-      <div class="flex items-center gap-2">
-        <h2 class="text-[0.8125rem] font-medium uppercase tracking-wide text-[var(--text-muted)]">
-          Сценарий прогноза
-        </h2>
-        <StatusChip kind="computed" />
+    <button
+      type="button"
+      class="mx-auto mt-4 flex min-h-[44px] items-center gap-2 rounded-full px-4 text-[0.9375rem] font-medium"
+      :style="{ color: 'var(--action)' }"
+      @click="sheet = 'how'"
+    >
+      <HelpCircle class="h-4 w-4" :stroke-width="2" aria-hidden="true" />
+      Как это работает
+    </button>
+
+    <SiteFooter />
+
+    <Teleport to="body">
+      <div
+        v-if="sheet"
+        class="fixed inset-0 z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm"
+        role="presentation"
+        @click.self="sheet = ''"
+      >
+        <div class="max-h-[88svh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <HowItWorksSheet v-if="sheet === 'how'" @close="sheet = ''" />
+
+          <ValueSheet
+            v-else-if="sheet === 'fact'"
+            title="Факт"
+            subtitle="Заработано с начала месяца: дни, которые вы внесли, плюс стартовая сумма."
+            :value="m.realizedRev"
+            :edit-label="state.carry ? 'Изменить стартовую сумму' : ''"
+            hint="Заработано с начала месяца до первого внесённого дня"
+            placeholder="1 250 000"
+            @close="sheet = ''"
+            @save="saveCarry"
+          />
+
+          <ValueSheet
+            v-else-if="sheet === 'forecast'"
+            title="Прогноз"
+            subtitle="Куда приземлится месяц, если темп не изменится. Прогноз не ставится, он считается — и меняется только от внесённых дней."
+            :value="m.landing"
+            @close="sheet = ''"
+          />
+
+          <ValueSheet
+            v-else-if="sheet === 'plan'"
+            title="План"
+            subtitle="Обязательство на месяц. Правка меняет то, что осталось разнести по открытым дням; закрытые дни остаются с прежней оценкой."
+            :value="m.T"
+            edit-label="Изменить план"
+            hint="Сумма, которую вы обязаны сделать"
+            placeholder="3 000 000"
+            :error="planDraftError"
+            @close="sheet = ''"
+            @save="savePlan"
+          />
+
+          <ValueSheet
+            v-else-if="sheet === 'goal'"
+            title="Цель"
+            subtitle="То, ради чего стараются сверх плана. Можно не ставить — тогда шкала строится до плана."
+            :value="m.goal"
+            edit-label="Изменить цель"
+            hint="Сверх плана"
+            placeholder="3 500 000"
+            :error="goalDraftError"
+            @close="sheet = ''"
+            @save="saveGoal"
+          />
+        </div>
       </div>
-      <p class="mt-2 text-[0.9375rem] font-semibold text-[var(--text)]">
-        Один, публикуемый
-      </p>
-      <p class="mt-1 text-[0.875rem] leading-snug text-[var(--text-secondary)]">
-        Переключатель сценариев встанет сюда. Сегодня прогноз один и переключать
-        его нечем: выбирать между прогнозами значит выбирать удобный, а месяц
-        приземлится туда, куда его несёт темп.
-      </p>
-    </section>
+    </Teleport>
   </div>
 </template>

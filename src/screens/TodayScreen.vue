@@ -4,6 +4,8 @@ import { Gauge, Target, Info } from 'lucide-vue-next'
 import MonthProgressCard from '../components/home/MonthProgressCard.vue'
 import HomeWidget from '../components/home/HomeWidget.vue'
 import InstallBanner from '../components/InstallBanner.vue'
+import TryWeekCard from '../components/TryWeekCard.vue'
+import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { mlnRub, mlnSigned, pct1, pctDelta, monthCap } from '../i18n/home.js'
 
@@ -24,7 +26,6 @@ const store = useMiniStore()
 const m = store.model
 const monthOver = store.monthOver
 
-const askReset = ref(false)
 const infoOpen = ref(false)
 
 const slides = computed(() => (m.value ? [{
@@ -64,10 +65,6 @@ const paceInfo = computed(() => {
   return `Сейчас ${pctDelta(d)} — по прогнозу выйдем ровно к плану.`
 })
 
-function reset() {
-  store.reset()
-  askReset.value = false
-}
 </script>
 
 <template>
@@ -138,29 +135,10 @@ function reset() {
 
     <InstallBanner />
 
-    <!-- Выход не заперт: инструмент возвращаемый -->
-    <footer class="mt-6 border-t border-[var(--line)] pt-4">
-      <p class="text-[0.75rem] leading-snug text-[var(--text-muted)]">
-        Данные лежат на этом устройстве. Никуда не отправляются, аккаунта нет.
-      </p>
-      <button
-        v-if="!askReset"
-        class="mt-2 min-h-[44px] text-[0.8125rem] font-medium text-[var(--text-secondary)] underline"
-        type="button"
-        @click="askReset = true"
-      >Удалить всё и начать заново</button>
-      <div v-else class="mt-2 flex flex-wrap items-center gap-3">
-        <span class="text-[0.8125rem] text-[var(--text-secondary)]">Удалить введённое без возврата?</span>
-        <button
-          class="min-h-[44px] rounded-lg px-3 text-[0.8125rem] font-semibold"
-          :style="{ background: 'var(--negative)', color: 'var(--ink-on-color)' }"
-          type="button" @click="reset"
-        >Удалить</button>
-        <button
-          class="min-h-[44px] text-[0.8125rem] font-medium text-[var(--text-secondary)] underline"
-          type="button" @click="askReset = false"
-        >Оставить</button>
-      </div>
-    </footer>
+    <div class="mt-4">
+      <TryWeekCard />
+    </div>
+
+    <SiteFooter />
   </div>
 </template>
