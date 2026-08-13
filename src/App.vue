@@ -1,15 +1,17 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { CalendarCheck, ShieldCheck, Activity } from 'lucide-vue-next'
+import { CalendarCheck, Zap, Activity } from 'lucide-vue-next'
 import StartScreen from './screens/StartScreen.vue'
 import OnboardingScreen from './screens/OnboardingScreen.vue'
 import TodayScreen from './screens/TodayScreen.vue'
-import PowerScreen from './screens/PowerScreen.vue'
+import EnergyScreen from './screens/EnergyScreen.vue'
+import SharedMonthScreen from './screens/SharedMonthScreen.vue'
 import RunscaleScreen from './screens/RunscaleScreen.vue'
 import GoalsScreen from './screens/GoalsScreen.vue'
 import DayControlScreen from './screens/DayControlScreen.vue'
 import AppShell from './components/AppShell.vue'
 import { useMiniStore } from './composables/useMiniStore.js'
+import { readShared, hasSharePayload } from './composables/shareLink.js'
 
 // Три состояния входа: витрина → подключение бизнеса → свои цифры.
 // Вернувшийся пользователь попадает сразу на свои цифры: витрину, которую
@@ -26,6 +28,35 @@ import { useMiniStore } from './composables/useMiniStore.js'
 const store = useMiniStore()
 const entered = ref(store.state.ready)
 const tab = ref('today')
+
+// Месяц, пришедший ссылкой, показывается вместо приложения и хранилища
+// не касается: у открывшего может быть свой месяц, и подменять его чужим
+// нельзя. Выход из просмотра — очистка адреса, дальше обычный запуск.
+//
+// Ссылка в мессенджере рвётся: длинный адрес переносится по строкам и часть
+// теряется. Молча показать вместо чужого месяца своё приложение — оставить
+// человека в уверенности, что ему прислали именно это.
+const hash = () => (typeof window === 'undefined' ? '' : window.location.hash)
+const shared = ref(readShared(hash()))
+const sharedBroken = ref(!shared.value && hasSharePayload(hash()))
+
+function exitShared() {
+  shared.value = null
+  sharedBroken.value = false
+  if (typeof window !== 'undefined') {
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+  }
+}
+
+// Приложение уже открыто, пришла вторая ссылка — меняется только адрес,
+// перезагрузки не происходит. Без этого месяц не открылся бы до обновления.
+if (typeof window !== 'undefined') {
+  window.addEventListener('hashchange', () => {
+    const next = readShared(hash())
+    shared.value = next
+    sharedBroken.value = !next && hasSharePayload(hash())
+  })
+}
 // Под-страница поверх вкладки: заход вглубь «Сегодня», поэтому у неё
 // кнопка назад, а не место в таб-баре.
 const subView = ref('')
@@ -40,7 +71,7 @@ const TABS = computed(() => [
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
   },
-  { id: 'power', label: 'Сила роста', icon: ShieldCheck, title: 'Сила роста' },
+  { id: 'power', label: 'Энергия', icon: Zap, title: 'Энергия роста' },
   { id: 'runscale', label: 'Ранскейл', icon: Activity, title: 'Ранскейл' },
 ])
 
@@ -72,7 +103,26 @@ function selectTab(id) {
 </script>
 
 <template>
-  <StartScreen v-if="view === 'showcase'" @start="entered = true" />
+  <SharedMonthScreen v-if="shared" :state="shared" @exit="exitShared" />
+
+  <!-- Ссылка была, месяц не открылся: сказать прямо, а не показывать
+       вместо чужого месяца своё приложение. -->
+  <div v-else-if="sharedBroken" class="min-h-[100dvh] w-full bg-[var(--bg)]">
+    <div class="mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col items-start justify-center gap-3 px-6">
+      <h1 class="text-[1.375rem] font-bold leading-tight text-[var(--text)]">Ссылка не открылась</h1>
+      <p class="text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
+        Месяц едет внутри ссылки, и она пришла не целиком. Попросите отправить её ещё раз — файлом или заново.
+      </p>
+      <button
+        type="button"
+        class="mt-2 min-h-[48px] w-full rounded-full px-5 text-[0.9375rem] font-bold"
+        :style="{ background: 'var(--accent)', color: 'var(--accent-ink)' }"
+        @click="exitShared"
+      >Посчитать свой месяц</button>
+    </div>
+  </div>
+
+  <StartScreen v-else-if="view === 'showcase'" @start="entered = true" />
 
   <!-- Подключение бизнеса идёт без оболочки: переключаться некуда,
        и таб-бар с шапкой во время ввода только мешают. -->
@@ -100,7 +150,7 @@ function selectTab(id) {
     <GoalsScreen v-else-if="subView === 'goals'" @back="subView = ''" />
     <template v-else>
       <TodayScreen v-if="tab === 'today'" @go="go" />
-      <PowerScreen v-else-if="tab === 'power'" />
+      <EnergyScreen v-else-if="tab === 'power'" />
       <RunscaleScreen v-else />
     </template>
   </AppShell>

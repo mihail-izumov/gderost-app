@@ -89,6 +89,9 @@ export function nextMonthState(set, { month, target, goal }) {
     carry: null,
     days: [],
     forecastLog: [],
+    // Предложения поделиться относятся к прожитому месяцу: в новом месяце
+    // они приходят заново.
+    shareSeen: [],
   }
 }
 

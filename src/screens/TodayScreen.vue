@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { Gauge, Target, Info } from 'lucide-vue-next'
 import MonthProgressCard from '../components/home/MonthProgressCard.vue'
 import HomeWidget from '../components/home/HomeWidget.vue'
@@ -7,6 +7,7 @@ import InstallBanner from '../components/InstallBanner.vue'
 import TryWeekCard from '../components/TryWeekCard.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import NextMonthSheet from '../components/NextMonthSheet.vue'
+import ShareSheet from '../components/ShareSheet.vue'
 import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
 import { mlnRub, mlnSigned, pct1, pctDelta, monthCap } from '../i18n/home.js'
 
@@ -67,6 +68,43 @@ const paceInfo = computed(() => {
   if (d > 0.001) return `Сейчас ${pctDelta(d)} — по прогнозу придём выше плана.`
   return `Сейчас ${pctDelta(d)} — по прогнозу выйдем ровно к плану.`
 })
+
+// Предложение поделиться месяцем приходит в двух точках, и обе — момент,
+// когда человеку впервые есть что показать: первая прожитая и полностью
+// внесённая неделя и закрытый месяц. Показывается по одному разу на повод.
+//
+// «Полная неделя» здесь означает не `w.complete`: в ядре у будущей недели
+// нет прошедших невнесённых дней, поэтому она полна по определению — и сразу
+// после подключения человеку предлагали бы поделиться пустым месяцем.
+// Повод настоящий, когда неделя прожита целиком и все её дни внесены.
+const shareReason = computed(() => {
+  if (!m.value) return ''
+  const seen = store.state.shareSeen || []
+  if (monthOver.value && !seen.includes('month')) return 'month'
+  const livedFull = m.value.weeks.some((w) => w.days.length === 7
+    && w.days.every((d) => d.entered || d.inCarry))
+  if (livedFull && !seen.includes('week')) return 'week'
+  return ''
+})
+// Шторка показывается не чаще одного раза за запуск: закрыл повод —
+// следующий приходит в следующий раз, а не подменяет текст под пальцем.
+const shareShown = ref(false)
+const shareOpen = ref(false)
+// Причина замораживается на момент открытия: `shareReason` пересчитается
+// сразу после отметки, и живая привязка сменила бы заголовок при закрытии.
+const shareShownReason = ref('')
+watch(shareReason, (r) => {
+  if (r && !shareShown.value) {
+    shareShownReason.value = r
+    shareShown.value = true
+    shareOpen.value = true
+  }
+}, { immediate: true })
+
+function closeShare() {
+  if (shareShownReason.value) store.markShareSeen(shareShownReason.value)
+  shareOpen.value = false
+}
 
 </script>
 
@@ -165,6 +203,23 @@ const paceInfo = computed(() => {
                  pb-[max(1rem,env(safe-area-inset-bottom))]"
         >
           <NextMonthSheet @close="nextOpen = false" />
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Предложение поделиться: приходит в момент ценности, по разу на повод. -->
+    <Teleport to="body">
+      <div
+        v-if="shareOpen"
+        class="fixed inset-0 z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm"
+        role="presentation"
+        @click.self="closeShare"
+      >
+        <div
+          class="w-full max-w-[430px] rounded-t-2xl bg-[var(--bg)] p-4
+                 pb-[max(1rem,env(safe-area-inset-bottom))]"
+        >
+          <ShareSheet :reason="shareShownReason" @close="closeShare" />
         </div>
       </div>
     </Teleport>

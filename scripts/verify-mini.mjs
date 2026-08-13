@@ -2,6 +2,8 @@
 // Запуск: node scripts/verify-mini.mjs (из app/).
 import { computeMini, nextMonthState, sigClass } from '../src/composables/miniModel.js'
 import { calibrateFromDays, observationsByDow, shapeStatus, shapeName } from '../src/data/weekShape.js'
+import { computeEnergy, computeGaps, moduleGain, LEVELS, PART } from '../src/composables/energyModel.js'
+import { encodeState, decodeState, readShared, shareUrl, hasSharePayload } from '../src/composables/shareLink.js'
 
 let fails = 0
 const ok = (cond, name) => {
@@ -235,6 +237,136 @@ ok(n15b.coef_src === 'user' && n15b.shape_from === '',
   'своя настройка переносится собой: перекрашивать нечего')
 ok(nextMonthState(set15, { month: '2026-09', target: 0 }) === null,
   'перенос без плана не происходит')
+
+// 16. Энергия роста. Число публично и складывается из пяти компонент —
+// значит оно обязано быть проверяемым, иначе это шкала настроения.
+const set16 = {
+  month: '2026-08', month_target: 3_100_000, month_goal: 3_500_000,
+  dow_coef: [1, 1, 1, 1, 1, 1, 1], carry: null,
+  days: [{ date: '2026-08-01', rev: 100_000 }],
+}
+const m16 = computeMini(set16, NOW)
+const e16 = computeEnergy(set16, m16)
+ok(e16.pct === 20, 'потолок бесплатной версии — 20 %')
+ok(e16.parts.length === 5 && e16.parts.every((p) => p.max === 20),
+  'пять компонент по 20: сумма шкалы = 100')
+ok(e16.parts.find((p) => p.key === 'live').value === 0,
+  'живой контур в Мини недоступен: 0 %')
+
+// Пустое состояние: компонента засчитывается, когда существует, а не когда
+// про неё есть поле. Иначе меряется намерение, а не состояние.
+const e16b = computeEnergy({ month: '2026-08', month_target: 0, month_goal: null, days: [], carry: null }, null)
+ok(e16b.pct === 0, 'пустое состояние — 0 %, а не «пять за старание»')
+const set16c = { ...set16, month_goal: null }
+ok(computeEnergy(set16c, computeMini(set16c, NOW)).pct === 15,
+  'цель не поставлена — 15 %: сущности нет, процента нет')
+
+// Уровень подключения читается по посчитанному проценту, а не назначается.
+ok(e16.level.id === 'mini', 'уровень выводится из процента')
+ok(computeEnergy({ ...set16, month_target: 0, month_goal: null, days: [], carry: null }, null).level.id === 'mini',
+  'пустое состояние остаётся на первом этапе')
+ok(LEVELS.map((l) => l.cap).join() === '20,35,80,100',
+  'лестница этапов: 20 → 35 → 80 → 100')
+
+// Мощность модуля — посчитанный прирост на этом состоянии, а не «х1».
+ok(moduleGain('razbor', e16) === 15, 'разбор поднимает цель с 5 до 20: +15 %')
+ok(moduleGain('bootcamp', e16) === 30, 'буткемп поднимает факт и план: +30 %')
+ok(moduleGain('runscale', e16) === 20, 'режим Ранскейл даёт живой контур: +20 %')
+ok(moduleGain('session', e16) === 20, 'сессии: прогноз +15, план +5')
+// Шкала обязана закрываться ровно: потолок Мини плюс приросты разбора,
+// буткемпа, сессии по прогнозу и режима Ранскейл дают 100 и ни процентом
+// больше. Незакрывающаяся шкала — обещание, которое нечем выполнить.
+ok(e16.pct + moduleGain('razbor', e16) + moduleGain('bootcamp', e16)
+  + (PART - e16.parts.find((p) => p.key === 'forecast').value)
+  + moduleGain('runscale', e16) === 100, 'лестница модулей закрывает шкалу ровно до 100')
+
+// Разрывы считаются на числах владельца и называются направлением.
+const gaps16 = computeGaps(m16)
+ok(gaps16.length === 3, 'три разрыва: до прогноза, прогноз↔план, план↔цель')
+// Ровный темп: прогноз сходится с планом ровно — направления нет, и его
+// не выдумывают.
+ok(gaps16.find((g) => g.key === 'forecast-plan').tone === 'neutral',
+  'совпадение прогноза с планом не называется направлением')
+// Отставание: направление названо и посчитано.
+const set16d = { ...set16, days: [{ date: '2026-08-01', rev: 10_000 }] }
+const m16d = computeMini(set16d, NOW)
+const gpd = computeGaps(m16d).find((g) => g.key === 'forecast-plan')
+ok(gpd.tone === 'bad' && близко(gpd.value, m16d.T - m16d.landing, 1e-6),
+  'разрыв прогноз↔план посчитан и подписан направлением')
+ok(computeGaps(null).length === 0, 'без модели разрывов нет')
+
+// 17. Ссылка на месяц. Состояние уезжает в адрес и обязано вернуться тем же:
+// получатель видит те же числа, что отправитель, иначе ссылка врёт молча.
+const set17 = {
+  ready: true, company: 'Компания', unit: 'Первый юнит',
+  month: '2026-08', month_target: 3_100_000, month_goal: 3_500_000,
+  dow_coef: [0.85, 0.9, 0.95, 1, 1.2, 1.15, 0.95], coef_src: 'data', shape_id: 'default', shape_from: '',
+  carry: { upTo: '2026-08-05', amount: 400_000, spread: true },
+  days: [
+    { date: '2026-08-06', rev: 91_000, planRef: 100_000 },
+    { date: '2026-08-07', rev: 0 },
+  ],
+  forecastLog: [{ at: '2026-08-07', after: '2026-08-06', landing: 2_900_000, was: 3_000_000, goalState: 'ok' }],
+}
+const back17 = decodeState(encodeState(set17))
+ok(back17 !== null, 'ссылка расшифровывается обратно')
+ok(back17.month === set17.month && back17.month_target === set17.month_target
+  && back17.month_goal === set17.month_goal && back17.unit === set17.unit,
+  'месяц, план, цель и юнит доезжают без потерь')
+ok(JSON.stringify(back17.dow_coef) === JSON.stringify(set17.dow_coef)
+  && back17.coef_src === 'data', 'форма недели и её источник доезжают')
+ok(back17.carry.upTo === '2026-08-05' && back17.carry.amount === 400_000 && back17.carry.spread === true,
+  'стартовая сумма с разносом доезжает')
+ok(back17.days.length === 2 && back17.days[0].date === '2026-08-06'
+  && back17.days[0].planRef === 100_000 && back17.days[1].rev === 0,
+  'дни доезжают вместе с линейкой момента ввода, ноль остаётся нулём')
+ok(back17.forecastLog[0].after === '2026-08-06' && back17.forecastLog[0].goalState === 'ok',
+  'журнал прогноза доезжает')
+
+// Числа на экране получателя обязаны совпасть с числами отправителя.
+const mA = computeMini(set17, NOW)
+const mB = computeMini(back17, NOW)
+ok(близко(mA.landing, mB.landing, 1e-6) && близко(mA.realizedRev, mB.realizedRev, 1e-6)
+  && mA.goalState === mB.goalState, 'у получателя те же прогноз, факт и достижимость')
+ok(computeEnergy(set17, mA).pct === computeEnergy(back17, mB).pct,
+  'энергия у получателя та же')
+
+// Мусор в адресе не роняет приложение и не притворяется месяцем.
+ok(decodeState('не-ссылка') === null && decodeState('') === null, 'мусор в адресе даёт null')
+ok(readShared('#m=' + encodeState(set17)) !== null && readShared('#что-то') === null,
+  'месяц читается только из своего префикса')
+ok(hasSharePayload('#m=что-угодно') && !hasSharePayload('#другое') && !hasSharePayload(''),
+  'попытка открыть месяц отличается от обычного запуска')
+
+// Битое состояние не должно доходить до ядра: `computeMini` на выдуманном
+// месяце возвращает null, и экран получателя остался бы пустым без объяснения.
+const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64')
+  .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+ok(decodeState(b64({ v: 1, m: 'не-месяц', k: [1, 1, 1, 1, 1, 1, 1], t: 1 })) === null,
+  'выдуманный месяц отсекается до ядра')
+ok(decodeState(b64({ v: 1, m: '2026-13', k: [1, 1, 1, 1, 1, 1, 1], t: 1 })) === null,
+  'тринадцатого месяца не бывает')
+ok(decodeState(b64({ v: 1, m: '2026-08', k: [0, 0, 0, 0, 0, 0, 0], t: 1 })) === null,
+  'нулевые веса недели отсекаются: делить на них нечем')
+
+// Длина ссылки меряется на худшем случае — полный месяц с журналом,
+// иначе проверка называется одним, а меряет другое.
+const days17 = []
+const log17 = []
+for (let d = 1; d <= 31; d++) {
+  const iso = `2026-08-${String(d).padStart(2, '0')}`
+  days17.push({ date: iso, rev: 91_000 + d * 137, planRef: 100_000 })
+  log17.push({ at: iso, after: iso, landing: 3_000_000 + d, was: 3_000_000, goalState: 'ok' })
+}
+const full17 = { ...set17, days: days17, forecastLog: log17 }
+const len17 = shareUrl(full17, 'https://gderost.ru/').length
+ok(len17 < 4000, `ссылка на полный месяц с журналом укладывается в адрес (${len17} знаков)`)
+ok(decodeState(encodeState(full17)).days.length === 31, 'полный месяц доезжает целиком')
+
+// Перенос месяца обнуляет показанные предложения поделиться: повод
+// «месяц закрыт» относится к месяцу, а не к устройству.
+ok((nextMonthState(full17, { month: '2026-09', target: 3_000_000 }).shareSeen || []).length === 0,
+  'в новом месяце предложения поделиться приходят заново')
 
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')
 process.exit(fails ? 1 : 0)
