@@ -3,12 +3,15 @@ export default {
   content: ['./index.html', './src/**/*.{vue,js}'],
   theme: {
     extend: {
-      // Правило ролей шрифта из лекала:
-      // ввёл или измерил компьютер → моно; сказал человек → проза (системный).
-      // Брендовых начертаний пока нет, роли держатся на системных.
+      // Роли начертаний перенесены из рабочего Ранскейла.
+      // @font-face — в src/styles/main.css, файлы — в public/fonts.
+      // Фолбэки обязательны: font-display:swap показывает их, пока грузится брендовый.
       fontFamily: {
-        brand: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', 'system-ui', 'sans-serif'],
-        label: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Text"', 'system-ui', 'sans-serif'],
+        // голос бренда: имя продукта, высказывание входа, крупные действия
+        brand: ['"Ranscale Display"', '"Helvetica Neue Condensed"', 'Impact', 'sans-serif'],
+        // ярлыки приборов: подписи блоков и категорий
+        label: ['"Ranscale Label"', '"Helvetica Neue Condensed"', 'sans-serif'],
+        // данные и ввод: поля, коды, цифры
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
     },

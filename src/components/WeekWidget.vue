@@ -122,8 +122,8 @@ const pillText = computed(() => props.pill ?? formatPct(leftPct.value, 0))
     <!-- Шапка: слева период, справа остаток. Обе величины про месяц, поэтому
          стоят в одной строке; разные формы — текст и пилюля — разводят их
          без разделительных знаков. -->
-    <div class="flex items-start justify-between gap-3 px-1">
-      <h2 class="text-[0.9375rem] font-semibold" :style="{ color: skin.title }">{{ title }}</h2>
+    <div class="flex items-center justify-between gap-3 px-1">
+      <h2 class="text-[1.25rem] font-bold leading-none" :style="{ color: skin.title }">{{ title }}</h2>
 
       <div v-if="noteText || pillText" class="flex shrink-0 items-center gap-2">
         <span v-if="noteText" class="text-[0.75rem]" :style="{ color: skin.note }">{{ noteText }}</span>
@@ -142,8 +142,12 @@ const pillText = computed(() => props.pill ?? formatPct(leftPct.value, 0))
         :style="{ gridColumnStart: d.dow }"
       >
         <span class="text-[0.6875rem] font-medium" :style="{ color: skin.dow }">{{ d.dowRu }}</span>
+        <!-- Цифра центрируется по кругу через leading-none: с наследованной
+             высотой строки она садилась на базовую линию и висела ниже центра
+             на пиксель-два, а в ряду из семи кругов это видно сразу. -->
         <span
-          class="flex h-8 w-8 items-center justify-center rounded-full text-[0.9375rem] font-semibold tabular-nums"
+          class="flex h-8 w-8 items-center justify-center rounded-full text-[0.9375rem] font-semibold
+                 leading-none tabular-nums"
           :style="d.isToday
             ? { background: skin.todayBg, color: skin.todayInk }
             : { color: skin.num }"

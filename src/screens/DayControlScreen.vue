@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Plus, X } from 'lucide-vue-next'
 import DailyHero from '../components/daily/DailyHero.vue'
 import DailyKpis from '../components/daily/DailyKpis.vue'
@@ -7,7 +7,7 @@ import DailyWeeks from '../components/daily/DailyWeeks.vue'
 import DailySummary from '../components/daily/DailySummary.vue'
 import DailyJournal from '../components/daily/DailyJournal.vue'
 import DailyCoef from '../components/daily/DailyCoef.vue'
-import WeekShapeCard from '../components/WeekShapeCard.vue'
+import WeekShapeSheet from '../components/WeekShapeSheet.vue'
 import AddReportForm from '../components/AddReportForm.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { useNavCaption } from '../composables/useNavCaption.js'
@@ -48,6 +48,19 @@ function openSheet(iso = '') {
   pickedDate.value = iso
   sheet.value = true
 }
+
+// Наблюдение за нижней кнопкой: видна — плавающая не нужна.
+const bottomCta = ref(null)
+const bottomCtaVisible = ref(false)
+let io = null
+watch(bottomCta, (el) => {
+  if (io) { io.disconnect(); io = null }
+  bottomCtaVisible.value = false
+  if (!el || typeof IntersectionObserver === 'undefined') return
+  io = new IntersectionObserver(([e]) => { bottomCtaVisible.value = !!(e && e.isIntersecting) })
+  io.observe(el)
+}, { flush: 'post' })
+onBeforeUnmount(() => { if (io) { io.disconnect(); io = null } })
 </script>
 
 <template>
@@ -65,28 +78,37 @@ function openSheet(iso = '') {
       Все числа посчитаны на том, что внесли вы. Ничего не отправляется в сеть.
     </p>
 
-    <!-- Кнопка ввода — внизу по центру и липкая. Действие живёт там же, где
-         виден его результат: внести день и тут же увидеть, как сдвинулся
-         прогноз, — это и есть петля, ради которой экран существует.
-         Круглая кнопка дублирует ту же команду для большого пальца. -->
-    <div class="mt-6">
-      <button
-        type="button"
-        class="min-h-[52px] w-full rounded-2xl text-[1.0625rem] font-bold"
-        :style="{ background: 'var(--accent)', color: 'var(--accent-ink)' }"
-        @click="openSheet('')"
-      >{{ L.add_report }}</button>
-    </div>
+    <!-- Вход в ввод отчёта. Перенесено из оригинала: светлая кнопка во всю
+         ширину с жёлтым кружком-иконкой слева, а не сплошная жёлтая плашка. -->
+    <button
+      ref="bottomCta"
+      type="button"
+      class="mt-1 flex min-h-[52px] w-full items-center justify-center gap-2.5 rounded-2xl bg-[var(--surface)] shadow-sm transition-opacity active:opacity-90"
+      @click="openSheet('')"
+    >
+      <span class="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--accent)]">
+        <Plus class="h-[18px] w-[18px] text-[var(--accent-ink)]" :stroke-width="2.5" aria-hidden="true" />
+      </span>
+      <span class="text-[1rem] font-semibold text-[var(--text)]">{{ L.add_report }}</span>
+    </button>
 
-    <div class="pointer-events-none fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+4.75rem)] z-20 flex justify-center">
+    <!-- Плавающая кнопка гаснет, когда до нижней уже долистали: две кнопки
+         об одном на одном экране — шум, а не подстраховка. Наблюдение через
+         IntersectionObserver, а не слушатель скролла: тот будит отрисовку
+         на каждый кадр прокрутки, и на длинной странице это видно на телефоне. -->
+    <div
+      class="pointer-events-none fixed inset-x-0 bottom-0 z-30 mx-auto flex max-w-[430px] justify-center px-4"
+      style="padding-bottom: calc(env(safe-area-inset-bottom) + 4.75rem)"
+      aria-hidden="true"
+    >
       <button
+        v-show="!bottomCtaVisible"
         type="button"
-        class="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full"
-        :style="{ background: 'var(--accent)', boxShadow: '0 6px 20px rgba(0,0,0,0.18)' }"
+        class="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] shadow-lg transition-opacity duration-150 active:opacity-90"
         :aria-label="L.add_report"
         @click="openSheet('')"
       >
-        <Plus class="h-7 w-7" :style="{ color: 'var(--accent-ink)' }" :stroke-width="2.5" aria-hidden="true" />
+        <Plus class="h-7 w-7 text-[var(--accent-ink)]" :stroke-width="2.75" aria-hidden="true" />
       </button>
     </div>
 
@@ -102,18 +124,22 @@ function openSheet(iso = '') {
           class="max-h-[88svh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4
                  pb-[max(1rem,env(safe-area-inset-bottom))]"
         >
-          <div class="mb-3 flex justify-end">
-            <button
-              type="button"
-              class="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-2)]"
-              aria-label="Закрыть"
-              @click="sheet = false; tune = false"
-            >
-              <X class="h-5 w-5 text-[var(--text-secondary)]" :stroke-width="2" aria-hidden="true" />
-            </button>
-          </div>
-          <AddReportForm v-if="sheet" :preset="pickedDate" />
-          <WeekShapeCard v-else />
+          <template v-if="sheet">
+            <div class="mb-3 flex justify-end">
+              <button
+                type="button"
+                class="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-2)]"
+                aria-label="Закрыть"
+                @click="sheet = false"
+              >
+                <X class="h-5 w-5 text-[var(--text-secondary)]" :stroke-width="2" aria-hidden="true" />
+              </button>
+            </div>
+            <AddReportForm :preset="pickedDate" />
+          </template>
+          <!-- Свой крестик у настройки формы: у неё есть заголовок, и вторая
+               кнопка закрытия над ним читалась бы как закрытие чего-то ещё. -->
+          <WeekShapeSheet v-else @close="tune = false" />
         </div>
       </div>
     </Teleport>

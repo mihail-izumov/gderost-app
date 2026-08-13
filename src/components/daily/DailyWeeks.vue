@@ -18,6 +18,10 @@ import { mln, ths, thsSigned, dayGen, L, SIG_VAR } from '../../i18n/daily.js'
 //
 // Добавлено против оригинала: замок недели. Следующая неделя открывается,
 // когда закрыты прошедшие дни предыдущих — запирают данные, а не деньги.
+//
+// Раскрыта только текущая неделя. В оригинале открывалась каждая неделя
+// с фактом, и месяц разворачивался в тридцать одну строку: искать в ней ту,
+// в которой живёшь, приходится глазами. Прошлые недели открываются тапом.
 
 const props = defineProps({ m: { type: Object, required: true } })
 const emit = defineEmits(['pick'])
@@ -39,7 +43,7 @@ function progFill(r) {
     <details
       v-for="w in m.weeks"
       :key="w.idx"
-      :open="w.open && w.rows.some((r) => r.status != null)"
+      :open="w.open && w.isCurrent"
       class="mb-2 overflow-hidden rounded-2xl border bg-[var(--surface)]"
       :style="{ borderColor: w.isCurrent ? 'var(--text)' : 'var(--line)' }"
     >

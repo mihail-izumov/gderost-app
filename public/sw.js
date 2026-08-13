@@ -12,6 +12,11 @@ const PRECACHE = [
   BASE + 'manifest.json',
   BASE + 'icon-192.png', BASE + 'icon-512.png',
   BASE + 'runscale_chevron.svg', BASE + 'runscale_logo.svg',
+  // Начертания бренда — по той же причине: они подключаются из CSS, в разметке
+  // страницы их адресов нет. Без них первый запуск без сети покажет фолбэк,
+  // и имя продукта наберётся не тем шрифтом.
+  BASE + 'fonts/UniversLTCYR-67BoldCond.woff2',
+  BASE + 'fonts/UniversLTCYR-57Condensed.woff2',
 ]
 
 self.addEventListener('install', (e) => {

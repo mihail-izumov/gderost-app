@@ -9,12 +9,10 @@ import CountersCard from '../components/CountersCard.vue'
 </script>
 
 <template>
-  <div class="w-full pb-10">
-    <header class="pt-2">
-      <h1 class="font-brand text-[1.75rem] font-bold leading-tight tracking-tight text-[var(--text)]">
-        Ранскейл
-      </h1>
-      <p class="mt-2 text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
+  <div class="w-full px-4 pb-10">
+    <!-- Заголовок ставит шапка приложения: второй такой же в потоке — дубль. -->
+    <header>
+      <p class="text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
         Система, из ядра которой собрано это приложение. Здесь она работает
         на полных данных — на собственном сборе, с проверками и живыми встречами.
       </p>

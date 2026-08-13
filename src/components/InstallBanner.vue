@@ -1,111 +1,181 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { Share, Plus, X } from 'lucide-vue-next'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
+import { ChevronDown, Share, X } from 'lucide-vue-next'
+import { chevronStyle } from '../composables/brandMask.js'
 
-// «Откройте как приложение». Смысл не в красивой иконке: установленное на
-// домашний экран открывается одним касанием, работает без сети и не теряется
-// среди вкладок. Приложение, которое открывают каждый день, обязано открываться
-// быстрее, чем вспоминается адрес.
+// Баннер «Откройте Ранскейл как приложение». Перенесено из рабочего Ранскейла:
+// знак слева, заголовок в две строки, пилюля «Подробнее» с шевроном вниз,
+// крестик справа сверху, модалка-инструкция в четыре шага.
 //
-// В уже установленном виде баннер не показывается — предлагать сделанное значит
-// не заметить, что человек уже сделал.
+// Вместо иконки приложения — фирменный шеврон белым на чёрном: временная
+// иконка приложения сейчас заглушка, и ставить её в баннер про установку
+// значит показывать человеку то, чего он на домашнем экране не захочет.
+//
+// Логика показа:
+//   • уже запущено как установленное приложение → не показываем вовсе;
+//   • закрыли крестиком → прячем только в памяти текущего просмотра.
+//     Перезагрузка показывает баннер снова, в хранилище это не пишется.
 
-const standalone = ref(false)
-const isIOS = ref(false)
 const dismissed = ref(false)
-const open = ref(false)
+const standalone = ref(false)
+const modalOpen = ref(false)
 
-onMounted(() => {
-  if (typeof window === 'undefined') return
-  standalone.value = window.matchMedia('(display-mode: standalone)').matches
-    || window.navigator.standalone === true
-  isIOS.value = /iphone|ipad|ipod/i.test(window.navigator.userAgent)
-})
+const chevron = chevronStyle(34)
 
-const show = computed(() => !standalone.value && !dismissed.value)
+function detectStandalone() {
+  if (typeof window === 'undefined') return false
+  const mm = typeof window.matchMedia === 'function'
+    && window.matchMedia('(display-mode: standalone)').matches
+  // iOS Safari — нестандартный navigator.standalone.
+  const ios = window.navigator && window.navigator.standalone === true
+  return !!(mm || ios)
+}
+
+const visible = computed(() => !standalone.value && !dismissed.value)
+
+function dismiss() { dismissed.value = true }
+
+const closeBtnRef = ref(null)
+function onKey(e) {
+  if (e.key === 'Escape') { e.preventDefault(); closeModal() }
+}
+let prevOverflow = ''
+function openModal() {
+  modalOpen.value = true
+  nextTick(() => {
+    prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    document.addEventListener('keydown', onKey)
+    closeBtnRef.value?.focus?.()
+  })
+}
+function closeModal() {
+  modalOpen.value = false
+  document.body.style.overflow = prevOverflow
+  document.removeEventListener('keydown', onKey)
+}
+
+onMounted(() => { standalone.value = detectStandalone() })
+onBeforeUnmount(() => { if (modalOpen.value) closeModal() })
+
+const steps = [
+  'Откройте сайт в Safari на айфоне.',
+  'Нажмите кнопку «Поделиться» внизу экрана — квадрат со стрелкой вверх.',
+  'Пролистайте меню и выберите «На экран „Домой“».',
+  'Нажмите «Добавить» — иконка появится рядом с другими приложениями.',
+]
 </script>
 
 <template>
-  <div v-if="show">
-    <div class="flex items-start gap-3 rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-3">
-      <div class="min-w-0 flex-1">
-        <p class="text-[0.9375rem] font-semibold leading-tight text-[var(--text)]">
-          Откройте как приложение
-        </p>
-        <p class="mt-1 text-[0.8125rem] leading-snug text-[var(--text-secondary)]">
-          С домашнего экрана открывается одним касанием и работает без сети.
-        </p>
+  <div v-if="visible" class="mt-2">
+    <div class="relative flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-lg">
+      <span
+        class="relative flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center overflow-hidden rounded-2xl"
+        :style="{ background: 'var(--surface-black)' }"
+      >
+        <span class="block" :style="{ ...chevron, background: 'var(--ink-on-color)' }" aria-hidden="true" />
+        <span class="bc-shine" aria-hidden="true" />
+      </span>
+      <div class="flex min-w-0 flex-1 flex-col gap-1 pr-8">
+        <span class="text-[0.9375rem] font-semibold leading-[1.15] text-[var(--text)]">
+          Откройте Ранскейл<br>как приложение
+        </span>
         <button
           type="button"
-          class="mt-1.5 min-h-[44px] text-[0.8125rem] font-semibold"
-          :style="{ color: 'var(--action)' }"
-          @click="open = true"
-        >Как это сделать</button>
+          class="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--text)] px-2.5 py-0.5 text-[0.75rem] font-medium text-[var(--ink-on-color)] active:opacity-90"
+          @click="openModal"
+        >
+          Подробнее
+          <ChevronDown class="h-3.5 w-3.5" :stroke-width="2" aria-hidden="true" />
+        </button>
       </div>
       <button
         type="button"
-        class="-mr-1 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center"
-        aria-label="Скрыть"
-        @click="dismissed = true"
+        class="absolute right-2 top-2 inline-flex h-9 w-9 items-center justify-center rounded-full text-[var(--text-muted)] active:bg-[var(--surface-2)]"
+        aria-label="Скрыть баннер"
+        @click="dismiss"
       >
-        <X class="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+        <X class="h-5 w-5" :stroke-width="2" />
       </button>
     </div>
 
-    <!-- Инструкция: три шага и ни одного лишнего слова -->
     <div
-      v-if="open"
-      class="fixed inset-0 z-50 flex items-end justify-center"
-      :style="{ background: 'var(--scrim)' }"
-      @click.self="open = false"
+      v-if="modalOpen"
+      class="fixed inset-0 z-50 flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm sm:items-center"
+      role="presentation"
+      @click.self="closeModal"
     >
       <div
-        class="w-full max-w-[430px] rounded-t-2xl bg-[var(--surface)] p-4
-               pb-[max(1rem,env(safe-area-inset-bottom))]"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Как установить приложение"
+        class="bc-fade-in flex max-h-[88svh] w-full max-w-[430px] flex-col overflow-hidden rounded-t-2xl bg-[var(--surface)] shadow-2xl sm:rounded-2xl"
+        style="padding-bottom: env(safe-area-inset-bottom)"
       >
-        <div class="flex items-start justify-between gap-3">
-          <h2 class="text-[1.0625rem] font-bold leading-tight text-[var(--text)]">
-            Установка на домашний экран
-          </h2>
+        <header class="flex items-center gap-3 border-b border-[var(--line)] px-4 py-3">
+          <span class="inline-flex items-center gap-2 rounded-full bg-[var(--surface-2)] px-3 py-1.5 text-[0.9375rem] font-medium text-[var(--text)]">
+            <Share class="h-4 w-4 shrink-0 text-[var(--text-muted)]" :stroke-width="2" aria-hidden="true" />
+            Установка
+          </span>
           <button
+            ref="closeBtnRef"
             type="button"
-            class="-mr-1 -mt-1 flex h-11 w-11 shrink-0 items-center justify-center"
+            class="ml-auto inline-flex h-11 w-11 items-center justify-center rounded-full text-[var(--text-secondary)] active:bg-[var(--surface-2)]"
             aria-label="Закрыть"
-            @click="open = false"
+            @click="closeModal"
           >
-            <X class="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            <X class="h-5 w-5" :stroke-width="2" />
           </button>
+        </header>
+
+        <div class="flex-1 overflow-y-auto px-4 py-4">
+          <h2 class="text-[1.25rem] font-semibold leading-snug text-[var(--text)]">
+            Как пользоваться Ранскейлом на айфоне
+          </h2>
+          <p class="mt-2 text-[1rem] leading-relaxed text-[var(--text-secondary)]">
+            Это веб-приложение — устанавливать из App Store ничего не нужно.
+            Добавьте ярлык на домашний экран и пользуйтесь как обычным приложением.
+            Без сети оно тоже открывается.
+          </p>
+
+          <h3 class="mt-5 text-[0.8125rem] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+            Добавьте Ранскейл на домашний экран
+          </h3>
+          <ol class="mt-3 flex flex-col gap-3">
+            <li v-for="(step, i) in steps" :key="i" class="flex items-start gap-3">
+              <span class="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[0.8125rem] font-semibold text-[var(--text-secondary)]">
+                {{ i + 1 }}
+              </span>
+              <span class="text-[1rem] leading-snug text-[var(--text)]">{{ step }}</span>
+            </li>
+          </ol>
         </div>
-
-        <ol v-if="isIOS" class="mt-3 flex flex-col gap-3">
-          <li class="flex items-start gap-2.5">
-            <Share class="mt-0.5 h-5 w-5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
-            <span class="text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
-              Нажмите «Поделиться» в нижней панели Safari
-            </span>
-          </li>
-          <li class="flex items-start gap-2.5">
-            <Plus class="mt-0.5 h-5 w-5 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
-            <span class="text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
-              Выберите «На экран „Домой“»
-            </span>
-          </li>
-          <li class="flex items-start gap-2.5">
-            <span class="mt-0.5 h-5 w-5 shrink-0 text-center text-[0.9375rem] text-[var(--text-secondary)]">3</span>
-            <span class="text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
-              Подтвердите «Добавить» — иконка появится рядом с остальными приложениями
-            </span>
-          </li>
-        </ol>
-        <p v-else class="mt-3 text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
-          В меню браузера выберите «Установить приложение» или «Добавить на главный экран».
-          Пункт называется по-разному, но лежит в главном меню.
-        </p>
-
-        <p class="mt-4 text-[0.75rem] leading-snug text-[var(--text-muted)]">
-          Данные останутся на устройстве и после установки. Аккаунта по-прежнему нет.
-        </p>
       </div>
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Периодический блик по знаку: диагональная полоса света раз в шесть секунд.
+   Цвет из токена через color-mix, без хардкода. */
+.bc-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    115deg,
+    transparent 38%,
+    color-mix(in srgb, var(--ink-on-color) 55%, transparent) 50%,
+    transparent 62%
+  );
+  transform: translateX(-120%);
+  animation: bc-shine-sweep 6s ease-in-out infinite;
+}
+@keyframes bc-shine-sweep {
+  0%, 72% { transform: translateX(-120%); }
+  88%, 100% { transform: translateX(120%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bc-shine { animation: none; opacity: 0; }
+}
+</style>

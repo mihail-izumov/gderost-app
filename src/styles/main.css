@@ -1,6 +1,25 @@
-/* ===== Design tokens — ЕДИНСТВЕННОЕ место во всём проекте, где допустим hex =====
-   Блок @font-face не переносился: брендовых начертаний пока нет,
-   роли шрифта держатся на системных (tailwind.config.js). */
+/* ===== Начертания бренда =====
+   Голос бренда — Univers Bold Condensed, ярлыки приборов — Univers Condensed.
+   Роли назначаются в tailwind.config.js; фолбэки там обязательны, потому что
+   font-display:swap показывает их, пока брендовый файл ещё грузится. */
+@font-face {
+  font-family: 'Ranscale Display';
+  src: url('/fonts/UniversLTCYR-67BoldCond.woff2') format('woff2'),
+       url('/fonts/UniversLTCYR-67BoldCond.woff') format('woff');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Ranscale Label';
+  src: url('/fonts/UniversLTCYR-57Condensed.woff2') format('woff2'),
+       url('/fonts/UniversLTCYR-57Condensed.woff') format('woff');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ===== Design tokens — ЕДИНСТВЕННОЕ место во всём проекте, где допустим hex ===== */
 :root {
   /* нейтрали (светлый холст) */
   --bg: #F7F6F3;  --surface: #FFFFFF;  --surface-2: #F1F0EC;

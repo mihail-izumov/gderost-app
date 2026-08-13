@@ -10,12 +10,10 @@ import StatusChip from '../components/StatusChip.vue'
 </script>
 
 <template>
-  <div class="w-full pb-10">
-    <header class="pt-2">
-      <h1 class="font-brand text-[1.75rem] font-bold leading-tight tracking-tight text-[var(--text)]">
-        Сила роста
-      </h1>
-      <p class="mt-2 text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
+  <div class="w-full px-4 pb-10">
+    <!-- Заголовок ставит шапка приложения: второй такой же в потоке — дубль. -->
+    <header>
+      <p class="text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
         Здесь введённое проходит проверку и становится проверенным.
         Раздела пока нет — вот что он будет делать и почему без него ваши числа
         остаются на второй ступени.

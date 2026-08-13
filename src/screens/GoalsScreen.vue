@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { ChevronLeft, AlertCircle } from 'lucide-vue-next'
+import { AlertCircle } from 'lucide-vue-next'
 import MoneyField from '../components/MoneyField.vue'
 import StatusChip from '../components/StatusChip.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
@@ -49,21 +49,11 @@ function save() {
 </script>
 
 <template>
-  <div v-if="m" class="w-full pb-10">
-    <header class="pt-2">
-      <button
-        type="button"
-        class="-ml-1 flex min-h-[44px] items-center gap-1 text-[0.9375rem] font-medium"
-        :style="{ color: 'var(--action)' }"
-        @click="emit('back')"
-      >
-        <ChevronLeft class="h-5 w-5" aria-hidden="true" />
-        Сегодня
-      </button>
-      <h1 class="mt-1 font-brand text-[1.75rem] font-bold leading-tight tracking-tight text-[var(--text)]">
-        Цели и планы
-      </h1>
-      <p class="mt-2 text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
+  <div v-if="m" class="w-full px-4 pb-10">
+    <!-- Ни заголовка, ни кнопки назад: и то и другое стоит в шапке приложения.
+         Своя пара здесь давала два «Цели и планы» подряд и две ссылки назад. -->
+    <header>
+      <p class="text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
         {{ monthLabel(m.month) }}. План — обязательство, цель — то, ради чего стараются
         сверх него. Прогноз не ставится, он считается.
       </p>

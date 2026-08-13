@@ -8,7 +8,7 @@
 
 import { reactive, computed, watch } from 'vue'
 import { computeMini, todayISO } from './miniModel.js'
-import { NEUTRAL } from '../data/weekShape.js'
+import { DEFAULT } from '../data/weekShape.js'
 
 const KEY = 'gderost.mini.v1'
 
@@ -20,9 +20,9 @@ function emptyState() {
     month: '',           // 'YYYY-MM'
     month_target: 0,
     month_goal: null,
-    dow_coef: [...NEUTRAL],
+    dow_coef: [...DEFAULT],
     coef_src: 'preset',
-    shape_id: 'neutral',
+    shape_id: 'default',
     carry: null,         // { upTo:'YYYY-MM-DD', amount:Number }
     days: [],            // [{ date:'YYYY-MM-DD', rev:Number }]
     forecastLog: [],     // [{ at:'YYYY-MM-DD', after:'YYYY-MM-DD', landing:Number }]
@@ -40,7 +40,7 @@ function load() {
     Object.keys(base).forEach((k) => {
       if (saved[k] !== undefined) base[k] = saved[k]
     })
-    if (!Array.isArray(base.dow_coef) || base.dow_coef.length !== 7) base.dow_coef = [...NEUTRAL]
+    if (!Array.isArray(base.dow_coef) || base.dow_coef.length !== 7) base.dow_coef = [...DEFAULT]
     if (!Array.isArray(base.days)) base.days = []
     if (!Array.isArray(base.forecastLog)) base.forecastLog = []
   } catch {
