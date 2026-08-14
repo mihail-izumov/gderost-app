@@ -10,11 +10,12 @@ import NextMonthSheet from '../components/NextMonthSheet.vue'
 import ShareSheet from '../components/ShareSheet.vue'
 import BottomSheet from '../components/BottomSheet.vue'
 import StoryOnboarding from '../components/StoryOnboarding.vue'
-import BootcampBanner from '../components/energy/BootcampBanner.vue'
+import LadderBanner from '../components/energy/LadderBanner.vue'
+import HonestBadge from '../components/HonestBadge.vue'
 import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
 import { sigClass, todayISO } from '../composables/miniModel.js'
 import { mlnRub, mlnSigned, pct1, pctDelta, monthCap } from '../i18n/home.js'
-import { widgetStory } from '../i18n/stories.js'
+import { widgetStory, HONEST_STORY } from '../i18n/stories.js'
 
 // Главная — дека виджетов. Устройство взято у рабочего Ранскейла:
 // дека месяца в рублях и днях, два виджета в отношениях, вход внутрь по тапу.
@@ -132,15 +133,28 @@ function closeShare() {
   shareOpen.value = false
 }
 
-// Слайды сторис собираются на текущих числах в момент открытия.
-const storySlides = computed(() => widgetStory({
+// Сторис на этом экране две: разбор виджетов на своих числах и «Честная
+// цифра» с шильда. Открывающий ставит сюжет, дальше механика одна.
+const storyKind = ref('widgets')
+
+const widgetSlides = computed(() => widgetStory({
   planFact: m.value && m.value.onPlan != null ? pct1(m.value.onPlan) : '',
   planFactLine: planFactInfo.value,
   pace: m.value ? mlnRub(m.value.landing) : '',
   paceLine: paceInfo.value,
 }))
+const storySlides = computed(() => (storyKind.value === 'honest' ? HONEST_STORY : widgetSlides.value))
 
-// Финал сторис ведёт на «Буткемп»: уровень посчитан там.
+function openWidgetStory() {
+  storyKind.value = 'widgets'
+  storyOpen.value = true
+}
+function openHonest() {
+  storyKind.value = 'honest'
+  storyOpen.value = true
+}
+
+// Финал ведёт на «Разборы»: и уровень, и статусы чисел посчитаны там.
 function storyDone() {
   storyOpen.value = false
   emit('go', 'power')
@@ -168,6 +182,12 @@ function storyDone() {
     </div>
 
     <MonthProgressCard class="mb-3" :slides="slides" :month="m.month" :days-left="m.daysLeft" />
+
+    <!-- Статус чисел стоит там же, где числа: под декой месяца. Устройство
+         объясняет сторис, экран сообщает состояние. -->
+    <div class="mb-3">
+      <HonestBadge @open="openHonest" />
+    </div>
 
     <div class="flex gap-3">
       <HomeWidget
@@ -207,7 +227,7 @@ function storyDone() {
     <button
       type="button"
       class="mt-3 flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-[var(--surface)] px-4 py-3 text-left shadow-sm transition-colors active:bg-[var(--surface-2)]"
-      @click="storyOpen = true"
+      @click="openWidgetStory"
     >
       <span
         class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
@@ -225,10 +245,10 @@ function storyDone() {
       <ChevronRight class="h-5 w-5 shrink-0 text-[var(--text-muted)]" :stroke-width="2.5" aria-hidden="true" />
     </button>
 
-    <!-- Буткемп маячит и здесь: человек, который ведёт свой месяц, дорогу
-         дальше видит с того же экрана. Открывает вкладку, а не шторку —
+    <!-- Дорога маячит и здесь: человек, который ведёт свой месяц, видит
+         следующую ступень с того же экрана. Открывает вкладку, а не шторку —
          на вкладке лежит всё, ради чего он туда идёт. -->
-    <BootcampBanner class="mt-3" @open="emit('go', 'power')" />
+    <LadderBanner class="mt-3" @open="emit('go', 'power')" />
 
     <div class="mt-3">
       <TryWeekCard />

@@ -2,9 +2,9 @@
 // Запуск: node scripts/verify-mini.mjs (из app/).
 import { computeMini, nextMonthState, sigClass } from '../src/composables/miniModel.js'
 import { calibrateFromDays, observationsByDow, shapeStatus, shapeName } from '../src/data/weekShape.js'
-import { computeEnergy, computeGaps, moduleGain, LEVELS, PART } from '../src/composables/energyModel.js'
+import { computeEnergy, computeGaps, moduleGain, LEVELS, PART, PARTS, MODULE_LIFTS } from '../src/composables/energyModel.js'
 import { encodeState, decodeState, readShared, shareUrl, hasSharePayload } from '../src/composables/shareLink.js'
-import { MODULES, SESSIONS, BY_LABEL } from '../src/i18n/energy.js'
+import { MODULES, SESSIONS, BY_LABEL, isLocked } from '../src/i18n/energy.js'
 
 let fails = 0
 const ok = (cond, name) => {
@@ -256,8 +256,8 @@ const e16 = computeEnergy(set16, m16)
 ok(e16.pct === 20, 'потолок бесплатной версии — 20 %')
 ok(e16.parts.length === 5 && e16.parts.every((p) => p.max === 20),
   'пять компонент по 20: сумма шкалы = 100')
-ok(e16.parts.find((p) => p.key === 'live').value === 0,
-  'живой контур в Мини недоступен: 0 %')
+ok(e16.parts.find((p) => p.key === 'drivers').value === 0,
+  'драйверов в Мини нет: 0 %')
 
 // Пустое состояние: компонента засчитывается, когда существует, а не когда
 // про неё есть поле. Иначе меряется намерение, а не состояние.
@@ -271,40 +271,80 @@ ok(computeEnergy(set16c, computeMini(set16c, NOW)).pct === 15,
 ok(e16.level.id === 'mini', 'уровень выводится из процента')
 ok(computeEnergy({ ...set16, month_target: 0, month_goal: null, days: [], carry: null }, null).level.id === 'mini',
   'пустое состояние остаётся на первом этапе')
-ok(LEVELS.map((l) => l.cap).join() === '20,70,80',
-  'лестница этапов: 20 → 70 → 80')
-ok(LEVELS.length === 3 && !LEVELS.some((l) => l.id === 'runscale'),
-  'этапов три: подписка живёт своей вкладкой, а не ступенью подготовки')
+ok(LEVELS.map((l) => l.cap).join() === '20,45,65,100',
+  'лестница этапов: 20 → 45 → 65 → 100')
+// Недостижимый этап — дефект шкалы: владелец, купивший всё на своём участке,
+// обязан на него встать. Раньше этап «Сессии» стоял на 70 при потолке 55.
+const TOP = PARTS.reduce((a, p) => a + p.steps[p.steps.length - 1].pct, 0)
+ok(TOP === 100, 'сумма верхних ступеней всех компонент — ровно 100')
+const reach = {
+  mini: 20,
+  razbory: 20 + moduleGain('razbor', e16) + moduleGain('masterplan', e16),
+  bootcamp: 65,
+  runscale: 100,
+}
+ok(LEVELS.every((l) => reach[l.id] >= l.cap), 'каждый этап достижим суммой ступеней')
 
 // Мощность модуля — посчитанный прирост на этом состоянии, а не «х1».
-ok(moduleGain('razbor', e16) === 15, 'разбор поднимает цель с 5 до 20: +15 %')
+ok(moduleGain('razbor', e16) === 10, 'разбор поднимает план и цель до середины: +10 %')
+ok(moduleGain('masterplan', e16) === 20, 'серия разборов на состоянии Мини: +20 %')
 ok(moduleGain('bootcamp', e16) === 30, 'буткемп поднимает факт и план: +30 %')
-ok(moduleGain('runscale', e16) === 20, 'режим Ранскейл даёт живой контур: +20 %')
-ok(moduleGain('session-forecast', e16) === 15, 'сессия по прогнозу: +15 %')
-ok(moduleGain('session-plan', e16) === 5, 'сессия по плану: +5 %')
-ok(moduleGain('session-drivers', e16) === 5, 'сессия по драйверам — та же ступень плана: +5 %')
-ok(moduleGain('session-goal', e16) === 15, 'сессия по цели: +15 %')
-// Шкала обязана закрываться ровно: потолок Мини плюс приросты разбора,
-// буткемпа, сессии по прогнозу и режима Ранскейл дают 100 и ни процентом
-// больше. Незакрывающаяся шкала — обещание, которое нечем выполнить.
-ok(e16.pct + moduleGain('razbor', e16) + moduleGain('bootcamp', e16)
-  + (PART - e16.parts.find((p) => p.key === 'forecast').value)
-  + moduleGain('runscale', e16) === 100, 'лестница модулей закрывает шкалу ровно до 100')
+ok(moduleGain('runscale', e16) === 50, 'режим поднимает прогноз, цель и драйверы: +50 %')
+// Ни одна ступень не принадлежит двум платным модулям. Иначе вторая покупка
+// показала бы «+0 %» рядом с ценой — ровно та дыра, из-за которой линейка
+// пересобиралась 15.08.
+const liftKeys = Object.entries(MODULE_LIFTS)
+  .flatMap(([, lifts]) => Object.entries(lifts).map(([k, v]) => `${k}:${v}`))
+ok(new Set(liftKeys).size === liftKeys.length, 'ступень принадлежит одному модулю')
+
+// Мощность считается на состоянии, в котором ступень покупают: дорога идёт
+// снизу вверх, и каждая следующая берёт только то, что осталось.
+const cur = Object.fromEntries(PARTS.map((p) => [p.key, p.steps[0].pct]))
+const pathGain = {}
+for (const id of SESSIONS) {
+  let g = 0
+  for (const [k, to] of Object.entries(MODULE_LIFTS[id])) {
+    g += Math.max(0, to - cur[k])
+    cur[k] = Math.max(cur[k], to)
+  }
+  pathGain[id] = g
+}
+ok(pathGain.razbor === 10 && pathGain.masterplan === 15
+  && pathGain.bootcamp === 20 && pathGain.runscale === 35,
+  'по дороге: +10 · +15 · +20 · +35')
+ok(20 + SESSIONS.reduce((a, id) => a + pathGain[id], 0) === 100,
+  'дорога закрывает шкалу ровно до 100')
+
+// Каждая ступень что-то даёт человеку из Мини: платный модуль с нулевой
+// мощностью на витрине — сломанный товар, а не состояние пользователя.
+ok(SESSIONS.every((id) => moduleGain(id, e16) > 0),
+  'у каждой ступени мощность на состоянии Мини больше нуля')
+
+// Цена за процент не убывает вверх по лестнице: внизу покупается разговор,
+// наверху — живая система, и она за процент дороже. Режим считается пакетом
+// от трёх месяцев: это его минимальная покупка.
+const fullPrice = (id) => MODULES[id].price * (MODULES[id].priceUnit ? 3 : 1)
+const perPct = SESSIONS.map((id) => fullPrice(id) / pathGain[id])
+ok(perPct.every((v, i) => i === 0 || v >= perPct[i - 1]),
+  'цена за процент растёт по лестнице')
 
 // Каждая карта сущности знает свой модуль: кнопка «+N%» открывает паспорт
 // того, что эту ступень поднимает. Модуль без паспорта — мёртвая кнопка,
 // и на экране она выглядит точно так же, как живая.
 const byOf = (k) => e16.parts.find((p) => p.key === k).nextBy
-ok(byOf('fact') === 'bootcamp' && byOf('forecast') === 'session-forecast'
-  && byOf('plan') === 'session-plan' && byOf('goal') === 'razbor',
+ok(byOf('fact') === 'bootcamp' && byOf('forecast') === 'runscale'
+  && byOf('plan') === 'razbor' && byOf('goal') === 'razbor',
   'у каждой сущности назван свой модуль')
-ok([...SESSIONS, 'bootcamp', 'runscale'].every((id) => MODULES[id] && BY_LABEL[id]),
-  'у каждого модуля есть паспорт и имя')
-ok(SESSIONS[0] === 'razbor' && SESSIONS.length === 5,
-  'лента сессий: разбор первым, за ним четыре темы')
-ok(MODULES['session-drivers'].price === 105000, 'сессия по драйверам — 105 000 ₽')
-ok(MODULES.razbor.price === 50000 && ['session-goal', 'session-plan', 'session-forecast']
-  .every((id) => MODULES[id].price === 50000), 'разбор и тематические сессии — 50 000 ₽')
+ok(SESSIONS.every((id) => MODULES[id] && BY_LABEL[id]),
+  'у каждой ступени есть паспорт и имя')
+ok(SESSIONS.join() === 'razbor,masterplan,bootcamp,runscale',
+  'лента ступеней: вход, серия, буткемп, режим')
+ok(MODULES.razbor.price === 100000 && MODULES.masterplan.price === 250000
+  && MODULES.bootcamp.price === 650000 && MODULES.runscale.price === 650000,
+  'прайс: 100 000 · 250 000 · 650 000 · 650 000 в месяц')
+ok(isLocked('masterplan', false) && !isLocked('masterplan', true)
+  && isLocked('runscale', true) && !isLocked('razbor', false),
+  'замок: серия — после разбора, режим — после буткемпа, вход открыт всегда')
 
 // Разрывы считаются на числах владельца и называются направлением.
 const gaps16 = computeGaps(m16)

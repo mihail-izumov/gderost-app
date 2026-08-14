@@ -2,6 +2,9 @@
 import { computed, ref } from 'vue'
 import { Download, ArrowRight, Check } from 'lucide-vue-next'
 import ConnectProgress from '../components/energy/ConnectProgress.vue'
+import HonestBadge from '../components/HonestBadge.vue'
+import StoryOnboarding from '../components/StoryOnboarding.vue'
+import { HONEST_STORY } from '../i18n/stories.js'
 import SiteFooter from '../components/SiteFooter.vue'
 import { computeMini } from '../composables/miniModel.js'
 import { computeEnergy, computeGaps } from '../composables/energyModel.js'
@@ -81,6 +84,10 @@ async function download() {
     saveFailed.value = true
   }
 }
+
+// Сторис «Честная цифра» открывается и здесь: шильд без объяснения был бы
+// украшением, а получателю ссылки статус числа важнее всего.
+const honestOpen = ref(false)
 </script>
 
 <template>
@@ -116,6 +123,12 @@ async function download() {
         :pct="energy.pct"
         :level-id="energy.level.id"
       />
+
+      <!-- Статус чисел получателю нужнее, чем автору: он видит чужой месяц
+           и обязан знать, на чём тот стоит, до того как поверит цифрам. -->
+      <div class="mt-3">
+        <HonestBadge @open="honestOpen = true" />
+      </div>
 
       <section class="mt-3 rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-4">
         <dl class="flex flex-col">
@@ -176,6 +189,12 @@ async function download() {
       </button>
 
       <SiteFooter />
+      <StoryOnboarding
+        :open="honestOpen"
+        :slides="HONEST_STORY"
+        @close="honestOpen = false"
+        @done="honestOpen = false"
+      />
     </div>
   </div>
 </template>

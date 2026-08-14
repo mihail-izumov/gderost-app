@@ -7,13 +7,15 @@ import { MODULES, ORDER_STEPS } from '../../i18n/energy.js'
 import { useMiniStore } from '../../composables/useMiniStore.js'
 import { monthCap } from '../../i18n/home.js'
 import ShareMonthButton from '../ShareMonthButton.vue'
+import HonestBadge from '../HonestBadge.vue'
 
 // Паспорт модуля: услуга описана как устройство.
 //
 // Три плитки — скорость, мощность, расход — и спецификация строками.
 // Мощность не написана словом, а посчитана на состоянии владельца: разбор
-// поднимает цель с 5 до 20, значит на его паспорте стоит «+15%». Так лестница
-// сверху и паспорт говорят на одном языке.
+// поднимает план и цель до середины, значит на его паспорте стоит «+10%»,
+// а у того, кто перепрыгнул ступень, число будет больше. Так лестница сверху
+// и паспорт говорят на одном языке.
 //
 // Заказ живёт здесь же: отправка данных и есть заказ, и кнопка на это одна.
 // Выгрузка файлом и ссылка на сайт стояли рядом как равные действия
@@ -51,7 +53,12 @@ const bring = computed(() => {
 const tiles = computed(() => (!mod.value ? [] : [
   { label: 'Скорость', value: mod.value.speed },
   { label: 'Мощность', value: gain.value > 0 ? `+${gain.value}%` : '—' },
-  { label: 'Расход', value: mod.value.price ? formatRub(mod.value.price) : 'на разборе' },
+  {
+    label: 'Расход',
+    value: mod.value.price
+      ? formatRub(mod.value.price) + (mod.value.priceUnit ? ' / мес' : '')
+      : 'на разборе',
+  },
 ]))
 </script>
 
@@ -91,6 +98,13 @@ const tiles = computed(() => (!mod.value ? [] : [
 
     <p v-if="mod.note" class="mt-1 text-[0.75rem] leading-snug text-[var(--text-muted)]">{{ mod.note }}</p>
 
+    <!-- Буткемп — единственная ступень, которая ставит числам последний
+         статус. Шильд с тремя заполненными делениями показывает это ровно
+         там, где человек читает состав продукта. -->
+    <div v-if="moduleId === 'bootcamp'" class="mt-3">
+      <HonestBadge :filled="3" />
+    </div>
+
     <!-- Заказ. Первый шаг — отправка данных: без них встречу назначать не на чем. -->
     <template v-if="!locked">
       <!-- Заявка уже отправлена: человек вернулся в паспорт и обязан увидеть
@@ -127,9 +141,7 @@ const tiles = computed(() => (!mod.value ? [] : [
         class="mt-3"
         tone="accent"
         :icon="false"
-        :label="sent
-          ? 'Отправить ещё раз'
-          : moduleId === 'razbor' ? 'Отправить данные на разбор' : 'Отправить данные на сессию'"
+        :label="sent ? 'Отправить ещё раз' : mod.cta"
         @shared="store.addRequest(moduleId)"
       />
 
@@ -151,7 +163,7 @@ const tiles = computed(() => (!mod.value ? [] : [
       <div class="mt-4 flex items-center gap-2.5 rounded-xl px-3 py-2.5" :style="{ background: 'var(--surface-2)' }">
         <Lock class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" :stroke-width="2" aria-hidden="true" />
         <span class="text-[0.8125rem] leading-snug text-[var(--text-secondary)]">
-          Будет доступно после первой сессии
+          {{ mod.lockNote || 'Будет доступно после разбора' }}
         </span>
       </div>
       <button

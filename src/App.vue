@@ -78,9 +78,9 @@ const TABS = computed(() => [
   // человеку незачем.
   {
     id: 'power',
-    label: 'Буткемп',
+    label: 'Разборы',
     icon: Zap,
-    title: 'Буткемп',
+    title: 'Разборы',
     leadingAction: 'hardReload',
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',

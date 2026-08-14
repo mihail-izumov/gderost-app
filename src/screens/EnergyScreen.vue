@@ -6,7 +6,6 @@ import EnergyBreakdown from '../components/energy/EnergyBreakdown.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
 import SessionRail from '../components/energy/SessionRail.vue'
 import RateRazborSheet from '../components/energy/RateRazborSheet.vue'
-import BootcampBanner from '../components/energy/BootcampBanner.vue'
 import RequestList from '../components/energy/RequestList.vue'
 import BottomSheet from '../components/BottomSheet.vue'
 import StoryOnboarding from '../components/StoryOnboarding.vue'
@@ -14,14 +13,17 @@ import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { computeEnergy } from '../composables/energyModel.js'
 import { ENTITY_STORY } from '../i18n/stories.js'
+import { isLocked } from '../i18n/energy.js'
 
-// «Буткемп» — вкладка, на которой человек видит, где он на дороге и чем эта
+// «Разборы» — вкладка, на которой человек видит, где он на дороге и чем эта
 // дорога проходится.
 //
 // Экран стоит на одном развороте: плашка юнита с процентом, вход в цели
-// и планы, лента сессий с переключателем «Сессии / Мои старты», баннер
-// буткемпа. Всё остальное живёт в шторках и открывается оттуда, где о нём
-// зашла речь.
+// и планы, лента из четырёх ступеней с переключателем «Ступени / Мои старты».
+// Всё остальное живёт в шторках и открывается оттуда, где о нём зашла речь.
+//
+// Отдельного баннера буткемпа здесь больше нет: буткемп стоит в ленте своей
+// карточкой, и второй вход к нему на том же экране был бы шумом.
 //
 // Карточек четырёх сущностей здесь больше нет. Уровни `N / 20` были видимой
 // частью формулы, но экран от них читался вторым дашбордом: те же четыре
@@ -41,7 +43,7 @@ const state = store.state
 
 const energy = computed(() => computeEnergy(state, m.value))
 
-// Сессии открываются отметкой о состоявшемся разборе. Проверить её нечем,
+// Серия открывается отметкой о состоявшемся разборе. Проверить её нечем,
 // и заказ всё равно проходит через живого человека — отметка открывает
 // возможность заказать, а не сам продукт. Отметить можно только в паспорте
 // самого разбора: на чужих карточках эта кнопка читалась как отмычка.
@@ -94,7 +96,7 @@ function storyDone() {
     <!-- Переключатель режимов ленты вместо заголовка «Сессии». -->
     <div class="mb-2 mt-4 inline-flex rounded-full bg-[var(--surface-2)] p-[3px]">
       <button
-        v-for="t in [{ id: 'sessions', label: 'Сессии' }, { id: 'mine', label: 'Мои старты' }]"
+        v-for="t in [{ id: 'sessions', label: 'Ступени' }, { id: 'mine', label: 'Мои старты' }]"
         :key="t.id"
         type="button"
         class="min-h-[36px] rounded-full px-3.5 text-[0.8125rem] font-semibold transition-colors"
@@ -116,8 +118,6 @@ function storyDone() {
     />
     <RequestList v-else :requests="state.requests" @open="openModule" />
 
-    <BootcampBanner class="mt-2.5" :ready="unlocked" @open="openModule('bootcamp')" />
-
     <!-- Отметка разбора появляется только после самой оценки. У человека,
          который открыл ссылку впервые, разбора не было — приглашение оценить
          его шумело бы ровно там, где продаётся первый разбор. -->
@@ -133,7 +133,7 @@ function storyDone() {
           <span class="block text-[0.9375rem] font-semibold text-[var(--text)]">
             Разбор оценён: {{ state.razborRating }} из 10
           </span>
-          <span class="block truncate text-[0.75rem] text-[var(--text-muted)]">Сессии открыты</span>
+          <span class="block truncate text-[0.75rem] text-[var(--text-muted)]">Серия разборов открыта</span>
         </span>
       </span>
       <span class="shrink-0 text-[0.8125rem] font-medium" :style="{ color: 'var(--action)' }">Изменить</span>
@@ -158,7 +158,7 @@ function storyDone() {
       <ModulePassport
         :module-id="moduleOpen"
         :energy="energy"
-        :locked="moduleOpen !== 'razbor' && !unlocked"
+        :locked="isLocked(moduleOpen, unlocked)"
         :rated="unlocked"
         @rate="fromModuleToRate"
         @close="moduleOpen = ''"
