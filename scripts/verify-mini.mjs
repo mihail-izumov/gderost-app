@@ -394,5 +394,35 @@ ok(decodeState(encodeState(full17)).days.length === 31, 'полный месяц
 ok((nextMonthState(full17, { month: '2026-09', target: 3_000_000 }).shareSeen || []).length === 0,
   'в новом месяце предложения поделиться приходят заново')
 
+// Повод «неделя закрыта полностью». Правило живёт на экране «Сегодня»,
+// а проверяется здесь на ядре: 14.08 шторка прилетала сразу после подключения,
+// потому что дни, покрытые стартовой суммой, считались внесёнными, и неделя,
+// которая ещё не началась, проходила как прожитая.
+const NOW_SHARE = new Date(2026, 7, 14, 12, 0, 0) // пятница 14 августа
+const ISO_NOW = '2026-08-14'
+const baseShare = {
+  month: '2026-08', month_target: 3_000_000, month_goal: null,
+  dow_coef: [0.85, 0.9, 0.95, 1, 1.2, 1.15, 0.95], carry: null, days: [],
+}
+const weekClosed = (set) => {
+  const mm = computeMini(set, NOW_SHARE)
+  return mm.weeks.some((w) => w.days.length === 7
+    && w.days[w.days.length - 1].iso < ISO_NOW
+    && w.days.every((d) => d.entered))
+}
+const daysRange = (from, to) => {
+  const out = []
+  for (let d = from; d <= to; d++) out.push({ date: `2026-08-${String(d).padStart(2, '0')}`, rev: 95_000 })
+  return out
+}
+ok(weekClosed({ ...baseShare, days: daysRange(3, 9) }),
+  'прожитая неделя, внесённая по дням, даёт повод поделиться')
+ok(!weekClosed({ ...baseShare, days: daysRange(3, 9).filter((x) => !x.date.endsWith('05')) }),
+  'неделя с дырой повода не даёт')
+ok(!weekClosed({ ...baseShare, carry: { upTo: '2026-08-13', amount: 1_200_000, spread: true } }),
+  'стартовая сумма за прошлое неделю не закрывает')
+ok(!weekClosed({ ...baseShare, days: daysRange(10, 16) }),
+  'текущая неделя, заполненная вперёд, повода не даёт')
+
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')
 process.exit(fails ? 1 : 0)

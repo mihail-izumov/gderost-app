@@ -16,6 +16,12 @@ import { useMiniStore } from '../composables/useMiniStore.js'
 defineProps({
   tone: { type: String, default: 'quiet' }, // quiet | accent
   label: { type: String, default: 'Поделиться месяцем' },
+  // Форма подстраивается под соседей: в ряду с прямоугольными кнопками
+  // пилюля читается как элемент другой природы.
+  shape: { type: String, default: 'pill' }, // pill | card
+  // Знак нужен там, где кнопка стоит одна среди текста, и лишний там,
+  // где она в ряду одинаковых.
+  icon: { type: Boolean, default: true },
 })
 const emit = defineEmits(['shared'])
 
@@ -51,14 +57,19 @@ async function share() {
 <template>
   <button
     type="button"
-    class="flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full px-5 text-[0.9375rem] font-semibold"
+    class="flex w-full items-center justify-center gap-2 px-5"
+    :class="shape === 'card'
+      ? 'min-h-[52px] rounded-2xl text-[1.0625rem] font-semibold'
+      : 'min-h-[48px] rounded-full text-[0.9375rem] font-semibold'"
     :style="tone === 'accent'
       ? { background: 'var(--accent)', color: 'var(--accent-ink)' }
       : { background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--rim)' }"
     @click="share"
   >
-    <Check v-if="done" class="h-5 w-5" :stroke-width="2.5" aria-hidden="true" />
-    <Share2 v-else class="h-5 w-5" :stroke-width="2" aria-hidden="true" />
+    <template v-if="icon">
+      <Check v-if="done" class="h-5 w-5" :stroke-width="2.5" aria-hidden="true" />
+      <Share2 v-else class="h-5 w-5" :stroke-width="2" aria-hidden="true" />
+    </template>
     {{ done || label }}
   </button>
 </template>

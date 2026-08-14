@@ -73,13 +73,26 @@ const TABS = computed(() => [
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
   },
-  { id: 'power', label: 'Буткемп', icon: Zap, title: 'Буткемп' },
+  // Чип бизнеса и перезагрузка живут и здесь: «Буткемп» говорит про тот же
+  // юнит, что «Сегодня», и переключаться между ними, теряя контекст в шапке,
+  // человеку незачем.
+  {
+    id: 'power',
+    label: 'Буткемп',
+    icon: Zap,
+    title: 'Буткемп',
+    leadingAction: 'hardReload',
+    eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
+    eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
+  },
   { id: 'runscale', label: 'Подписка', icon: Activity, title: 'Рост по подписке' },
 ])
 
+// Подпись назад нейтральная: «Цели и планы» открываются и с «Сегодня»,
+// и с «Буткемпа», а возврат ведёт туда, откуда пришли.
 const SUB_VIEWS = {
-  day: { title: 'Контроль Дня', showBack: true, backLabel: 'Главная' },
-  goals: { title: 'Цели и планы', showBack: true, backLabel: 'Главная' },
+  day: { title: 'Контроль Дня', showBack: true, backLabel: 'Назад' },
+  goals: { title: 'Цели и планы', showBack: true, backLabel: 'Назад' },
 }
 
 const view = computed(() => {
@@ -123,7 +136,7 @@ function selectTab(id) {
       <button
         type="button"
         class="mt-2 min-h-[48px] w-full rounded-full px-5 text-[0.9375rem] font-bold"
-        :style="{ background: 'var(--accent)', color: 'var(--accent-ink)' }"
+        :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
         @click="exitShared"
       >Посчитать свой месяц</button>
     </div>
@@ -184,7 +197,7 @@ function selectTab(id) {
     <GoalsScreen v-else-if="subView === 'goals'" @back="subView = ''" />
     <template v-else>
       <TodayScreen v-if="tab === 'today'" @go="go" />
-      <EnergyScreen v-else-if="tab === 'power'" />
+      <EnergyScreen v-else-if="tab === 'power'" @go="go" />
       <RunscaleScreen v-else />
     </template>
   </AppShell>

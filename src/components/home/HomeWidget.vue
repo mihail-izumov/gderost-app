@@ -1,11 +1,16 @@
 <script setup>
+import { computed } from 'vue'
 import { MoveUpRight, MoveDownRight, MoveRight } from 'lucide-vue-next'
 
 // Виджет-кнопка на Главной. Перенесено из рабочего Ранскейла один в один.
-// Стрелка тренда — три состояния, серая монохромная в круге: цвет здесь несёт
-// только жёлтая заливка иконки раздела, светофор живёт внутри «Контроля Дня».
+// Стрелка тренда — три состояния, серая монохромная в круге.
+//
+// Заливка иконки несёт СТАТУС раздела, а не украшение: зелёный — держим,
+// жёлтый — отклонились, красный — не догоняем, серый — считать не из чего.
+// Жёлтая плитка стояла на обоих виджетах всегда и означала только «здесь
+// иконка»; цвет, который не меняется, статуса не сообщает.
 
-defineProps({
+const props = defineProps({
   icon: { type: [Object, Function], required: true },
   name: { type: String, required: true },
   metricLabel: { type: String, required: true },
@@ -14,8 +19,20 @@ defineProps({
   trend: { type: String, default: null }, // 'up' | 'down' | 'flat' | null
   subLabel: { type: String, required: true },
   subValue: { type: String, default: '' },
+  // 'good' | 'warn' | 'bad' | 'idle'
+  tone: { type: String, default: 'idle' },
 })
 defineEmits(['select'])
+
+// Тёмная заливка держит белый знак, жёлтая — тёмный: цветного текста
+// и цветных знаков на цвете в системе нет.
+const TONE = {
+  good: { bg: 'var(--positive)', ink: 'var(--ink-on-color)' },
+  warn: { bg: 'var(--warning)', ink: 'var(--accent-ink)' },
+  bad: { bg: 'var(--negative)', ink: 'var(--ink-on-color)' },
+  idle: { bg: 'var(--surface-2)', ink: 'var(--text-muted)' },
+}
+const skin = computed(() => TONE[props.tone] || TONE.idle)
 </script>
 
 <template>
@@ -25,7 +42,10 @@ defineEmits(['select'])
     @click="$emit('select')"
   >
     <div class="mb-3.5 flex items-center gap-2.5">
-      <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--accent)] text-[var(--accent-ink)]">
+      <span
+        class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
+        :style="{ background: skin.bg, color: skin.ink }"
+      >
         <component :is="icon" class="h-[22px] w-[22px]" :stroke-width="2.1" aria-hidden="true" />
       </span>
       <h2 class="whitespace-pre-line text-[0.9375rem] font-bold leading-tight text-[var(--text)]">{{ name }}</h2>

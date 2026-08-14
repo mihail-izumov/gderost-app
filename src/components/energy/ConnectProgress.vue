@@ -35,31 +35,35 @@ const levels = LEVELS
       <span class="min-w-0">
         <span class="block truncate text-[1.0625rem] font-bold leading-tight">{{ unit || 'Ваш бизнес' }}</span>
         <span class="mt-1 flex items-center gap-1.5">
+          <!-- Точка статуса — жёлтая: подключение идёт и не закончено.
+               Это её единственное законное место на экране. -->
           <span
             class="inline-block h-[7px] w-[7px] rounded-full"
-            :style="{ background: 'var(--accent)' }"
+            :style="{ background: 'var(--warning)' }"
             aria-hidden="true"
           ></span>
           <span class="text-[0.8125rem]" :style="{ color: 'var(--ink-on-color-muted)' }">Подключается</span>
         </span>
       </span>
 
-      <span class="flex shrink-0 items-start gap-1">
+      <!-- Знак «инфо» стоит слева от процента и ростом с него: состав числа —
+           единственное, что с этим числом можно сделать, и мелкий значок
+           в углу этого не сообщал. Кнопка обнимает оба элемента: попасть
+           пальцем можно и по знаку, и по самой цифре. -->
+      <button
+        type="button"
+        class="-mr-1 flex shrink-0 items-center gap-2 rounded-xl px-1 py-1"
+        aria-label="Из чего сложился процент"
+        @click="$emit('info')"
+      >
+        <Info class="h-7 w-7 shrink-0" :style="{ color: 'var(--ink-on-color-muted)' }" :stroke-width="2" aria-hidden="true" />
         <span class="text-right">
           <span class="block text-[0.625rem] uppercase tracking-wide" :style="{ color: 'var(--ink-on-color-muted)' }">
             Энергия роста
           </span>
           <span class="block text-[1.75rem] font-bold leading-none tabular-nums">{{ pct }}%</span>
         </span>
-        <button
-          type="button"
-          class="-mr-2 -mt-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
-          aria-label="Из чего сложился процент"
-          @click="$emit('info')"
-        >
-          <Info class="h-[18px] w-[18px]" :style="{ color: 'var(--ink-on-color-muted)' }" :stroke-width="2" aria-hidden="true" />
-        </button>
-      </span>
+      </button>
     </div>
 
     <!-- Этапы пути. Пройденный — светлый, будущий — приглушённый; текущий подписан. -->
@@ -72,7 +76,7 @@ const levels = LEVELS
       >
         <span
           class="mb-1.5 h-[3px] w-full rounded-full"
-          :style="{ background: l.id === levelId ? 'var(--accent)' : 'var(--line-on-color)' }"
+          :style="{ background: l.id === levelId ? 'var(--ink-on-color)' : 'var(--line-on-color)' }"
           aria-hidden="true"
         ></span>
         <span

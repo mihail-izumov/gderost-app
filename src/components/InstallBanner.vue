@@ -1,6 +1,6 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
-import { ChevronDown, Share, X } from 'lucide-vue-next'
+import { Share, X } from 'lucide-vue-next'
 import { chevronStyle } from '../composables/brandMask.js'
 
 // Баннер «Откройте Ранскейл как приложение». Перенесено из рабочего Ранскейла:
@@ -15,6 +15,11 @@ import { chevronStyle } from '../composables/brandMask.js'
 //   • уже запущено как установленное приложение → не показываем вовсе;
 //   • закрыли крестиком → прячем только в памяти текущего просмотра.
 //     Перезагрузка показывает баннер снова, в хранилище это не пишется.
+//
+// Место на экране — самый низ, под рефреном: баннер про то, как вернуться
+// сюда завтра, и читает его тот, кто уже посмотрел свои числа. Над числами
+// он стоял поперёк дороги. Знак вопроса на кнопке заменил шеврон вниз:
+// шеврон обещал раскрывашку, а открывается инструкция.
 
 const dismissed = ref(false)
 const standalone = ref(false)
@@ -85,8 +90,7 @@ const steps = [
           class="inline-flex w-fit items-center gap-1 rounded-full bg-[var(--text)] px-2.5 py-0.5 text-[0.75rem] font-medium text-[var(--ink-on-color)] active:opacity-90"
           @click="openModal"
         >
-          Как установить
-          <ChevronDown class="h-3.5 w-3.5" :stroke-width="2" aria-hidden="true" />
+          Как установить?
         </button>
       </div>
       <button

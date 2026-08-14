@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue'
 import { Download, ArrowRight, Check } from 'lucide-vue-next'
 import ConnectProgress from '../components/energy/ConnectProgress.vue'
-import EntityLadder from '../components/energy/EntityLadder.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { computeMini } from '../composables/miniModel.js'
 import { computeEnergy, computeGaps } from '../composables/energyModel.js'
@@ -26,7 +25,13 @@ defineEmits(['exit'])
 
 const m = computed(() => computeMini(props.state, new Date()))
 const energy = computed(() => computeEnergy(props.state, m.value))
-const gaps = computed(() => computeGaps(m.value))
+// Ноль не показываем: расстояния нет, и строка о нём была бы шумом.
+const visibleGaps = computed(() => computeGaps(m.value).filter((g) => g.value > 0))
+function gapColor(tone) {
+  if (tone === 'bad') return 'var(--negative)'
+  if (tone === 'good') return 'var(--positive)'
+  return 'var(--text-muted)'
+}
 const saved = ref(false)
 const saveFailed = ref(false)
 
@@ -130,9 +135,21 @@ async function download() {
         </p>
       </section>
 
-      <div class="mt-3">
-        <EntityLadder :model="m" :energy="energy" :gaps="gaps" />
-      </div>
+      <!-- Расстояния между величинами. Получатель видит их тем же списком,
+           что и автор в «Целях и планах»: карточек с уровнями сущностей
+           больше нет ни у кого, и расходиться этим двум экранам нельзя. -->
+      <ul v-if="visibleGaps.length" class="mt-3 flex flex-col gap-1.5">
+        <li
+          v-for="g in visibleGaps"
+          :key="g.key"
+          class="flex items-center justify-center gap-2 rounded-xl bg-[var(--surface)] px-3 py-2"
+        >
+          <span class="text-[0.75rem] text-[var(--text-muted)]">{{ g.label }}</span>
+          <span class="text-[0.8125rem] font-bold tabular-nums" :style="{ color: gapColor(g.tone) }">
+            {{ formatRub(g.value) }}
+          </span>
+        </li>
+      </ul>
 
       <button
         type="button"
@@ -151,7 +168,7 @@ async function download() {
       <button
         type="button"
         class="mt-2 flex min-h-[48px] w-full items-center justify-between gap-2 rounded-full px-5 text-[0.9375rem] font-bold"
-        :style="{ background: 'var(--accent)', color: 'var(--accent-ink)' }"
+        :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
         @click="$emit('exit')"
       >
         Посчитать свой месяц

@@ -92,14 +92,18 @@ const fill = (n) => (n < i.value ? 1 : n > i.value ? 0 : progress.value)
 
 <template>
   <Teleport to="body">
+    <!-- Холст на весь экран, содержимое — в мобильной колонке по центру.
+         Приложение везде живёт в 430 пикселях, и сторис, растянутые на всю
+         ширину рабочего стола, выпадали из него единственным местом. -->
     <div
       v-if="open && slide"
-      class="fixed inset-0 z-[70] flex flex-col"
+      class="fixed inset-0 z-[70] flex justify-center"
       :style="{ background: 'var(--surface-black)', color: 'var(--ink-on-color)' }"
       role="dialog"
       aria-modal="true"
       :aria-label="slide.title"
     >
+    <div class="flex w-full max-w-[430px] flex-col">
       <!-- Полоса прогресса с закрытием в её конце — паттерн Whoosh. -->
       <div
         class="flex items-center gap-1.5 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]"
@@ -149,9 +153,10 @@ const fill = (n) => (n < i.value ? 1 : n > i.value ? 0 : progress.value)
         <button
           type="button"
           class="min-h-[52px] w-full rounded-full text-[1.0625rem] font-bold"
-          :style="{ background: 'var(--accent)', color: 'var(--accent-ink)' }"
+          :style="{ background: 'var(--ink-on-color)', color: 'var(--surface-black)' }"
           @click="next"
         >{{ slide.cta || 'Дальше' }}</button>
+      </div>
       </div>
     </div>
   </Teleport>

@@ -118,27 +118,21 @@ function goTo(i) {
           :reset-token="resetToken"
         />
 
-        <!-- Запертый слот: за размытием стоит не имитация чужих чисел,
-             а честная заглушка. Числа под размытием были бы враньём,
-             которое просто трудно прочитать. -->
-        <div v-else class="relative">
-          <!-- Под размытием стоит форма полосы, а не чужие числа: величины
-               подобраны так, чтобы читалась только геометрия. Разобрать их
-               нельзя, и разбирать нечего — это не данные второго юнита. -->
-          <div class="pointer-events-none select-none blur-[4px]" aria-hidden="true">
-            <MonthProgressSlide :fact="1_600_000" :plan="3_400_000" :forecast="2_600_000" :goal="4_000_000" />
-          </div>
-          <div class="absolute inset-0 flex items-center justify-center">
-            <button
-              type="button"
-              data-test="deck-connect"
-              class="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[var(--accent)] px-4 text-[0.9375rem] font-bold text-[var(--accent-ink)] active:opacity-90"
-              @click="connectOpen = true"
-            >
-              <Plus class="h-4 w-4" :stroke-width="2.5" aria-hidden="true" />
-              Подключить
-            </button>
-          </div>
+        <!-- Запертый слот: одна кнопка и пустое место. Раньше под ней лежала
+             размытая полоса с подставными числами — она читалась как чужие
+             данные, которые почему-то спрятали, а её размытие вылезало жёлтым
+             хвостом на соседний экран деки (маска блюра выходит за края слайда,
+             а лента прокрутки его не обрезает). Ни данных, ни артефакта. -->
+        <div v-else class="flex min-h-[104px] items-center justify-center">
+          <button
+            type="button"
+            data-test="deck-connect"
+            class="inline-flex min-h-[44px] items-center gap-2 rounded-full border border-[var(--rim)] px-4 text-[0.9375rem] font-semibold text-[var(--text)] active:bg-[var(--surface-2)]"
+            @click="connectOpen = true"
+          >
+            <Plus class="h-4 w-4" :stroke-width="2.5" aria-hidden="true" />
+            Подключить
+          </button>
         </div>
       </div>
     </div>

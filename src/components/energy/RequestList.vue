@@ -4,13 +4,17 @@ import { Clock, ChevronRight } from 'lucide-vue-next'
 import { MODULES } from '../../i18n/energy.js'
 import { dayLabel } from '../../i18n/format.js'
 
-// Мои заявки. Появляется, когда заявка есть, — до этого раздела нет.
+// «Мои старты» — второй режим ленты сессий. Здесь то, что человек уже
+// отправил: модуль и дата.
 //
-// Сейчас здесь живёт ровно один факт: что и когда человек отправил. Своих
-// статусов приложение не выдумывает: подтверждение и ссылку на оплату
+// Своих статусов приложение не выдумывает: подтверждение и ссылку на оплату
 // присылает живой человек, и рисовать «на проверке» без связи с ним значило бы
 // обещать движение, которого приложение не видит. Строка «ждём ответа»
 // говорит правду и ничего сверх неё.
+//
+// Пусто — не пустой экран: раздел живёт переключателем рядом с сессиями,
+// и человек попадает сюда сам. Одна строка вместо списка отвечает на вопрос,
+// с чего начинать.
 //
 // Когда появится контур заявок, статус приедет в ту же запись и встанет
 // на место подписи — экран для этого уже устроен.
@@ -35,16 +39,12 @@ const rows = computed(() => props.requests
 </script>
 
 <template>
-  <section v-if="rows.length">
-    <h2 class="mb-2 mt-5 text-[0.8125rem] font-medium uppercase tracking-wide text-[var(--text-muted)]">
-      Мои заявки
-    </h2>
-
-    <ul class="flex flex-col gap-2">
+  <section>
+    <ul v-if="rows.length" class="flex flex-col gap-2">
       <li v-for="r in rows" :key="r.id">
         <button
           type="button"
-          class="flex w-full items-center gap-3 rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-3.5 text-left"
+          class="flex w-full items-center gap-3 rounded-2xl bg-[var(--surface)] p-3.5 text-left"
           @click="$emit('open', r.module)"
         >
           <span
@@ -73,5 +73,12 @@ const rows = computed(() => props.requests
         </button>
       </li>
     </ul>
+
+    <p
+      v-else
+      class="rounded-2xl bg-[var(--surface)] px-4 py-6 text-center text-[1.0625rem] font-bold leading-snug text-[var(--text)]"
+    >
+      Начни с разбора.<br>Рост не ждёт.
+    </p>
   </section>
 </template>

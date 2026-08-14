@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { Gauge, Target, Info } from 'lucide-vue-next'
+import { Gauge, Target, BookOpen, ChevronRight } from 'lucide-vue-next'
 import MonthProgressCard from '../components/home/MonthProgressCard.vue'
 import HomeWidget from '../components/home/HomeWidget.vue'
 import InstallBanner from '../components/InstallBanner.vue'
@@ -10,7 +10,9 @@ import NextMonthSheet from '../components/NextMonthSheet.vue'
 import ShareSheet from '../components/ShareSheet.vue'
 import BottomSheet from '../components/BottomSheet.vue'
 import StoryOnboarding from '../components/StoryOnboarding.vue'
+import BootcampBanner from '../components/energy/BootcampBanner.vue'
 import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
+import { sigClass, todayISO } from '../composables/miniModel.js'
 import { mlnRub, mlnSigned, pct1, pctDelta, monthCap } from '../i18n/home.js'
 import { widgetStory } from '../i18n/stories.js'
 
@@ -56,6 +58,18 @@ const fcTrend = computed(() => {
 
 const gapValue = computed(() => (m.value ? mlnSigned(m.value.T - m.value.landing) : '—'))
 
+// Статус виджетов цветом. «Контроль Дня» — тот же светофор, которым красятся
+// дни внутри него: отношение факта к плану на прошедшие дни. «Цели и планы» —
+// один вопрос: догоняет ли прогноз план. Считать не из чего — серый, и это
+// тоже состояние, а не отсутствие оформления.
+const dayTone = computed(() => (m.value && m.value.onPlan != null
+  ? sigClass(m.value.onPlan)
+  : 'idle'))
+const goalsTone = computed(() => {
+  if (!m.value || !m.value.T || !m.value.landing) return 'idle'
+  return m.value.landing >= m.value.T ? 'good' : 'bad'
+})
+
 // Живые интерпретации для сторис о виджетах: расшифровка на своих числах,
 // а не на выдуманном примере. Перенесено из оригинала; раскрывашка с экрана
 // уехала в сторис, числа остались живыми.
@@ -81,13 +95,20 @@ const paceInfo = computed(() => {
 // «Полная неделя» здесь означает не `w.complete`: в ядре у будущей недели
 // нет прошедших невнесённых дней, поэтому она полна по определению — и сразу
 // после подключения человеку предлагали бы поделиться пустым месяцем.
-// Повод настоящий, когда неделя прожита целиком и все её дни внесены.
+//
+// Дни, покрытые стартовой суммой, тоже не считаются: сумма разносится по уже
+// прошедшим дням при подключении, и неделя из одних разнесённых дней проходила
+// как «закрыта полностью» — шторка прилетала сразу после ввода, в неделю,
+// которая ещё даже не началась. Повод настоящий, когда неделя кончилась
+// календарно и каждый её день внесён руками.
 const shareReason = computed(() => {
   if (!m.value) return ''
   const seen = store.state.shareSeen || []
   if (monthOver.value && !seen.includes('month')) return 'month'
+  const today = todayISO()
   const livedFull = m.value.weeks.some((w) => w.days.length === 7
-    && w.days.every((d) => d.entered || d.inCarry))
+    && w.days[w.days.length - 1].iso < today
+    && w.days.every((d) => d.entered))
   if (livedFull && !seen.includes('week')) return 'week'
   return ''
 })
@@ -157,6 +178,7 @@ function storyDone() {
         :value-main="m.onPlan == null ? '—' : pct1(m.onPlan)"
         sub-label="Разрыв"
         :sub-value="gapValue"
+        :tone="dayTone"
         @select="emit('go', 'day')"
       />
       <!-- Прогноз стоит рублями, а не отношением к плану: «Прогноз/План»
@@ -173,28 +195,50 @@ function storyDone() {
         :trend="fcTrend"
         sub-label="Цель"
         :sub-value="m.goal ? mlnRub(m.goal) : '—'"
+        :tone="goalsTone"
         @select="emit('go', 'goals')"
       />
     </div>
 
-    <!-- Как читать виджеты: сторис по запросу, на своих числах.
-         Абзац с экрана ушёл — формат объяснения теперь свой. -->
+    <!-- Как читать виджеты — своя плашка, а не мелкая ссылка под деком.
+         Это первое, что стоит открыть на экране, и выглядеть оно обязано
+         как дело, а не как сноска. Значка «инфо» нет: он читается служебным
+         и гасит то, что должно звать. -->
     <button
       type="button"
-      class="mx-auto mt-2.5 flex min-h-[44px] items-center gap-1.5 rounded-full px-3 py-1.5 text-[0.8125rem] font-medium text-[var(--text-muted)] transition-colors active:bg-[var(--surface-2)]"
+      class="mt-3 flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-[var(--surface)] px-4 py-3 text-left shadow-sm transition-colors active:bg-[var(--surface-2)]"
       @click="storyOpen = true"
     >
-      <Info class="h-4 w-4" :stroke-width="2" aria-hidden="true" />
-      <span>Как читать виджеты</span>
+      <span
+        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+        :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
+        aria-hidden="true"
+      >
+        <BookOpen class="h-[18px] w-[18px]" :stroke-width="2.2" />
+      </span>
+      <span class="min-w-0 flex-1">
+        <span class="block text-[0.9375rem] font-bold leading-tight text-[var(--text)]">Как читать виджеты</span>
+        <span class="mt-0.5 block text-[0.75rem] leading-snug text-[var(--text-muted)]">
+          Две минуты на ваших числах
+        </span>
+      </span>
+      <ChevronRight class="h-5 w-5 shrink-0 text-[var(--text-muted)]" :stroke-width="2.5" aria-hidden="true" />
     </button>
 
-    <InstallBanner />
+    <!-- Буткемп маячит и здесь: человек, который ведёт свой месяц, дорогу
+         дальше видит с того же экрана. Открывает вкладку, а не шторку —
+         на вкладке лежит всё, ради чего он туда идёт. -->
+    <BootcampBanner class="mt-3" @open="emit('go', 'power')" />
 
-    <div class="mt-4">
+    <div class="mt-3">
       <TryWeekCard />
     </div>
 
     <SiteFooter />
+
+    <!-- Установка стоит последней: она про то, как вернуться сюда завтра,
+         и до неё дочитывает тот, кто уже посмотрел свои числа. -->
+    <InstallBanner />
 
     <!-- Перенос месяца: шторка общего вида -->
     <BottomSheet :open="nextOpen" @close="nextOpen = false">

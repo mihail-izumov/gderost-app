@@ -1,27 +1,37 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { ChevronRight, HelpCircle } from 'lucide-vue-next'
+import { ArrowDown, ChevronRight, Sparkles } from 'lucide-vue-next'
 import WeekWidget from '../components/WeekWidget.vue'
 import ValueSheet from '../components/ValueSheet.vue'
-import HowItWorksSheet from '../components/HowItWorksSheet.vue'
+import BottomSheet from '../components/BottomSheet.vue'
+import ModulePassport from '../components/energy/ModulePassport.vue'
+import StoryOnboarding from '../components/StoryOnboarding.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { sigClass } from '../composables/miniModel.js'
+import { computeEnergy, computeGaps } from '../composables/energyModel.js'
 import { formatRub, formatGrowth, formatPct, daysWord } from '../i18n/format.js'
 import { monthCap } from '../i18n/home.js'
+import { FORECAST_STORY } from '../i18n/stories.js'
 
-// Цели и планы — четыре величины, четыре плашки, ни одного абзаца.
+// Цели и планы — четыре величины, четыре плашки и расстояния между ними.
 //
 // Каждая плашка показывает имя и число и открывается тапом. Что это за
 // величина, откуда берётся и можно ли её поменять — внутри, там же и правка,
 // и только по отдельной кнопке: тап по цифре открывал бы клавиатуру раньше,
 // чем человек решил менять.
 //
-// Плашки чёрные: это не карточки данных, а входы. Их четыре, они одинаковые
-// и стоят в порядке метода — факт, прогноз, план, цель.
+// Плашки светлые: чёрными они спорили с чёрным календарём над ними, и экран
+// читался одним пятном. Календарь остаётся единственным тёмным якорем.
 //
-// Всё, что раньше объяснялось абзацами вокруг полей, собрано в «Как это
-// работает» и открывается с любого места.
+// Расстояния между величинами переехали сюда с «Буткемпа»: «осталось
+// заработать по прогнозу», «прогноз выше плана», «цель выше плана». Место
+// правильное — здесь эти числа и правятся. Мощностей `N / 20` при них нет,
+// а вход в сессию, которая двигает соседнюю величину, остался: разрыв назван,
+// и ответ на него стоит рядом.
+//
+// Всё, что раньше объяснялось абзацами вокруг полей, разложено по слайдам
+// сторис «Как работает прогноз».
 
 const store = useMiniStore()
 const m = store.model
@@ -46,6 +56,19 @@ const widgetWeek = computed(() => {
     isToday: x.isToday,
     mark: x.inCarry ? 'carry' : x.entered ? sigClass(x.fact / x.planAt) : 'idle',
   }))
+})
+
+// Все недели месяца — для разворота карточки на весь месяц.
+const monthWeeks = computed(() => {
+  if (!m.value) return []
+  return m.value.weeks.map((w) => w.days.map((x) => ({
+    key: x.iso,
+    dow: x.dow,
+    dowRu: x.dowRu,
+    dd: x.dd,
+    isToday: x.isToday,
+    mark: x.inCarry ? 'carry' : x.entered ? sigClass(x.fact / x.planAt) : 'idle',
+  })))
 })
 
 // Подпись и остаток — того же месяца, что и числа под виджетом.
@@ -73,6 +96,31 @@ const rows = computed(() => {
     { key: 'goal', label: 'Цель', value: m.value.goal, extra: '', empty: 'не поставлена' },
   ]
 })
+
+// Расстояния между величинами и сессия, которая двигает соседнюю.
+// Разрыв «факт → прогноз» никакой сессией не двигается: его закрывает работа,
+// а не встреча, — поэтому входа у него нет.
+const energy = computed(() => computeEnergy(state, m.value))
+const GAP_MODULE = { 'forecast-plan': 'session-plan', 'plan-goal': 'session-goal' }
+const gaps = computed(() => {
+  const byKey = {}
+  for (const g of computeGaps(m.value)) byKey[g.key] = { ...g, module: GAP_MODULE[g.key] || '' }
+  return byKey
+})
+// Разрыв стоит под той плашкой, к которой относится.
+const GAP_AFTER = { fact: 'fact-forecast', forecast: 'forecast-plan', plan: 'plan-goal' }
+function gapFor(key) {
+  const g = gaps.value[GAP_AFTER[key]]
+  return g && g.value > 0 ? g : null
+}
+function gapColor(tone) {
+  if (tone === 'bad') return 'var(--negative)'
+  if (tone === 'good') return 'var(--positive)'
+  return 'var(--text-muted)'
+}
+
+const moduleOpen = ref('')
+const storyOpen = ref(false)
 
 // Цель ниже плана — не цель, а второй план. Называем это в той же шторке,
 // где человек её и правит.
@@ -113,44 +161,94 @@ function saveCarry(v) {
       tone="black"
       :label="monthCap(m.month)"
       :days="widgetWeek"
+      :weeks="monthWeeks"
       :note="widgetNote"
       :pill="widgetPill"
     />
 
     <div class="mt-3 flex flex-col gap-2">
-      <button
-        v-for="r in rows" :key="r.key"
-        type="button"
-        class="flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left"
-        :style="{ background: 'var(--surface-black)', color: 'var(--ink-on-color)' }"
-        @click="sheet = r.key"
-      >
-        <span class="min-w-0 flex-1">
-          <span class="block text-[0.8125rem]" :style="{ color: 'var(--ink-on-color-muted)' }">{{ r.label }}</span>
-          <span class="mt-0.5 flex items-baseline gap-2">
-            <span class="text-[1.5rem] font-bold leading-none tabular-nums">
-              {{ r.value ? formatRub(r.value) : r.empty }}
-            </span>
-            <span v-if="r.extra" class="text-[0.875rem] font-semibold" :style="{ color: 'var(--ink-on-color-muted)' }">
-              {{ r.extra }}
+      <template v-for="r in rows" :key="r.key">
+        <button
+          type="button"
+          class="flex w-full items-center gap-3 rounded-2xl bg-[var(--surface)] px-4 py-3.5 text-left shadow-sm"
+          @click="sheet = r.key"
+        >
+          <span class="min-w-0 flex-1">
+            <span class="block text-[0.8125rem] text-[var(--text-muted)]">{{ r.label }}</span>
+            <span class="mt-0.5 flex items-baseline gap-2">
+              <span class="text-[1.5rem] font-bold leading-none tabular-nums text-[var(--text)]">
+                {{ r.value ? formatRub(r.value) : r.empty }}
+              </span>
+              <span v-if="r.extra" class="text-[0.875rem] font-semibold text-[var(--text-muted)]">
+                {{ r.extra }}
+              </span>
             </span>
           </span>
-        </span>
-        <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: 'var(--ink-on-color-muted)' }" :stroke-width="2" aria-hidden="true" />
-      </button>
+          <ChevronRight class="h-5 w-5 shrink-0 text-[var(--text-muted)]" :stroke-width="2" aria-hidden="true" />
+        </button>
+
+        <!-- Расстояние до следующей величины. Ноль не показываем: расстояния
+             нет. Где его двигает сессия — строка становится кнопкой. -->
+        <component
+          :is="gapFor(r.key) && gapFor(r.key).module ? 'button' : 'div'"
+          v-if="gapFor(r.key)"
+          :type="gapFor(r.key).module ? 'button' : null"
+          class="flex w-full items-center justify-center gap-2 px-2 py-0.5"
+          @click="gapFor(r.key).module ? moduleOpen = gapFor(r.key).module : null"
+        >
+          <ArrowDown class="h-3.5 w-3.5 shrink-0" :style="{ color: gapColor(gapFor(r.key).tone) }" :stroke-width="2.5" aria-hidden="true" />
+          <span class="text-[0.75rem] text-[var(--text-muted)]">{{ gapFor(r.key).label }}</span>
+          <span class="text-[0.8125rem] font-bold tabular-nums" :style="{ color: gapColor(gapFor(r.key).tone) }">
+            {{ formatRub(gapFor(r.key).value) }}
+          </span>
+          <ChevronRight
+            v-if="gapFor(r.key).module"
+            class="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]"
+            :stroke-width="2.5"
+            aria-hidden="true"
+          />
+        </component>
+      </template>
     </div>
 
+    <!-- Как работает прогноз — своим бейджем, а не мелкой ссылкой со знаком
+         вопроса: это не справка на всякий случай, а то, ради чего человек
+         сюда пришёл во второй раз. -->
     <button
       type="button"
-      class="mx-auto mt-4 flex min-h-[44px] items-center gap-2 rounded-full px-4 text-[0.9375rem] font-medium"
-      :style="{ color: 'var(--action)' }"
-      @click="sheet = 'how'"
+      class="mt-4 flex min-h-[52px] w-full items-center gap-2.5 rounded-2xl bg-[var(--surface)] px-4 text-left shadow-sm"
+      @click="storyOpen = true"
     >
-      <HelpCircle class="h-4 w-4" :stroke-width="2" aria-hidden="true" />
-      Как это работает
+      <span
+        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+        :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
+        aria-hidden="true"
+      >
+        <Sparkles class="h-4 w-4" :stroke-width="2.2" />
+      </span>
+      <span class="min-w-0 flex-1 text-[0.9375rem] font-bold text-[var(--text)]">Как работает прогноз?</span>
+      <ChevronRight class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" :stroke-width="2.5" aria-hidden="true" />
     </button>
 
     <SiteFooter />
+
+    <!-- Паспорт сессии открывается прямо из разрыва. -->
+    <BottomSheet :open="!!moduleOpen" @close="moduleOpen = ''">
+      <ModulePassport
+        :module-id="moduleOpen"
+        :energy="energy"
+        :locked="state.razborRating === null || state.razborRating === undefined"
+        :rated="state.razborRating !== null && state.razborRating !== undefined"
+        @close="moduleOpen = ''"
+      />
+    </BottomSheet>
+
+    <StoryOnboarding
+      :open="storyOpen"
+      :slides="FORECAST_STORY"
+      @close="storyOpen = false"
+      @done="storyOpen = false"
+    />
 
     <Teleport to="body">
       <div
@@ -160,10 +258,8 @@ function saveCarry(v) {
         @click.self="sheet = ''"
       >
         <div class="max-h-[88svh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <HowItWorksSheet v-if="sheet === 'how'" @close="sheet = ''" />
-
           <ValueSheet
-            v-else-if="sheet === 'fact'"
+            v-if="sheet === 'fact'"
             title="Факт"
             subtitle="Заработано с начала месяца: дни, которые вы внесли, плюс стартовая сумма."
             :value="m.realizedRev"

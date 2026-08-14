@@ -1,5 +1,6 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { ChevronDown } from 'lucide-vue-next'
 import { DOW_RU, todayISO } from '../composables/miniModel.js'
 import { weekRangeLabel, daysWord, formatPct } from '../i18n/format.js'
 
@@ -26,6 +27,8 @@ const props = defineProps({
   // Оценки для режима без `days`: 7 значений Пн..Вс
   marks: { type: Array, default: null },
   now: { type: Date, default: () => new Date() },
+  // Все недели месяца: с ними у карточки появляется разворот на весь месяц
+  weeks: { type: Array, default: null },
   // Своя подпись вместо диапазона дат
   label: { type: String, default: null },
   // 'black' — герой-кадр входа, 'surface' — обычная карточка внутри приложения
@@ -117,6 +120,19 @@ const leftPct = computed(() => {
 
 const noteText = computed(() => props.note ?? `${daysLeft.value} ${daysWord(daysLeft.value)} ост.`)
 const pillText = computed(() => props.pill ?? formatPct(leftPct.value, 0))
+
+// Разворот на весь месяц. Неделя остаётся видом по умолчанию: она отвечает
+// на вопрос «что сейчас». Месяц целиком нужен реже и приходит по нажатию —
+// полоса со стрелкой внизу карточки читается как поле для тапа, потому что
+// занимает всю её ширину.
+const expanded = ref(false)
+const monthRows = computed(() => (props.weeks || []).map((w) => w.map((d) => ({
+  ...d,
+  fill: MARK_FILL[d.mark] || null,
+}))))
+const rows = computed(() => (expanded.value && monthRows.value.length
+  ? monthRows.value
+  : [week.value]))
 </script>
 
 <template>
@@ -137,13 +153,20 @@ const pillText = computed(() => props.pill ?? formatPct(leftPct.value, 0))
       </div>
     </div>
 
-    <ul class="mt-4 grid grid-cols-7 gap-1">
+    <ul
+      v-for="(r, ri) in rows" :key="ri"
+      class="grid grid-cols-7 gap-1"
+      :class="ri === 0 ? 'mt-4' : 'mt-2'"
+    >
       <li
-        v-for="d in week" :key="d.key"
+        v-for="d in r" :key="d.key"
         class="flex flex-col items-center gap-1.5"
         :style="{ gridColumnStart: d.dow }"
       >
-        <span class="text-[0.6875rem] font-medium" :style="{ color: skin.dow }">{{ d.dowRu }}</span>
+        <!-- Подписи дней недели печатаются один раз, над первой строкой:
+             в развёрнутом месяце пять одинаковых шапок читались бы как пять
+             отдельных календарей. -->
+        <span v-if="ri === 0" class="text-[0.6875rem] font-medium" :style="{ color: skin.dow }">{{ d.dowRu }}</span>
         <!-- Цифра в круге центруется утилитой `.gr-digit` из `main.css`:
              коробка строки обрезается по высоте прописной, и флекс центрирует
              саму цифру. Подобранного на глаз сдвига здесь больше нет — он
@@ -176,5 +199,24 @@ const pillText = computed(() => props.pill ?? formatPct(leftPct.value, 0))
         />
       </li>
     </ul>
+
+    <!-- Полоса разворота во всю ширину карточки: она и есть кнопка.
+         Стрелка поворачивается, подпись называет то, что случится. -->
+    <button
+      v-if="monthRows.length"
+      type="button"
+      class="mt-3 flex min-h-[36px] w-full items-center justify-center gap-1.5 rounded-xl text-[0.75rem] font-medium"
+      :style="{ background: dark ? 'color-mix(in srgb, var(--ink-on-color) 12%, transparent)' : 'var(--surface-2)', color: skin.note }"
+      :aria-expanded="expanded ? 'true' : 'false'"
+      @click="expanded = !expanded"
+    >
+      {{ expanded ? 'Свернуть' : 'Весь месяц' }}
+      <ChevronDown
+        class="h-4 w-4 transition-transform"
+        :class="expanded ? 'rotate-180' : ''"
+        :stroke-width="2.5"
+        aria-hidden="true"
+      />
+    </button>
   </section>
 </template>
