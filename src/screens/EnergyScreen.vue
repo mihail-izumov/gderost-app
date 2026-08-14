@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Star, Check, Info } from 'lucide-vue-next'
+import { Check, Info } from 'lucide-vue-next'
 import ConnectProgress from '../components/energy/ConnectProgress.vue'
 import EnergyBreakdown from '../components/energy/EnergyBreakdown.vue'
 import EntityLadder from '../components/energy/EntityLadder.vue'
@@ -87,28 +87,27 @@ function storyDone() {
 
     <BootcampBanner class="mt-2.5" @open="openModule('bootcamp')" />
 
-    <!-- Отметка разбора видна сразу: без неё петля обрывается на середине
-         и непонятно, чем открываются остальные карточки. -->
+    <!-- Отметка разбора появляется только после самой оценки. У человека,
+         который открыл ссылку впервые, разбора не было — приглашение оценить
+         его шумело бы ровно там, где продаётся первый разбор, и раскрывало
+         механику замка раньше времени. Вход в оценку для клиента живёт
+         в запертом паспорте сессии — там, где замок и стоит. -->
     <button
+      v-if="unlocked"
       type="button"
       class="mt-2.5 flex min-h-[52px] w-full items-center justify-between gap-3 rounded-2xl border border-[var(--rim)] bg-[var(--surface)] px-4 text-left"
       @click="rateOpen = true"
     >
       <span class="flex min-w-0 items-center gap-2.5">
-        <Check v-if="unlocked" class="h-[18px] w-[18px] shrink-0" :style="{ color: 'var(--positive)' }" :stroke-width="2.5" aria-hidden="true" />
-        <Star v-else class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" :stroke-width="2" aria-hidden="true" />
+        <Check class="h-[18px] w-[18px] shrink-0" :style="{ color: 'var(--positive)' }" :stroke-width="2.5" aria-hidden="true" />
         <span class="min-w-0">
           <span class="block text-[0.9375rem] font-semibold text-[var(--text)]">
-            {{ unlocked ? `Разбор оценён: ${state.razborRating} из 10` : 'Разбор уже был?' }}
+            Разбор оценён: {{ state.razborRating }} из 10
           </span>
-          <span class="block truncate text-[0.75rem] text-[var(--text-muted)]">
-            {{ unlocked ? 'Сессии открыты' : 'Оцените пользу — откроются остальные сессии' }}
-          </span>
+          <span class="block truncate text-[0.75rem] text-[var(--text-muted)]">Сессии открыты</span>
         </span>
       </span>
-      <span class="shrink-0 text-[0.8125rem] font-medium" :style="{ color: 'var(--action)' }">
-        {{ unlocked ? 'Изменить' : 'Оценить' }}
-      </span>
+      <span class="shrink-0 text-[0.8125rem] font-medium" :style="{ color: 'var(--action)' }">Изменить</span>
     </button>
 
     <ShareMonthButton class="mt-4" tone="accent" label="Поделиться" />

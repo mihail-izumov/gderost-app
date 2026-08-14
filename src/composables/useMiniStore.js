@@ -6,7 +6,7 @@
 // Отсюда же следует граница: очистил данные сайта — данные ушли навсегда,
 // и об этом честнее сказать в интерфейсе, чем делать вид, что есть облако.
 
-import { reactive, computed, watch } from 'vue'
+import { reactive, computed, ref, watch } from 'vue'
 import { computeMini, nextMonthState, todayISO } from './miniModel.js'
 import { DEFAULT } from '../data/weekShape.js'
 import { buildExportText, exportFileName } from './exportText.js'
@@ -65,15 +65,18 @@ function load() {
 
 const state = reactive(load())
 
-let writeFailed = false
+// Реактивный ref, а не переменная: флаг читает баннер на экране, и обычная
+// переменная меняла бы значение так, что экран об этом не узнавал бы —
+// ровно то молчание, которое здесь запрещено.
+const writeFailed = ref(false)
 watch(state, (s) => {
   try {
     localStorage.setItem(KEY, JSON.stringify(s))
-    writeFailed = false
+    writeFailed.value = false
   } catch {
     // Приватный режим или переполненное хранилище: молчать нельзя, но и падать
     // незачем — сессия доработает в памяти, а экран скажет об этом словами.
-    writeFailed = true
+    writeFailed.value = true
   }
 }, { deep: true })
 
@@ -83,7 +86,19 @@ export function currentMonth(now = new Date()) {
 
 // Модель пересчитывается на каждое изменение состояния — отдельной команды
 // «обновить» не существует, и рассинхрона цифр на экране быть не может.
-const model = computed(() => (state.ready ? computeMini(state, new Date()) : null))
+//
+// Нерасчётное состояние отдаёт null, а не бросает: оборванная запись или
+// ручная правка хранилища не должны превращаться в мёртвый белый экран.
+// Ветку «модель не собралась» рисует App — с выходом, а не с пустотой.
+const model = computed(() => {
+  if (!state.ready) return null
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(String(state.month))) return null
+  try {
+    return computeMini(state, new Date())
+  } catch {
+    return null
+  }
+})
 
 const monthOver = computed(() => state.ready && state.month < currentMonth())
 
@@ -92,7 +107,7 @@ export function useMiniStore() {
     state,
     model,
     monthOver,
-    storageFailed: () => writeFailed,
+    storageFailed: () => writeFailed.value,
 
     /** Онбординг: четыре поля и ни одним больше. Прогноз не спрашивается. */
     setup({ company, unit, target, goal, earned, earnedUpTo, month }) {

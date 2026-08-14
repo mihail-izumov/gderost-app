@@ -6,7 +6,9 @@ import ValueSheet from '../components/ValueSheet.vue'
 import HowItWorksSheet from '../components/HowItWorksSheet.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
-import { formatRub, formatGrowth } from '../i18n/format.js'
+import { sigClass } from '../composables/miniModel.js'
+import { formatRub, formatGrowth, formatPct, daysWord } from '../i18n/format.js'
+import { monthCap } from '../i18n/home.js'
 
 // Цели и планы — четыре величины, четыре плашки, ни одного абзаца.
 //
@@ -27,13 +29,48 @@ const state = store.state
 
 const sheet = ref('')
 
+// Виджет показывает неделю месяца приложения, а не календаря устройства:
+// раньше он рисовал текущую календарную неделю с пустыми маркерами над
+// числами месяца приложения, и на закрытом месяце шапка говорила про август,
+// а числа под ней были июльские. Дни берутся из модели вместе с оценками —
+// виджет перестал быть декорацией там, где данные для оценок есть.
+const widgetWeek = computed(() => {
+  if (!m.value) return null
+  const w = m.value.weeks.find((x) => x.isCurrent) || m.value.weeks[m.value.weeks.length - 1]
+  if (!w) return null
+  return w.days.map((x) => ({
+    key: x.iso,
+    dow: x.dow,
+    dowRu: x.dowRu,
+    dd: x.dd,
+    isToday: x.isToday,
+    mark: x.inCarry ? 'carry' : x.entered ? sigClass(x.fact / x.planAt) : 'idle',
+  }))
+})
+
+// Подпись и остаток — того же месяца, что и числа под виджетом.
+const widgetNote = computed(() => (m.value ? `${m.value.daysLeft} ${daysWord(m.value.daysLeft)} ост.` : ''))
+const widgetPill = computed(() => (m.value && m.value.days.length
+  ? formatPct((m.value.daysLeft / m.value.days.length) * 100, 0)
+  : ''))
+
 const rows = computed(() => {
   if (!m.value) return []
+  // Пустота у каждой величины своя: цель «не поставлена» — её ставят руками;
+  // факт и прогноз без данных — прочерк, слово «не поставлена» рядом с ними
+  // врало бы про их природу. Отклонение прогноза на пустом месяце (−100 %)
+  // не печатается: это арифметика пустоты, а не оценка.
   return [
-    { key: 'fact', label: 'Факт', value: m.value.realizedRev, extra: '' },
-    { key: 'forecast', label: 'Прогноз', value: m.value.landing, extra: formatGrowth(m.value.landDev) },
-    { key: 'plan', label: 'План', value: m.value.T, extra: '' },
-    { key: 'goal', label: 'Цель', value: m.value.goal, extra: '' },
+    { key: 'fact', label: 'Факт', value: m.value.realizedRev, extra: '', empty: '—' },
+    {
+      key: 'forecast',
+      label: 'Прогноз',
+      value: m.value.landing,
+      extra: m.value.landing > 0 ? formatGrowth(m.value.landDev) : '',
+      empty: '—',
+    },
+    { key: 'plan', label: 'План', value: m.value.T, extra: '', empty: '—' },
+    { key: 'goal', label: 'Цель', value: m.value.goal, extra: '', empty: 'не поставлена' },
   ]
 })
 
@@ -70,9 +107,15 @@ function saveCarry(v) {
 
 <template>
   <div v-if="m" class="px-4 pb-4">
-    <!-- Тот же виджет, что на входе: месяц, в котором человек живёт, выглядит
-         одинаково везде, где про него говорят. -->
-    <WeekWidget tone="black" label="Этот месяц" />
+    <!-- Тот же виджет, что на входе, но с днями месяца приложения:
+         календарь и числа под ним говорят про один и тот же месяц. -->
+    <WeekWidget
+      tone="black"
+      :label="monthCap(m.month)"
+      :days="widgetWeek"
+      :note="widgetNote"
+      :pill="widgetPill"
+    />
 
     <div class="mt-3 flex flex-col gap-2">
       <button
@@ -86,7 +129,7 @@ function saveCarry(v) {
           <span class="block text-[0.8125rem]" :style="{ color: 'var(--ink-on-color-muted)' }">{{ r.label }}</span>
           <span class="mt-0.5 flex items-baseline gap-2">
             <span class="text-[1.5rem] font-bold leading-none tabular-nums">
-              {{ r.value ? formatRub(r.value) : 'не поставлена' }}
+              {{ r.value ? formatRub(r.value) : r.empty }}
             </span>
             <span v-if="r.extra" class="text-[0.875rem] font-semibold" :style="{ color: 'var(--ink-on-color-muted)' }">
               {{ r.extra }}

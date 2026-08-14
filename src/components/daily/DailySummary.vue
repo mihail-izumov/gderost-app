@@ -61,8 +61,13 @@ const carryWeeks = computed(() => props.m.weeks.filter(
           <template v-if="w.hasFact"><b class="font-semibold text-[var(--text)]">{{ mln(w.fact) }}</b></template>
           <template v-else-if="w.hasSpread"><b class="font-semibold text-[var(--text-secondary)]">{{ mln(w.spreadFact) }}</b></template>
           <template v-else><span>ждём</span></template>
+          <!-- Подпись называет охват. Процент справа считается против плана
+               внесённых дней, и пока неделя внесена не целиком, «план» всей
+               недели рядом с ним предлагал читателю поделить видимое
+               на видимое и получить другое число. -->
           <span class="block text-[0.625rem]">
             <template v-if="!w.hasFact && w.hasSpread">разнесено</template>
+            <template v-else-if="w.hasFact && w.partOfPlan < w.plan - 0.5">план внесённых {{ mln(w.partOfPlan) }}</template>
             <template v-else>план {{ mln(w.plan) }}</template>
           </span>
         </div>

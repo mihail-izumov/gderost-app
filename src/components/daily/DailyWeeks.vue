@@ -93,7 +93,10 @@ function progFill(r) {
           <span v-else-if="w.hasSpread"><span class="text-[var(--text-muted)]">разнесено </span><b class="font-semibold text-[var(--text)]">{{ mln(w.spreadFact) }}</b></span>
           <span v-else-if="w.days.every((d) => d.closed)"><span class="text-[var(--text-muted)]">вошла суммой</span></span>
           <span v-else><span class="text-[var(--text-muted)]">надо </span><b class="font-semibold text-[var(--text)]">{{ mln(w.need) }}</b></span>
-          <span v-if="w.hasFact"><span class="text-[var(--text-muted)]">откл. </span><b class="font-semibold text-[var(--text-secondary)]">{{ thsSigned(w.delta) }}</b></span>
+          <!-- Отклонение меряется против плана внесённых дней — пока неделя
+               внесена не целиком, подпись называет охват, иначе читатель
+               вычитает из факта план всей недели и получает другое число. -->
+          <span v-if="w.hasFact"><span class="text-[var(--text-muted)]">{{ w.partOfPlan < w.plan - 0.5 ? 'откл. внесённых ' : 'откл. ' }}</span><b class="font-semibold text-[var(--text-secondary)]">{{ thsSigned(w.delta) }}</b></span>
         </div>
       </summary>
 

@@ -62,8 +62,8 @@ export function widgetStory({ planFact, planFactLine, pace, paceLine }) {
     {
       id: 'pace',
       kicker: 'Виджеты · 2 из 2',
-      title: 'Прогноз/План',
-      text: `Насколько месяц отклонится от плана, если темп сохранится. ${paceLine || ''}`,
+      title: 'Прогноз',
+      text: `Куда придёт месяц, если темп сохранится. Стрелка — сдвиг за последний внесённый день. ${paceLine || ''}`,
       value: pace || '',
     },
     {

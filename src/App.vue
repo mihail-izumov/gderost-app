@@ -87,6 +87,11 @@ const view = computed(() => {
   return entered.value ? 'onboarding' : 'showcase'
 })
 
+// Состояние есть, а модель из него не собралась: оборванная запись или чужая
+// правка хранилища. Экран с выходом вместо пустоты — раньше четыре экрана
+// на `v-if` просто исчезали, и кнопка «Всё забыть» исчезала вместе с ними.
+const broken = computed(() => view.value === 'app' && !store.model.value)
+
 // Сброс данных возвращает на витрину, а не на пустой экран приложения.
 watch(() => store.state.ready, (ready) => {
   if (!ready) { entered.value = false; tab.value = 'today'; subView.value = '' }
@@ -126,6 +131,22 @@ function selectTab(id) {
 
   <StartScreen v-else-if="view === 'showcase'" @start="entered = true" />
 
+  <!-- Сохранённое не читается. Сказать и дать выход — вместо белого экрана. -->
+  <div v-else-if="broken" class="min-h-[100dvh] w-full bg-[var(--bg)]">
+    <div class="mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col items-start justify-center gap-3 px-6">
+      <h1 class="text-[1.375rem] font-bold leading-tight text-[var(--text)]">Сохранённые данные не читаются</h1>
+      <p class="text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
+        Запись месяца повреждена — так бывает, если она оборвалась. Посчитать по ней нельзя.
+      </p>
+      <button
+        type="button"
+        class="mt-2 min-h-[48px] w-full rounded-full text-[0.9375rem] font-bold"
+        :style="{ background: 'var(--negative)', color: 'var(--ink-on-color)' }"
+        @click="store.reset()"
+      >Всё забыть и начать заново</button>
+    </div>
+  </div>
+
   <!-- Подключение бизнеса идёт без оболочки: переключаться некуда,
        и таб-бар с шапкой во время ввода только мешают. -->
   <div v-else-if="view === 'onboarding'" class="min-h-[100dvh] w-full flex justify-center bg-[var(--bg)]">
@@ -148,6 +169,17 @@ function selectTab(id) {
     @update:active="selectTab"
     @back="subView = ''"
   >
+    <!-- Отказ записи виден на каждом экране: человек вводит числа и обязан
+         знать, что они живут только до закрытия вкладки. -->
+    <p
+      v-if="store.storageFailed()"
+      class="mx-4 mb-3 rounded-xl border px-3 py-2 text-[0.8125rem] leading-snug"
+      :style="{ borderColor: 'var(--negative)', color: 'var(--negative)', background: 'var(--surface)' }"
+    >
+      Браузер не сохраняет данные — введённое живёт, пока открыта эта вкладка.
+      Скачайте файл месяца или откройте сайт не в приватном режиме.
+    </p>
+
     <DayControlScreen v-if="subView === 'day'" />
     <GoalsScreen v-else-if="subView === 'goals'" @back="subView = ''" />
     <template v-else>

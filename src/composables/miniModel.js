@@ -206,8 +206,11 @@ export function computeMini(set, now = new Date()) {
   const maxObsBase = enteredDays.length
     ? Math.max(...enteredDays.map((x) => x.fact / x.weight))
     : null
+  // Лучшего дня нет — сравнивать не с чем, и на пустом месяце тоже: «план
+  // достижим» рядом с «не хватает 3 млн» на нуле данных — обещание, а не
+  // расчёт. Пустота по дням и пустота из суммы говорят одно слово.
   const goalState = maxObsBase == null
-    ? (wClosed > 0 ? 'unknown' : 'ok')
+    ? 'unknown'
     : adjBase > maxObsBase * 1.001 ? 'out'
     : adjBase > impliedBase * 1.25 ? 'record'
     : 'ok'

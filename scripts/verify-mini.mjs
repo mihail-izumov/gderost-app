@@ -43,6 +43,11 @@ const m4 = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: [1
 ok(m4.realizedRev === 1_000_000, 'сумма прошлого входит в факт')
 ok(близко(m4.landing, 3_100_000, 1e-3), 'сумма прошлого: темп 100к/день → приземление 3,1 млн')
 ok(m4.goalState === 'unknown', 'достижимость unknown: лучший день из суммы не восстановить')
+
+// Пустой месяц: ни одного дня — сравнивать не с чем, и «план достижим»
+// не печатается. Пустота по дням и пустота из суммы говорят одно слово.
+const m4b = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: [1,1,1,1,1,1,1], carry: null, days: [] }, NOW)
+ok(m4b.goalState === 'unknown', 'достижимость unknown на месяце без единого числа')
 ok(m4.days[0].inCarry && m4.weeks[0].rows[0].sig === 'carry', 'день из суммы серый, sig=carry')
 ok(m4.days.filter((x) => x.inCarry).every((x) => x.need === null), 'дням из суммы need не ставится')
 
