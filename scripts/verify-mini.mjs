@@ -4,6 +4,7 @@ import { computeMini, nextMonthState, sigClass } from '../src/composables/miniMo
 import { calibrateFromDays, observationsByDow, shapeStatus, shapeName } from '../src/data/weekShape.js'
 import { computeEnergy, computeGaps, moduleGain, LEVELS, PART } from '../src/composables/energyModel.js'
 import { encodeState, decodeState, readShared, shareUrl, hasSharePayload } from '../src/composables/shareLink.js'
+import { MODULES, SESSIONS, BY_LABEL } from '../src/i18n/energy.js'
 
 let fails = 0
 const ok = (cond, name) => {
@@ -265,20 +266,40 @@ ok(computeEnergy(set16c, computeMini(set16c, NOW)).pct === 15,
 ok(e16.level.id === 'mini', 'уровень выводится из процента')
 ok(computeEnergy({ ...set16, month_target: 0, month_goal: null, days: [], carry: null }, null).level.id === 'mini',
   'пустое состояние остаётся на первом этапе')
-ok(LEVELS.map((l) => l.cap).join() === '20,35,80,100',
-  'лестница этапов: 20 → 35 → 80 → 100')
+ok(LEVELS.map((l) => l.cap).join() === '20,70,80',
+  'лестница этапов: 20 → 70 → 80')
+ok(LEVELS.length === 3 && !LEVELS.some((l) => l.id === 'runscale'),
+  'этапов три: подписка живёт своей вкладкой, а не ступенью подготовки')
 
 // Мощность модуля — посчитанный прирост на этом состоянии, а не «х1».
 ok(moduleGain('razbor', e16) === 15, 'разбор поднимает цель с 5 до 20: +15 %')
 ok(moduleGain('bootcamp', e16) === 30, 'буткемп поднимает факт и план: +30 %')
 ok(moduleGain('runscale', e16) === 20, 'режим Ранскейл даёт живой контур: +20 %')
-ok(moduleGain('session', e16) === 20, 'сессии: прогноз +15, план +5')
+ok(moduleGain('session-forecast', e16) === 15, 'сессия по прогнозу: +15 %')
+ok(moduleGain('session-plan', e16) === 5, 'сессия по плану: +5 %')
+ok(moduleGain('session-drivers', e16) === 5, 'сессия по драйверам — та же ступень плана: +5 %')
+ok(moduleGain('session-goal', e16) === 15, 'сессия по цели: +15 %')
 // Шкала обязана закрываться ровно: потолок Мини плюс приросты разбора,
 // буткемпа, сессии по прогнозу и режима Ранскейл дают 100 и ни процентом
 // больше. Незакрывающаяся шкала — обещание, которое нечем выполнить.
 ok(e16.pct + moduleGain('razbor', e16) + moduleGain('bootcamp', e16)
   + (PART - e16.parts.find((p) => p.key === 'forecast').value)
   + moduleGain('runscale', e16) === 100, 'лестница модулей закрывает шкалу ровно до 100')
+
+// Каждая карта сущности знает свой модуль: кнопка «+N%» открывает паспорт
+// того, что эту ступень поднимает. Модуль без паспорта — мёртвая кнопка,
+// и на экране она выглядит точно так же, как живая.
+const byOf = (k) => e16.parts.find((p) => p.key === k).nextBy
+ok(byOf('fact') === 'bootcamp' && byOf('forecast') === 'session-forecast'
+  && byOf('plan') === 'session-plan' && byOf('goal') === 'razbor',
+  'у каждой сущности назван свой модуль')
+ok([...SESSIONS, 'bootcamp', 'runscale'].every((id) => MODULES[id] && BY_LABEL[id]),
+  'у каждого модуля есть паспорт и имя')
+ok(SESSIONS[0] === 'razbor' && SESSIONS.length === 5,
+  'лента сессий: разбор первым, за ним четыре темы')
+ok(MODULES['session-drivers'].price === 105000, 'сессия по драйверам — 105 000 ₽')
+ok(MODULES.razbor.price === 50000 && ['session-goal', 'session-plan', 'session-forecast']
+  .every((id) => MODULES[id].price === 50000), 'разбор и тематические сессии — 50 000 ₽')
 
 // Разрывы считаются на числах владельца и называются направлением.
 const gaps16 = computeGaps(m16)

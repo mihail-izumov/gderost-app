@@ -1,27 +1,36 @@
 <script setup>
 import { computed } from 'vue'
-import { ArrowDown } from 'lucide-vue-next'
+import { ArrowDown, ChevronRight } from 'lucide-vue-next'
 import { formatRub } from '../../i18n/format.js'
 import { PART } from '../../composables/energyModel.js'
 import { PART_HINT, MINI_HINT, BY_LABEL } from '../../i18n/energy.js'
 
 // Четыре сущности и разрывы между ними.
 //
-// Лестница факт → прогноз → план → цель показывает не четыре числа, а три
-// расстояния между ними: именно там живёт вопрос «как вообще расти», и почти
-// никто эти расстояния не считает. Приложение показывает величину и молчит —
-// отношение к разрыву у каждого владельца своё, и это предмет разбора,
-// а не подпись на экране.
+// Главное число карты — уровень сущности, а не рубли (D-112). Рубли владелец
+// и так видит на «Сегодня» в четырёх видах; здесь они справка, по которой он
+// узнаёт свою карту, а вопрос экрана другой: на чём это число стоит. Пока
+// рубли стояли крупно, экран читался как второй дашборд и терял свой смысл.
 //
-// Каждая карта несёт свой уровень энергии: сколько сущность даёт сейчас
-// и чем поднимается. Это то же число, что в шкале сверху, поэтому шкала
-// и карты не спорят между собой.
+// Статус — чип, а не серая строка: «со слов» и «посчитано» это положение
+// числа на лестнице доверия, то же самое, что `StatusChip` в остальном
+// приложении, и выглядеть оно обязано одинаково везде.
+//
+// Строка «чем поднимается» стала кнопкой: у каждой сущности свой модуль,
+// и открывается он оттуда, где названа нехватка. Ступень, которая берётся
+// своими руками, кнопкой не становится — покупать там нечего.
+//
+// Лестница факт → прогноз → план → цель показывает не четыре числа, а три
+// расстояния между ними: именно там живёт вопрос «как вообще расти».
+// Приложение показывает величину и молчит — отношение к разрыву у каждого
+// владельца своё, и это предмет разбора, а не подпись на экране.
 
 const props = defineProps({
   model: { type: Object, required: true },
   energy: { type: Object, required: true },
   gaps: { type: Array, default: () => [] },
 })
+defineEmits(['module'])
 
 const VALUE_OF = {
   fact: (m) => m.realizedRev,
@@ -44,9 +53,10 @@ const rows = computed(() => props.energy.parts
     level: p.value,
     nextBy: p.nextBy,
     nextGain: p.nextGain,
+    // Ступень своими руками покупкой не открывается: там действие, а не модуль.
+    buyable: p.nextGain > 0 && p.nextBy !== 'mini',
     // Подпись отвечает ближайшей ступени, а не верхней: пока цель
-    // не поставлена, ближайшее — поставить её здесь, и «отделяется от плана
-    // на разборе» рядом с «+5 %, Мини» спорило бы само с собой.
+    // не поставлена, ближайшее — поставить её здесь.
     hint: (p.nextBy === 'mini' ? MINI_HINT[p.key] : PART_HINT[p.key]) || '',
     gap: props.gaps.find((g) => g.key === GAP_AFTER[p.key]) || null,
   })))
@@ -64,33 +74,54 @@ function gapColor(tone) {
       <article class="rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-3.5">
         <div class="flex items-start justify-between gap-3">
           <span class="min-w-0">
-            <span class="block text-[0.9375rem] font-bold text-[var(--text)]">{{ r.label }}</span>
-            <span class="mt-0.5 block text-[0.75rem] text-[var(--text-muted)]">{{ r.status }}</span>
+            <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span class="text-[0.9375rem] font-bold text-[var(--text)]">{{ r.label }}</span>
+              <span
+                class="inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.625rem]
+                       font-medium uppercase tracking-wide"
+                :style="{ background: 'var(--surface-2)', color: 'var(--text-muted)' }"
+              >{{ r.status }}</span>
+            </span>
+            <span
+              v-if="r.on && r.value !== null && r.value !== undefined"
+              class="mt-1.5 inline-flex items-center rounded-md px-1.5 py-0.5 text-[0.75rem]
+                     font-semibold tabular-nums"
+              :style="{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }"
+            >{{ formatRub(r.value) }}</span>
           </span>
+
           <span class="shrink-0 text-right">
-            <span class="block text-[1.25rem] font-bold leading-none tabular-nums text-[var(--text)]">
-              {{ !r.on || r.value === null || r.value === undefined ? '—' : formatRub(r.value) }}
-            </span>
-            <span class="mt-1 block text-[0.6875rem] tabular-nums text-[var(--text-muted)]">
-              энергия {{ r.level }} / {{ PART }}
-            </span>
+            <span class="text-[1.5rem] font-bold leading-none tabular-nums text-[var(--text)]">{{ r.level }}</span>
+            <span class="text-[0.9375rem] font-medium tabular-nums text-[var(--text-muted)]"> / {{ PART }}</span>
           </span>
         </div>
 
-        <!-- Невключённая опция: что поднимает эту сущность и чем включается.
-             Без имени модуля строка превращается в упрёк. -->
+        <!-- Чем поднимается. Модуль открывается отсюда: нехватка названа
+             здесь, значит и ответ на неё стоит здесь. -->
+        <button
+          v-if="r.buyable"
+          type="button"
+          class="mt-3 flex min-h-[44px] w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left"
+          :style="{ background: 'var(--surface-2)' }"
+          @click="$emit('module', r.nextBy)"
+        >
+          <span class="min-w-0">
+            <span class="block text-[0.8125rem] font-semibold leading-snug text-[var(--text)]">
+              +{{ r.nextGain }}% — {{ BY_LABEL[r.nextBy] || r.nextBy }}
+            </span>
+            <span class="block truncate text-[0.75rem] text-[var(--text-muted)]">{{ r.hint }}</span>
+          </span>
+          <ChevronRight class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" :stroke-width="2.5" aria-hidden="true" />
+        </button>
+
+        <!-- Ступень, которая берётся здесь же. Покупать нечего — и кнопки нет. -->
         <div
-          v-if="r.nextGain > 0"
+          v-else-if="r.nextGain > 0"
           class="mt-3 flex items-center justify-between gap-3 rounded-xl px-3 py-2"
           :style="{ background: 'var(--surface-2)' }"
         >
-          <span class="min-w-0 text-[0.8125rem] leading-snug text-[var(--text-secondary)]">
-            {{ r.hint }}
-          </span>
-          <span class="shrink-0 text-right">
-            <span class="block text-[0.8125rem] font-bold tabular-nums text-[var(--text)]">+{{ r.nextGain }}%</span>
-            <span class="block text-[0.6875rem] text-[var(--text-muted)]">{{ BY_LABEL[r.nextBy] || r.nextBy }}</span>
-          </span>
+          <span class="min-w-0 text-[0.8125rem] leading-snug text-[var(--text-secondary)]">{{ r.hint }}</span>
+          <span class="shrink-0 text-[0.8125rem] font-bold tabular-nums text-[var(--text)]">+{{ r.nextGain }}%</span>
         </div>
       </article>
 

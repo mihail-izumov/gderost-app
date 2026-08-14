@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from 'vue'
+import ShareMonthButton from './ShareMonthButton.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { saveText } from '../composables/saveFile.js'
 
@@ -57,9 +58,15 @@ function reset() {
       Ничего не видим, никуда не отправляем, почту не просим и не пишем вам.
     </p>
 
+    <!-- Поделиться стоит здесь же (D-112): месяц уходит ссылкой в тот же
+         телеграм, где о нём и зашёл разговор, а рядом лежит выгрузка файлом.
+         Раньше ссылка жила только на второй вкладке, и человек, который вёл
+         неделю и хотел показать её партнёру, до неё не доходил. -->
+    <ShareMonthButton class="mt-4" tone="accent" label="Поделиться" />
+
     <button
       type="button"
-      class="mt-4 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl text-[1.0625rem] font-bold"
+      class="mt-2 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl text-[1.0625rem] font-bold"
       :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
       @click="saveData"
     >

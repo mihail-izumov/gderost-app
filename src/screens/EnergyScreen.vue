@@ -1,27 +1,28 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Download, Check } from 'lucide-vue-next'
+import { Star, Check } from 'lucide-vue-next'
 import ConnectProgress from '../components/energy/ConnectProgress.vue'
 import EnergyBreakdown from '../components/energy/EnergyBreakdown.vue'
 import EntityLadder from '../components/energy/EntityLadder.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
+import SessionRail from '../components/energy/SessionRail.vue'
+import RateRazborSheet from '../components/energy/RateRazborSheet.vue'
 import ShareMonthButton from '../components/ShareMonthButton.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { computeEnergy, computeGaps } from '../composables/energyModel.js'
-import { DRIVERS } from '../i18n/energy.js'
-import { saveText } from '../composables/saveFile.js'
 
-// «Энергия» — вкладка, на которой человек видит, на чём стоят его числа.
+// «Буткемп» — вкладка, на которой человек видит, на чём стоят его числа
+// и чем каждое из них поднимается.
 //
-// Правило раздела: у всего здесь есть утилитарная функция. Плашка показывает,
-// где он на пути; число посчитано и раскрывается составом; карты дают уровень
-// каждой сущности и разрывы между ними; паспорт разбора — устройство, а не
-// описание; кнопка собирает файл, с которым идут на разбор.
+// Экран стоит на одном развороте: плашка, четыре карты, лента сессий, отметка
+// разбора и одна кнопка. Всё остальное — состав энергии, паспорта модулей,
+// заказ — живёт в модалках и открывается оттуда, где о нём зашла речь
+// (D-112). До правки экран рассказывал всё сразу и оттого читался как текст,
+// а не как прибор.
 //
 // Числа владельца на экране есть — значит и тон обычный: экран сообщает
-// состояние и не объясняет себя абзацами. Прежняя заглушка этого раздела
-// состояла из объяснений, потому что показывать ей было нечего.
+// состояние и не объясняет себя абзацами.
 
 const store = useMiniStore()
 const m = store.model
@@ -30,29 +31,21 @@ const state = store.state
 const energy = computed(() => computeEnergy(state, m.value))
 const gaps = computed(() => computeGaps(m.value))
 
-const breakdownOpen = ref(false)
-const saved = ref(false)
-const saveFailed = ref(false)
+// Сессии открываются отметкой о состоявшемся разборе. Проверить её нечем,
+// и заказ всё равно проходит через живого человека — отметка открывает
+// возможность заказать, а не сам продукт.
+const unlocked = computed(() => state.razborRating !== null && state.razborRating !== undefined)
 
-// Тот же файл, что и в «Сегодня»: другой выгрузки у месяца не бывает.
-// Здесь он назван по месту — это то, с чем идут на разбор. Запасной путь
-// через буфер — как в остальных выгрузках: часть браузеров скачивание
-// не даёт, и молчать об этом нельзя.
-async function download() {
-  if (saveText(store.exportText(), store.exportFileName())) {
-    saved.value = true
-    saveFailed.value = false
-    setTimeout(() => { saved.value = false }, 2500)
-    return
-  }
-  try {
-    await navigator.clipboard.writeText(store.exportText())
-    saved.value = true
-    saveFailed.value = false
-    setTimeout(() => { saved.value = false }, 2500)
-  } catch {
-    saveFailed.value = true
-  }
+const breakdownOpen = ref(false)
+const rateOpen = ref(false)
+const moduleOpen = ref('')
+
+function openModule(id) {
+  moduleOpen.value = id
+}
+function fromModuleToRate() {
+  moduleOpen.value = ''
+  rateOpen.value = true
 }
 </script>
 
@@ -62,64 +55,45 @@ async function download() {
       :unit="state.unit || state.company"
       :pct="energy.pct"
       :level-id="energy.level.id"
+      @info="breakdownOpen = true"
     />
 
+    <EntityLadder class="mt-3" :model="m" :energy="energy" :gaps="gaps" @module="openModule" />
+
+    <h2 class="mb-2 mt-5 text-[0.8125rem] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+      Сессии
+    </h2>
+    <SessionRail :energy="energy" :unlocked="unlocked" @open="openModule" />
+
+    <!-- Отметка разбора видна сразу: без неё петля обрывается на середине
+         и непонятно, чем открываются остальные карточки. -->
     <button
       type="button"
-      class="mt-2 flex min-h-[44px] w-full items-center justify-center rounded-full text-[0.875rem] font-medium"
-      :style="{ color: 'var(--action)' }"
-      @click="breakdownOpen = true"
+      class="mt-2.5 flex min-h-[52px] w-full items-center justify-between gap-3 rounded-2xl border border-[var(--rim)] bg-[var(--surface)] px-4 text-left"
+      @click="rateOpen = true"
     >
-      Из чего сложились {{ energy.pct }}%
+      <span class="flex min-w-0 items-center gap-2.5">
+        <Check v-if="unlocked" class="h-[18px] w-[18px] shrink-0" :style="{ color: 'var(--positive)' }" :stroke-width="2.5" aria-hidden="true" />
+        <Star v-else class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" :stroke-width="2" aria-hidden="true" />
+        <span class="min-w-0">
+          <span class="block text-[0.9375rem] font-semibold text-[var(--text)]">
+            {{ unlocked ? `Разбор оценён: ${state.razborRating} из 10` : 'Разбор уже был?' }}
+          </span>
+          <span class="block truncate text-[0.75rem] text-[var(--text-muted)]">
+            {{ unlocked ? 'Сессии открыты' : 'Оцените пользу — откроются остальные сессии' }}
+          </span>
+        </span>
+      </span>
+      <span class="shrink-0 text-[0.8125rem] font-medium" :style="{ color: 'var(--action)' }">
+        {{ unlocked ? 'Изменить' : 'Оценить' }}
+      </span>
     </button>
 
-    <EntityLadder class="mt-1" :model="m" :energy="energy" :gaps="gaps" />
-
-    <!-- Драйверы: ступень, которой в приложении нет. Сказано прямо, потому что
-         именно она объясняет, почему план здесь остаётся одним числом. -->
-    <section class="mt-4 rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-4">
-      <h2 class="text-[0.9375rem] font-bold text-[var(--text)]">{{ DRIVERS.title }}</h2>
-      <p class="mt-1 text-[0.8125rem] leading-snug text-[var(--text-secondary)]">{{ DRIVERS.lead }}</p>
-      <ol class="mt-3 flex flex-col gap-2">
-        <li
-          v-for="(row, i) in DRIVERS.rows"
-          :key="i"
-          class="flex gap-2.5 text-[0.8125rem] leading-snug text-[var(--text-secondary)]"
-        >
-          <span
-            class="mt-[2px] flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full text-[0.625rem] font-bold"
-            :style="{ background: 'var(--surface-2)', color: 'var(--text-muted)' }"
-          >{{ i + 1 }}</span>
-          {{ row }}
-        </li>
-      </ol>
-    </section>
-
-    <div class="mt-4">
-      <ModulePassport module-id="razbor" :energy="energy" />
-    </div>
-
-    <!-- Ссылка — основной способ отдать месяц: открывается одним касанием
-         и показывает те же числа. Файл остаётся рядом для случая, когда месяц
-         уходит в чужой разбор насовсем. -->
-    <ShareMonthButton class="mt-2" tone="accent" label="Отправить ссылку на месяц" />
-
-    <button
-      type="button"
-      class="mt-2 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full border border-[var(--rim)] text-[0.9375rem] font-semibold text-[var(--text)]"
-      :style="{ background: 'var(--surface)' }"
-      @click="download"
-    >
-      <Check v-if="saved" class="h-5 w-5" :stroke-width="2.5" aria-hidden="true" />
-      <Download v-else class="h-5 w-5" :stroke-width="2" aria-hidden="true" />
-      {{ saved ? 'Готово' : 'Собрать файл для разбора' }}
-    </button>
-    <p v-if="saveFailed" class="mt-2 text-[0.8125rem] leading-snug" :style="{ color: 'var(--negative)' }">
-      Браузер не дал сохранить файл и скопировать текст. Откройте приложение в Safari или Chrome.
-    </p>
+    <ShareMonthButton class="mt-4" tone="accent" label="Поделиться" />
 
     <SiteFooter />
 
+    <!-- Состав энергии -->
     <Teleport to="body">
       <div
         v-if="breakdownOpen"
@@ -129,6 +103,44 @@ async function download() {
       >
         <div class="max-h-[88svh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           <EnergyBreakdown :energy="energy" @close="breakdownOpen = false" />
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Паспорт модуля и заказ -->
+    <Teleport to="body">
+      <div
+        v-if="moduleOpen"
+        class="fixed inset-0 z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm"
+        role="presentation"
+        @click.self="moduleOpen = ''"
+      >
+        <div class="max-h-[88svh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <ModulePassport
+            :module-id="moduleOpen"
+            :energy="energy"
+            :locked="moduleOpen !== 'razbor' && !unlocked"
+            @rate="fromModuleToRate"
+          />
+          <button
+            type="button"
+            class="mt-3 min-h-[44px] w-full rounded-full text-[0.875rem] font-medium text-[var(--text-muted)]"
+            @click="moduleOpen = ''"
+          >Закрыть</button>
+        </div>
+      </div>
+    </Teleport>
+
+    <!-- Оценка разбора -->
+    <Teleport to="body">
+      <div
+        v-if="rateOpen"
+        class="fixed inset-0 z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm"
+        role="presentation"
+        @click.self="rateOpen = false"
+      >
+        <div class="max-h-[88svh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+          <RateRazborSheet @close="rateOpen = false" />
         </div>
       </div>
     </Teleport>
