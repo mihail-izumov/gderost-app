@@ -1,7 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { Download, Check, Lock } from 'lucide-vue-next'
-import { formatRub } from '../../i18n/format.js'
+import { formatRub, dayLabel } from '../../i18n/format.js'
 import { moduleGain } from '../../composables/energyModel.js'
 import { MODULES, ORDER_STEPS } from '../../i18n/energy.js'
 import { bookingLink } from '../../data/contact.js'
@@ -38,6 +38,7 @@ const store = useMiniStore()
 const mod = computed(() => MODULES[props.moduleId] || null)
 const gain = computed(() => moduleGain(props.moduleId, props.energy))
 const link = computed(() => bookingLink())
+const sent = computed(() => store.state.requests.find((r) => r.module === props.moduleId) || null)
 
 const tiles = computed(() => (!mod.value ? [] : [
   { label: 'Скорость', value: mod.value.speed },
@@ -103,6 +104,17 @@ async function download() {
 
     <!-- Заказ. Первый шаг — отправка данных: без них встречу назначать не на чем. -->
     <template v-if="!locked">
+      <!-- Заявка уже отправлена: человек вернулся в паспорт и обязан увидеть
+           это первым, а не отправлять второй раз, не зная о первом. -->
+      <p
+        v-if="sent"
+        class="mt-4 rounded-xl px-3 py-2.5 text-[0.8125rem] leading-snug"
+        :style="{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }"
+      >
+        Заявка отправлена {{ dayLabel(sent.at) }}. Ждём ответа: подтверждение
+        и ссылка на оплату придут от нас.
+      </p>
+
       <ol class="mt-4 flex flex-col gap-2">
         <li
           v-for="(step, i) in ORDER_STEPS"
@@ -117,10 +129,15 @@ async function download() {
         </li>
       </ol>
 
+      <!-- Отправка и есть заявка: отмечаем её в тот же момент, иначе для
+           человека она исчезает вместе с закрывшимся листом «Поделиться». -->
       <ShareMonthButton
         class="mt-3"
         tone="accent"
-        :label="moduleId === 'razbor' ? 'Отправить месяц на разбор' : 'Отправить месяц на сессию'"
+        :label="sent
+          ? 'Отправить ещё раз'
+          : moduleId === 'razbor' ? 'Отправить месяц на разбор' : 'Отправить месяц на сессию'"
+        @shared="store.addRequest(moduleId)"
       />
 
       <button

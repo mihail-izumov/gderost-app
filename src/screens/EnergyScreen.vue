@@ -8,6 +8,7 @@ import ModulePassport from '../components/energy/ModulePassport.vue'
 import SessionRail from '../components/energy/SessionRail.vue'
 import RateRazborSheet from '../components/energy/RateRazborSheet.vue'
 import BootcampBanner from '../components/energy/BootcampBanner.vue'
+import RequestList from '../components/energy/RequestList.vue'
 import BottomSheet from '../components/BottomSheet.vue'
 import StoryOnboarding from '../components/StoryOnboarding.vue'
 import ShareMonthButton from '../components/ShareMonthButton.vue'
@@ -86,6 +87,10 @@ function storyDone() {
     <SessionRail :energy="energy" :unlocked="unlocked" @open="openModule" />
 
     <BootcampBanner class="mt-2.5" @open="openModule('bootcamp')" />
+
+    <!-- Отправленные заявки. Раздела нет, пока нет ни одной: пустой список
+         «здесь появятся ваши заявки» ничего не сообщает и занимает экран. -->
+    <RequestList :requests="state.requests" @open="openModule" />
 
     <!-- Отметка разбора появляется только после самой оценки. У человека,
          который открыл ссылку впервые, разбора не было — приглашение оценить

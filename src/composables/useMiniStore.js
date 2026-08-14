@@ -32,6 +32,11 @@ function emptyState() {
     // Какие предложения поделиться уже показывались. Показанное второй раз
     // становится назойливостью, а закрытое предложение — ответом «нет».
     shareSeen: [],
+    // Отправленные заявки: [{ id, module, at, rating }]. Пока контура нет,
+    // здесь живёт только след собственного действия человека — что и когда
+    // он отправил. Статус сюда приедет с контуром заявок и ляжет в те же
+    // записи: экран уже умеет его показывать.
+    requests: [],
     // Оценка пользы первого разбора, 0–10, и день, когда она поставлена.
     // Автоматики нет и не будет: разбор случился или не случился, знает только
     // человек. Отметка носит статус «со слов» и открывает не продукт,
@@ -56,6 +61,7 @@ function load() {
     if (!Array.isArray(base.days)) base.days = []
     if (!Array.isArray(base.forecastLog)) base.forecastLog = []
     if (!Array.isArray(base.shareSeen)) base.shareSeen = []
+    if (!Array.isArray(base.requests)) base.requests = []
   } catch {
     // Битое хранилище не должно ронять приложение: начинаем с чистого.
     return emptyState()
@@ -245,6 +251,32 @@ export function useMiniStore() {
     /** Предложение поделиться показано: второй раз оно не приходит. */
     markShareSeen(id) {
       if (id && !state.shareSeen.includes(id)) state.shareSeen.push(id)
+    },
+
+    /**
+     * Записать отправленную заявку.
+     *
+     * Отметка ставится в момент, когда человек отправил месяц: без неё заявка
+     * исчезает для него в ту же секунду, когда лист «Поделиться» закрылся.
+     * Ничего, кроме собственного действия, здесь не утверждается — статус
+     * появится, когда появится контур, и ляжет в эту же запись.
+     *
+     * Повторная отправка того же модуля обновляет дату, а не плодит вторую
+     * заявку: человек мог отправить ссылку дважды, но заявка одна.
+     */
+    addRequest(moduleId) {
+      if (!moduleId) return false
+      const at = todayISO()
+      const i = state.requests.findIndex((r) => r.module === moduleId)
+      if (i >= 0) state.requests[i] = { ...state.requests[i], at }
+      else state.requests.push({ id: `${moduleId}-${Date.now()}`, module: moduleId, at, rating: null })
+      return true
+    },
+
+    /** Заявка снимается человеком: передумал — след уходит вместе с ним. */
+    removeRequest(id) {
+      const i = state.requests.findIndex((r) => r.id === id)
+      if (i >= 0) state.requests.splice(i, 1)
     },
 
     /**
