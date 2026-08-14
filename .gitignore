@@ -1,6 +1,8 @@
 node_modules
 dist
 .DS_Store
+# Остатки FUSE-маунта песочницы: пустые технические файлы, в репозиторий не идут
+.fuse_hidden*
 .env
 .env.*
 *.local

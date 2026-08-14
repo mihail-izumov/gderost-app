@@ -61,7 +61,7 @@ function clear() {
       :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
       :disabled="picked === null || picked === undefined"
       @click="save"
-    >Сохранить</button>
+    >Сохранить оценку</button>
 
     <button
       v-if="store.state.razborRating !== null"

@@ -8,8 +8,11 @@ import TryWeekCard from '../components/TryWeekCard.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import NextMonthSheet from '../components/NextMonthSheet.vue'
 import ShareSheet from '../components/ShareSheet.vue'
+import BottomSheet from '../components/BottomSheet.vue'
+import StoryOnboarding from '../components/StoryOnboarding.vue'
 import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
 import { mlnRub, mlnSigned, pct1, pctDelta, monthCap } from '../i18n/home.js'
+import { widgetStory } from '../i18n/stories.js'
 
 // Главная — дека виджетов. Устройство взято у рабочего Ранскейла:
 // дека месяца в рублях и днях, два виджета в отношениях, вход внутрь по тапу.
@@ -28,7 +31,7 @@ const store = useMiniStore()
 const m = store.model
 const monthOver = store.monthOver
 
-const infoOpen = ref(false)
+const storyOpen = ref(false)
 const nextOpen = ref(false)
 const nextMonth = computed(() => currentMonth())
 
@@ -52,8 +55,9 @@ const fcTrend = computed(() => {
 
 const gapValue = computed(() => (m.value ? mlnSigned(m.value.T - m.value.landing) : '—'))
 
-// Живые интерпретации для «Как читать виджеты»: расшифровка на своих числах,
-// а не на выдуманном примере. Перенесено из оригинала.
+// Живые интерпретации для сторис о виджетах: расшифровка на своих числах,
+// а не на выдуманном примере. Перенесено из оригинала; раскрывашка с экрана
+// уехала в сторис, числа остались живыми.
 const planFactInfo = computed(() => {
   const v = m.value ? m.value.onPlan : null
   if (v == null) return ''
@@ -106,6 +110,20 @@ function closeShare() {
   shareOpen.value = false
 }
 
+// Слайды сторис собираются на текущих числах в момент открытия.
+const storySlides = computed(() => widgetStory({
+  planFact: m.value && m.value.onPlan != null ? pct1(m.value.onPlan) : '',
+  planFactLine: planFactInfo.value,
+  pace: m.value ? pctDelta(m.value.landDev) : '',
+  paceLine: paceInfo.value,
+}))
+
+// Финал сторис ведёт на «Буткемп»: уровень посчитан там.
+function storyDone() {
+  storyOpen.value = false
+  emit('go', 'power')
+}
+
 </script>
 
 <template>
@@ -153,34 +171,16 @@ function closeShare() {
       />
     </div>
 
-    <!-- Как читать виджеты: расшифровка по запросу, на своих числах -->
+    <!-- Как читать виджеты: сторис по запросу, на своих числах.
+         Абзац с экрана ушёл — формат объяснения теперь свой. -->
     <button
       type="button"
-      class="mx-auto mt-2.5 flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[0.8125rem] font-medium text-[var(--text-muted)] transition-colors active:bg-[var(--surface-2)]"
-      :aria-expanded="infoOpen ? 'true' : 'false'"
-      @click="infoOpen = !infoOpen"
+      class="mx-auto mt-2.5 flex min-h-[44px] items-center gap-1.5 rounded-full px-3 py-1.5 text-[0.8125rem] font-medium text-[var(--text-muted)] transition-colors active:bg-[var(--surface-2)]"
+      @click="storyOpen = true"
     >
       <Info class="h-4 w-4" :stroke-width="2" aria-hidden="true" />
       <span>Как читать виджеты</span>
     </button>
-    <Transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="opacity-0 -translate-y-1"
-      enter-to-class="opacity-100 translate-y-0"
-      leave-active-class="transition duration-200 ease-in"
-      leave-from-class="opacity-100 translate-y-0"
-      leave-to-class="opacity-0 -translate-y-1"
-    >
-      <div
-        v-if="infoOpen"
-        class="mt-1 rounded-2xl bg-[var(--surface)] p-4 text-[0.8125rem] leading-relaxed text-[var(--text-secondary)] shadow-sm"
-      >
-        <p><b class="text-[var(--text)]">План/Факт</b> — сколько заработали к сегодняшнему дню от плана на прошедшие дни. 100% — идём ровно по плану, ниже — отстаём. {{ planFactInfo }}</p>
-        <p class="mt-2"><b class="text-[var(--text)]">Прогноз/План</b> — если темп сохранится, насколько выручка месяца отклонится от плана. Стрелка — сдвиг за последний внесённый день. {{ paceInfo }}</p>
-        <p class="mt-2"><b class="text-[var(--text)]">Вместе:</b> слева — где вы сейчас, справа — куда придёте к концу месяца.</p>
-        <p class="mt-2"><b class="text-[var(--text)]">Полоса месяца</b> — те же деньги в рублях. <b class="text-[var(--text)]">План</b> — обязательство, <b class="text-[var(--text)]">цель</b> — амбиция сверху; это разные числа.</p>
-      </div>
-    </Transition>
 
     <InstallBanner />
 
@@ -190,38 +190,21 @@ function closeShare() {
 
     <SiteFooter />
 
-    <!-- Перенос месяца: шторка той же формы, что ввод отчёта -->
-    <Teleport to="body">
-      <div
-        v-if="nextOpen"
-        class="fixed inset-0 z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm"
-        role="presentation"
-        @click.self="nextOpen = false"
-      >
-        <div
-          class="max-h-[88svh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4
-                 pb-[max(1rem,env(safe-area-inset-bottom))]"
-        >
-          <NextMonthSheet @close="nextOpen = false" />
-        </div>
-      </div>
-    </Teleport>
+    <!-- Перенос месяца: шторка общего вида -->
+    <BottomSheet :open="nextOpen" @close="nextOpen = false">
+      <NextMonthSheet @close="nextOpen = false" />
+    </BottomSheet>
 
     <!-- Предложение поделиться: приходит в момент ценности, по разу на повод. -->
-    <Teleport to="body">
-      <div
-        v-if="shareOpen"
-        class="fixed inset-0 z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm"
-        role="presentation"
-        @click.self="closeShare"
-      >
-        <div
-          class="w-full max-w-[430px] rounded-t-2xl bg-[var(--bg)] p-4
-                 pb-[max(1rem,env(safe-area-inset-bottom))]"
-        >
-          <ShareSheet :reason="shareShownReason" @close="closeShare" />
-        </div>
-      </div>
-    </Teleport>
+    <BottomSheet :open="shareOpen" @close="closeShare">
+      <ShareSheet :reason="shareShownReason" @close="closeShare" />
+    </BottomSheet>
+
+    <StoryOnboarding
+      :open="storyOpen"
+      :slides="storySlides"
+      @close="storyOpen = false"
+      @done="storyDone"
+    />
   </div>
 </template>

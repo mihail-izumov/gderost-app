@@ -57,6 +57,6 @@ defineEmits(['close'])
       class="mt-4 min-h-[48px] w-full rounded-full text-[0.9375rem] font-bold"
       :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
       @click="$emit('close')"
-    >Понятно</button>
+    >Буду знать!</button>
   </div>
 </template>

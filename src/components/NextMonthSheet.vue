@@ -1,6 +1,5 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { X } from 'lucide-vue-next'
 import MoneyField from './MoneyField.vue'
 import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
 import { monthLabel, monthOf, plural } from '../i18n/format.js'
@@ -85,16 +84,10 @@ async function saveAndStart() {
 
 <template>
   <div class="w-full">
-    <header class="flex items-center gap-3 pb-3">
+    <!-- Крестика нет: шторка закрывается свайпом, тапом по затемнению
+         и кнопками внизу — выход всегда в одном месте. -->
+    <header class="pb-3">
       <h2 class="text-[1.25rem] font-bold text-[var(--text)]">Начать {{ monthLabel(to) }}</h2>
-      <button
-        type="button"
-        class="ml-auto flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-2)]"
-        aria-label="Закрыть"
-        @click="emit('close')"
-      >
-        <X class="h-5 w-5 text-[var(--text-secondary)]" :stroke-width="2" aria-hidden="true" />
-      </button>
     </header>
 
     <div class="flex flex-col gap-3 rounded-2xl bg-[var(--surface)] p-4">

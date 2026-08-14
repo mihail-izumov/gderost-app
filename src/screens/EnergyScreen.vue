@@ -1,25 +1,28 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Star, Check } from 'lucide-vue-next'
+import { Star, Check, Info } from 'lucide-vue-next'
 import ConnectProgress from '../components/energy/ConnectProgress.vue'
 import EnergyBreakdown from '../components/energy/EnergyBreakdown.vue'
 import EntityLadder from '../components/energy/EntityLadder.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
 import SessionRail from '../components/energy/SessionRail.vue'
 import RateRazborSheet from '../components/energy/RateRazborSheet.vue'
+import BootcampBanner from '../components/energy/BootcampBanner.vue'
+import BottomSheet from '../components/BottomSheet.vue'
+import StoryOnboarding from '../components/StoryOnboarding.vue'
 import ShareMonthButton from '../components/ShareMonthButton.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { computeEnergy, computeGaps } from '../composables/energyModel.js'
+import { ENTITY_STORY } from '../i18n/stories.js'
 
 // «Буткемп» — вкладка, на которой человек видит, на чём стоят его числа
 // и чем каждое из них поднимается.
 //
-// Экран стоит на одном развороте: плашка, четыре карты, лента сессий, отметка
-// разбора и одна кнопка. Всё остальное — состав энергии, паспорта модулей,
-// заказ — живёт в модалках и открывается оттуда, где о нём зашла речь
-// (D-112). До правки экран рассказывал всё сразу и оттого читался как текст,
-// а не как прибор.
+// Экран стоит на одном развороте: плашка, четыре карты, лента сессий, баннер
+// буткемпа, отметка разбора и одна кнопка. Всё остальное живёт в шторках
+// и открывается оттуда, где о нём зашла речь. Шторки общего вида —
+// свайп вниз, кнопка внизу. Объяснение сущностей — сторис по запросу.
 //
 // Числа владельца на экране есть — значит и тон обычный: экран сообщает
 // состояние и не объясняет себя абзацами.
@@ -39,6 +42,7 @@ const unlocked = computed(() => state.razborRating !== null && state.razborRatin
 const breakdownOpen = ref(false)
 const rateOpen = ref(false)
 const moduleOpen = ref('')
+const storyOpen = ref(false)
 
 function openModule(id) {
   moduleOpen.value = id
@@ -46,6 +50,12 @@ function openModule(id) {
 function fromModuleToRate() {
   moduleOpen.value = ''
   rateOpen.value = true
+}
+// Финал сторис ведёт к составу энергии: «Проверить свой уровень» — не совет,
+// а дверь к числу, которое уже посчитано.
+function storyDone() {
+  storyOpen.value = false
+  breakdownOpen.value = true
 }
 </script>
 
@@ -60,10 +70,22 @@ function fromModuleToRate() {
 
     <EntityLadder class="mt-3" :model="m" :energy="energy" :gaps="gaps" @module="openModule" />
 
-    <h2 class="mb-2 mt-5 text-[0.8125rem] font-medium uppercase tracking-wide text-[var(--text-muted)]">
+    <!-- Сущности объясняются сторис, а не абзацем на экране. -->
+    <button
+      type="button"
+      class="mx-auto mt-2 flex min-h-[44px] items-center gap-1.5 rounded-full px-3 text-[0.8125rem] font-medium text-[var(--text-muted)]"
+      @click="storyOpen = true"
+    >
+      <Info class="h-4 w-4" :stroke-width="2" aria-hidden="true" />
+      Что такое факт, прогноз, план и цель
+    </button>
+
+    <h2 class="mb-2 mt-3 text-[0.8125rem] font-medium uppercase tracking-wide text-[var(--text-muted)]">
       Сессии
     </h2>
     <SessionRail :energy="energy" :unlocked="unlocked" @open="openModule" />
+
+    <BootcampBanner class="mt-2.5" @open="openModule('bootcamp')" />
 
     <!-- Отметка разбора видна сразу: без неё петля обрывается на середине
          и непонятно, чем открываются остальные карточки. -->
@@ -93,56 +115,28 @@ function fromModuleToRate() {
 
     <SiteFooter />
 
-    <!-- Состав энергии -->
-    <Teleport to="body">
-      <div
-        v-if="breakdownOpen"
-        class="fixed inset-0 z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm"
-        role="presentation"
-        @click.self="breakdownOpen = false"
-      >
-        <div class="max-h-[88svh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <EnergyBreakdown :energy="energy" @close="breakdownOpen = false" />
-        </div>
-      </div>
-    </Teleport>
+    <BottomSheet :open="breakdownOpen" @close="breakdownOpen = false">
+      <EnergyBreakdown :energy="energy" @close="breakdownOpen = false" />
+    </BottomSheet>
 
-    <!-- Паспорт модуля и заказ -->
-    <Teleport to="body">
-      <div
-        v-if="moduleOpen"
-        class="fixed inset-0 z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm"
-        role="presentation"
-        @click.self="moduleOpen = ''"
-      >
-        <div class="max-h-[88svh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <ModulePassport
-            :module-id="moduleOpen"
-            :energy="energy"
-            :locked="moduleOpen !== 'razbor' && !unlocked"
-            @rate="fromModuleToRate"
-          />
-          <button
-            type="button"
-            class="mt-3 min-h-[44px] w-full rounded-full text-[0.875rem] font-medium text-[var(--text-muted)]"
-            @click="moduleOpen = ''"
-          >Закрыть</button>
-        </div>
-      </div>
-    </Teleport>
+    <BottomSheet :open="!!moduleOpen" @close="moduleOpen = ''">
+      <ModulePassport
+        :module-id="moduleOpen"
+        :energy="energy"
+        :locked="moduleOpen !== 'razbor' && !unlocked"
+        @rate="fromModuleToRate"
+      />
+    </BottomSheet>
 
-    <!-- Оценка разбора -->
-    <Teleport to="body">
-      <div
-        v-if="rateOpen"
-        class="fixed inset-0 z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm"
-        role="presentation"
-        @click.self="rateOpen = false"
-      >
-        <div class="max-h-[88svh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
-          <RateRazborSheet @close="rateOpen = false" />
-        </div>
-      </div>
-    </Teleport>
+    <BottomSheet :open="rateOpen" @close="rateOpen = false">
+      <RateRazborSheet @close="rateOpen = false" />
+    </BottomSheet>
+
+    <StoryOnboarding
+      :open="storyOpen"
+      :slides="ENTITY_STORY"
+      @close="storyOpen = false"
+      @done="storyDone"
+    />
   </div>
 </template>
