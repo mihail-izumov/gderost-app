@@ -578,5 +578,16 @@ ok([...TELEMETRY.signalScores, ...TELEMETRY.reviewScores]
     && s.values.every((v) => v >= 0 && v <= 10)),
   'оценки пользы лежат в шкале 0–10 и подписаны месяцем')
 
+// Календарные недели месяца. Строк бывает от четырёх до шести — шесть только
+// когда первое число попадает на воскресенье или суббота начинает 31-дневный
+// месяц. Семи не бывает никогда, и первая со последней могут быть неполными.
+for (const [ym, dim] of [['2026-02', 28], ['2026-08', 31], ['2026-11', 30], ['2027-05', 31]]) {
+  const mm = computeMini({ month: ym, month_target: 1_000_000, dow_coef: [1,1,1,1,1,1,1], carry: null, days: [] },
+    new Date(Number(ym.slice(0, 4)), Number(ym.slice(5)) - 1, 15, 12, 0, 0))
+  ok(mm.weeks.length >= 4 && mm.weeks.length <= 6, `${ym}: недель месяца ${mm.weeks.length} — от четырёх до шести`)
+  ok(mm.weeks.reduce((a, w) => a + w.days.length, 0) === dim, `${ym}: дни недель складываются в месяц`)
+  ok(mm.weeks.every((w) => w.days.length <= 7), `${ym}: в неделе не больше семи дней`)
+}
+
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')
 process.exit(fails ? 1 : 0)

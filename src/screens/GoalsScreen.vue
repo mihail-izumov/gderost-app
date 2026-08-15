@@ -72,7 +72,7 @@ const monthWeeks = computed(() => {
 })
 
 // Подпись и остаток — того же месяца, что и числа под виджетом.
-const widgetNote = computed(() => (m.value ? `${m.value.daysLeft} ${daysWord(m.value.daysLeft)} ост.` : ''))
+const widgetNote = computed(() => (m.value ? `${m.value.daysLeft} ${daysWord(m.value.daysLeft)} с сегодня` : ''))
 const widgetPill = computed(() => (m.value && m.value.days.length
   ? formatPct((m.value.daysLeft / m.value.days.length) * 100, 0)
   : ''))
@@ -101,7 +101,10 @@ const rows = computed(() => {
 // Разрыв «факт → прогноз» никакой сессией не двигается: его закрывает работа,
 // а не встреча, — поэтому входа у него нет.
 const energy = computed(() => computeEnergy(state, m.value))
-const GAP_MODULE = { 'forecast-plan': 'session-plan', 'plan-goal': 'session-goal' }
+// Оба разрыва разбираются на разборе: тематические сессии сняты с витрины,
+// и прежние коды `session-plan` / `session-goal` открывали пустую шторку —
+// паспорта с такими именами в каталоге нет.
+const GAP_MODULE = { 'forecast-plan': 'razbor', 'plan-goal': 'razbor' }
 const gaps = computed(() => {
   const byKey = {}
   for (const g of computeGaps(m.value)) byKey[g.key] = { ...g, module: GAP_MODULE[g.key] || '' }
@@ -174,16 +177,16 @@ function saveCarry(v) {
     <button
       type="button"
       class="mt-3 flex min-h-[84px] w-full items-center gap-3 rounded-2xl px-4 py-4 text-left"
-      :style="{ background: 'color-mix(in srgb, var(--action) 12%, var(--surface))' }"
+      :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
       @click="storyOpen = true"
     >
       <span class="min-w-0 flex-1">
-        <span class="block text-[1.0625rem] font-bold leading-tight text-[var(--text)]">Расти с прогнозом</span>
-        <span class="mt-1 block text-[0.875rem] leading-snug text-[var(--text-secondary)]">
+        <span class="block text-[1.0625rem] font-bold leading-tight">Расти с прогнозом</span>
+        <span class="mt-1 block text-[0.875rem] leading-snug" :style="{ opacity: 0.85 }">
           Закрывайте разрывы быстрее
         </span>
       </span>
-      <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: 'var(--action)' }" :stroke-width="2.5" aria-hidden="true" />
+      <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: 'var(--ink-on-color)' }" :stroke-width="2.5" aria-hidden="true" />
     </button>
 
     <h2 class="mb-2 mt-5 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">

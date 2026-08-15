@@ -82,7 +82,10 @@ onMounted(() => {
       <!-- Карточка системы: имя витрины шапкой, под ним числа и время.
            Внутренние блоки белые на светло-сером — вложенность видна тоном,
            без второй обводки. -->
-      <header class="rounded-3xl border border-[var(--rim)] bg-[var(--surface-2)] p-2.5 pt-3">
+      <header
+        class="rounded-3xl p-2.5 pt-3"
+        :style="{ background: 'color-mix(in srgb, var(--line) 55%, var(--bg))' }"
+      >
         <h1 class="text-center text-[1.5rem] font-bold leading-none text-[var(--text)]">
           {{ BRAND.question }}
         </h1>

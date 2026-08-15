@@ -47,6 +47,16 @@ const rows = computed(() => props.m.weeks.map((w) => {
     : status === 'locked' && w.blockedBy ? w.blockedBy.iso[0]
       : status === 'now' || status === 'done' ? w.days.find((d) => !d.closed && d.iso <= props.today)?.iso || ''
         : ''
+  // Цвет статуса — тот же светофор, что у дней: зелёный закрыт, жёлтый
+  // требует внимания, серый ничего не утверждает. Красного у недели нет:
+  // отсутствие данных — не провал плана.
+  const SKIN = {
+    done: { bg: 'var(--positive)', ink: 'var(--ink-on-color)', bar: 'var(--positive)' },
+    now: { bg: 'var(--text)', ink: 'var(--ink-on-color)', bar: 'var(--text)' },
+    gaps: { bg: 'var(--warning)', ink: 'var(--accent-ink)', bar: 'var(--warning)' },
+    locked: { bg: 'var(--surface-2)', ink: 'var(--text-muted)', bar: 'var(--line)' },
+    ahead: { bg: 'var(--surface-2)', ink: 'var(--text-muted)', bar: 'var(--line)' },
+  }
   return {
     idx: w.idx,
     range: weekRangeLabel(w.days[0].iso, w.days[total - 1].iso),
@@ -55,6 +65,7 @@ const rows = computed(() => props.m.weeks.map((w) => {
     width: total ? Math.round((closed / total) * 100) : 0,
     status,
     label: { locked: 'заперта', gaps: 'есть пропуски', now: 'идёт', done: 'закрыта', ahead: 'впереди' }[status],
+    skin: SKIN[status],
     missing: w.missing,
     blockedBy: w.blockedBy,
     goTo,
@@ -77,17 +88,17 @@ const rows = computed(() => props.m.weeks.map((w) => {
           @click="r.goTo ? emit('enter', r.goTo) : null"
         >
           <span class="min-w-0 flex-1">
-            <span class="flex items-baseline gap-2">
+            <span class="flex items-center gap-2">
               <span class="text-[0.9375rem] font-semibold text-[var(--text)]">{{ r.range }}</span>
-              <span class="text-[0.75rem] text-[var(--text-muted)]">{{ r.label }}</span>
+              <span
+                class="inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide"
+                :style="{ background: r.skin.bg, color: r.skin.ink }"
+              >{{ r.label }}</span>
             </span>
             <span class="mt-1.5 block h-[6px] w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
               <span
                 class="block h-full rounded-full"
-                :style="{
-                  width: `${r.width}%`,
-                  background: r.status === 'locked' ? 'var(--line)' : 'var(--text)',
-                }"
+                :style="{ width: `${r.width}%`, background: r.skin.bar }"
               ></span>
             </span>
             <span class="mt-1 block text-[0.75rem] text-[var(--text-muted)]">

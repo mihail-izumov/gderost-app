@@ -65,6 +65,10 @@ function choose(m) {
   at.value = 1
 }
 
+// Кто это — обязательный шаг. Без имени компании и юнита все дальнейшие
+// экраны говорят «Ваш бизнес», ссылка на месяц приходит без адресата,
+// а выгрузка получает имя файла без имени. Пропускать его нельзя.
+const whoOk = computed(() => company.value.trim().length > 0 && unit.value.trim().length > 0)
 const targetOk = computed(() => Number(target.value) > 0)
 const goalConflict = computed(() =>
   Number(goal.value) > 0 && targetOk.value && Number(goal.value) < Number(target.value))
@@ -76,10 +80,23 @@ const earnedHigh = computed(() =>
 // ни прогноза к чему, ни «сколько надо сегодня» из чего.
 const canNext = computed(() => {
   if (step.value === 'choice') return false
+  if (step.value === 'who') return whoOk.value
   if (step.value === 'plan') return targetOk.value
   if (step.value === 'goal') return !goalConflict.value
   return true
 })
+
+// Подсказка внизу шага: зачем спрашиваем, что подойдёт и что делать, если
+// точного ответа нет. Это не абзац-объяснение на экране — это условие поля,
+// без которого человек застревает и выдумывает ответ.
+const HINT = {
+  choice: 'Короткий путь доводит до чисел за два шага. Остальное приложение спросит там, где без этого не посчитает.',
+  who: 'Имя нужно, чтобы отличать бизнесы и подписывать файл выгрузки. Юнит — точка или направление, по которому вы считаете выручку. Один бизнес — напишите одно и то же.',
+  plan: 'План — обязательство месяца, а не мечта. Не помните точно — возьмите прошлый месяц, поправить можно в любой день.',
+  earned: 'Сумма за все дни с начала месяца одним числом. Точной нет — назовите близкую: приложение разложит её по дням и подпишет допущением.',
+  goal: 'Цель — то, ради чего стараются сверх плана. Её можно не ставить, шкала построится до плана.',
+}
+const hint = computed(() => HINT[step.value] || '')
 
 function next() {
   if (!canNext.value) return
@@ -139,7 +156,10 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
       </div>
     </header>
 
-    <h1 class="mt-8 font-brand text-[1.75rem] font-bold leading-tight tracking-tight text-[var(--text)]">
+    <!-- Системным начертанием, а не брендовым: это служебный шаг анкеты,
+         а не голос продукта. Брендовое здесь выделяло анкету сильнее, чем
+         имя на витрине. -->
+    <h1 class="mt-8 text-[1.75rem] font-bold leading-tight tracking-tight text-[var(--text)]">
       {{ step === 'choice' ? 'С чего начнём' : 'Подключить бизнес' }}
     </h1>
 
@@ -155,9 +175,9 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
             :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
             @click="choose('short')"
           >
-            <span class="block text-[1.0625rem] font-bold leading-tight">Ввести два числа</span>
+            <span class="block text-[1.0625rem] font-bold leading-tight">Компания и план на месяц</span>
             <span class="mt-1 block text-[0.875rem] leading-snug opacity-80">
-              Название и план на месяц. Остальное — потом, по ходу дела
+              Остальное — потом, по ходу дела
             </span>
           </button>
           <button
@@ -233,6 +253,10 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
           </p>
         </template>
       </div>
+
+      <!-- Подсказка шага: зачем это спрашивают и что делать, если точного
+           ответа нет. Стоит внизу, под полями, и не спорит с ними за внимание. -->
+      <p v-if="hint" class="mt-6 text-[0.8125rem] leading-snug text-[var(--text-muted)]">{{ hint }}</p>
 
       <div class="mt-auto flex flex-col gap-3 pb-6 pt-10">
         <button

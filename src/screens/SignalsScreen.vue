@@ -88,16 +88,16 @@ function storyDone() {
     <button
       type="button"
       class="mt-2.5 flex min-h-[64px] w-full items-center gap-3 rounded-2xl px-4 py-3 text-left"
-      :style="{ background: 'color-mix(in srgb, var(--action) 12%, var(--surface))' }"
+      :style="{ background: 'var(--graphite)', color: 'var(--ink-on-color)' }"
       @click="storyOpen = true"
     >
       <span class="min-w-0 flex-1">
-        <span class="block text-[0.9375rem] font-bold leading-tight text-[var(--text)]">Расти по плану</span>
-        <span class="mt-0.5 block text-[0.75rem] leading-snug text-[var(--text-secondary)]">
+        <span class="block text-[0.9375rem] font-bold leading-tight">Расти по плану</span>
+        <span class="mt-0.5 block text-[0.75rem] leading-snug" :style="{ color: 'var(--ink-on-color-muted)' }">
           Система роста: факт, прогноз, план и цель
         </span>
       </span>
-      <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: 'var(--action)' }" :stroke-width="2.5" aria-hidden="true" />
+      <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: 'var(--ink-on-color-muted)' }" :stroke-width="2.5" aria-hidden="true" />
     </button>
 
     <!-- Переключатель режимов ленты вместо заголовка «Сессии». Во всю ширину:

@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { ChevronLeft, RotateCw } from 'lucide-vue-next'
+import { ChevronLeft } from 'lucide-vue-next'
 import BusinessChip from './business/BusinessChip.vue'
 import BottomSheet from './BottomSheet.vue'
 import LiveClock from './LiveClock.vue'
@@ -10,24 +10,20 @@ import { hardReload } from '../composables/useAppRefresh.js'
 // Шапка навигации. Перенесена из рабочего Ранскейла вместе с правилами,
 // которые там выстрадывались по одному.
 //
-// Устройство: липкая полоса сверху держит только то, что обязано быть видно
-// всегда, — возврат назад и компактный заголовок экрана, проявляющийся при
-// прокрутке. Всё остальное живёт в потоке страницы и уезжает вместе с ней.
+// ⚠ Липкая полоса НЕ занимает места в потоке. Пока она умела расти с нуля
+// до 44 пикселей, страница на пороге прокрутки дёргалась без остановки:
+// полоса раскрывалась → содержимое уезжало вниз → `scrollTop` падал ниже
+// порога → полоса схлопывалась → и так по кругу. Теперь полоса высотой ноль,
+// а видимая панель лежит в ней `absolute` и появляется прозрачностью:
+// высота потока не меняется никогда.
 //
-// Чип бизнеса и перезагрузка уехали из липкой полосы в поток (правка Михаила
-// 15.08). Причина: прилепленные к верху, они забирали место у заголовка экрана,
-// и при прокрутке в шапке стояли три разные вещи сразу. Теперь при прокрутке
-// в липкой полосе появляется по центру имя экрана — одинаково на всех разделах.
-// Чип занял освободившуюся ширину до кнопки перезагрузки: имя юнита длиннее
-// тринадцати знаков обрезалось на ровном месте.
+// Исключение — заход вглубь: там в полосе живёт кнопка «назад», она нужна
+// всегда, и под неё отводится настоящая высота.
 //
-// Три колонки, центральная — `auto`: заголовок занимает свою ширину и стоит
-// ровно по центру, потому что боковые `minmax(2.75rem, 1fr)` делят остаток
-// поровну. На узком экране сжимается подпись «Назад», а не заголовок;
-// 2.75rem = 44pt тач-таргета боковым слотам гарантированы.
-//
-// Стекло и фон появляются ТОЛЬКО при collapsed: на самом верху шапка
-// полностью прозрачна, иначе невидимый слой размытия размывает подпись.
+// Чип бизнеса и кнопка обновления стоят в потоке под полосой и уезжают вместе
+// со страницей. Кнопка обновления — капсула с надписью в наборе чипа: круглая
+// стрелка без подписи в приложении, где всё хранится на устройстве, читается
+// как «стереть и начать заново».
 //
 // Крупный заголовок центрирован — сознательное отклонение от iOS-умолчания,
 // перенесено как есть.
@@ -45,64 +41,66 @@ defineProps({
   // там ничего не добавляет к подписи в таб-баре, а дата и время отвечают
   // на его единственный вопрос — какой сейчас день.
   clockTitle: { type: Boolean, default: false },
+  // Крупный заголовок в потоке. Экран может начинаться сразу с содержимого
+  // и всё равно иметь имя в липкой полосе при прокрутке.
+  bigTitle: { type: Boolean, default: true },
 })
 defineEmits(['back'])
 
 const { caption } = useNavCaption()
 
 // Обновление спрашивает. Кнопка чистила кэш и перезагружала страницу молча,
-// и человек, задевший её пальцем, видел мигание без объяснения. Спросить —
-// одно касание; сказать, что данные при этом целы, — обязанность: кнопка
-// со стрелкой в приложении, где всё хранится на устройстве, читается
-// как «стереть и начать заново».
+// и человек, задевший её пальцем, видел мигание без объяснения.
 const updateOpen = ref(false)
 </script>
 
 <template>
   <header
-    class="sticky top-0 z-20 pt-[env(safe-area-inset-top)] transition-colors duration-200"
-    :class="collapsed
-      ? 'backdrop-blur bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] border-b border-[var(--line)]'
-      : 'bg-transparent border-b border-transparent'"
+    class="sticky top-0 z-20"
+    :class="showBack ? 'pt-[env(safe-area-inset-top)]' : 'h-0'"
   >
-    <!-- Полоса раскрывается только когда ей есть что держать: возврат назад
-         или компактный заголовок при прокрутке. Пустые 44 пикселя над экраном
-         читались дыркой от верхнего края. -->
     <div
-      class="grid w-full grid-cols-[minmax(2.75rem,1fr)_auto_minmax(2.75rem,1fr)] items-center overflow-hidden transition-[height] duration-200"
-      :class="showBack || collapsed ? 'h-11' : 'h-0'"
+      class="w-full pt-[env(safe-area-inset-top)] transition-opacity duration-200"
+      :class="[
+        showBack ? 'pt-0' : 'absolute inset-x-0 top-0',
+        showBack || collapsed
+          ? 'opacity-100 backdrop-blur bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] border-b border-[var(--line)]'
+          : 'pointer-events-none opacity-0',
+      ]"
     >
-      <div class="flex min-w-0 items-center justify-self-start pl-1">
-        <button
-          v-if="showBack"
-          type="button"
-          class="flex min-h-[44px] min-w-0 items-center gap-0.5 rounded-lg px-1 text-[var(--text)] active:bg-[var(--surface-2)]"
-          @click="$emit('back')"
+      <div class="grid h-11 w-full grid-cols-[minmax(2.75rem,1fr)_auto_minmax(2.75rem,1fr)] items-center">
+        <div class="flex min-w-0 items-center justify-self-start pl-1">
+          <button
+            v-if="showBack"
+            type="button"
+            class="flex min-h-[44px] min-w-0 items-center gap-0.5 rounded-lg px-1 text-[var(--text)] active:bg-[var(--surface-2)]"
+            @click="$emit('back')"
+          >
+            <ChevronLeft class="h-6 w-6 shrink-0" :stroke-width="2.25" />
+            <span v-if="backLabel" class="truncate text-[1.0625rem] leading-none">{{ backLabel }}</span>
+          </button>
+          <div v-else class="min-h-[44px] min-w-[44px]" aria-hidden="true"></div>
+        </div>
+
+        <div
+          data-test="nav-compact-title"
+          class="pointer-events-none flex min-w-0 items-center justify-center px-2"
         >
-          <ChevronLeft class="h-6 w-6 shrink-0" :stroke-width="2.25" />
-          <span v-if="backLabel" class="truncate text-[1.0625rem] leading-none">{{ backLabel }}</span>
-        </button>
-        <div v-else class="min-h-[44px] min-w-[44px]" aria-hidden="true"></div>
-      </div>
+          <LiveClock v-if="clockTitle" size="md" />
+          <span v-else-if="title" class="truncate text-[1.0625rem] font-semibold text-[var(--text)]">{{ title }}</span>
+        </div>
 
-      <div
-        v-if="title || clockTitle"
-        data-test="nav-compact-title"
-        class="pointer-events-none flex min-w-0 items-center justify-center px-2 transition-opacity duration-200"
-        :class="collapsed ? 'opacity-100' : 'opacity-0'"
-      >
-        <LiveClock v-if="clockTitle" size="md" />
-        <span v-else class="truncate text-[1.0625rem] font-semibold text-[var(--text)]">{{ title }}</span>
+        <div class="min-h-[44px] min-w-[44px]" aria-hidden="true"></div>
       </div>
-      <!-- заглушка центральной колонки: без неё правый слот съезжает в центр -->
-      <div v-else aria-hidden="true"></div>
-
-      <div class="min-h-[44px] min-w-[44px]" aria-hidden="true"></div>
     </div>
   </header>
 
-  <!-- Контекст экрана в потоке: чип бизнеса во всю ширину до кнопки обновления. -->
-  <div v-if="!showBack && (eyebrow || leadingAction === 'hardReload')" class="flex items-center gap-1 px-3">
+  <!-- Контекст экрана в потоке: чип бизнеса во всю доступную ширину
+       и капсула обновления. -->
+  <div
+    v-if="!showBack && (eyebrow || leadingAction === 'hardReload')"
+    class="flex items-center gap-2 px-3 pt-[env(safe-area-inset-top)]"
+  >
     <div v-if="eyebrow" class="min-w-0 flex-1">
       <BusinessChip :label="eyebrow" :name="eyebrowName" full-width />
     </div>
@@ -111,18 +109,17 @@ const updateOpen = ref(false)
       v-if="leadingAction === 'hardReload'"
       type="button"
       data-test="nav-hard-reload"
-      class="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg text-[var(--text)] active:bg-[var(--surface-2)]"
+      class="flex h-[26px] shrink-0 items-center rounded-full border px-3 text-[0.6875rem] font-medium uppercase tracking-[0.18em]
+             text-[var(--text-secondary)] active:bg-[var(--surface-2)]"
+      :style="{ borderColor: 'var(--line)' }"
       aria-label="Обновить до последней версии"
-      title="Обновить до последней версии"
       @click="updateOpen = true"
-    >
-      <RotateCw class="h-5 w-5" :stroke-width="2" />
-    </button>
+    >Обновить</button>
   </div>
 
   <!-- Крупный заголовок в потоке. Подпись — absolute НАД ним, чтобы h1
        не сдвигался и стоял на одном месте во всех разделах. -->
-  <div v-if="title || caption || clockTitle" class="relative px-4 pb-3 pt-2 text-center">
+  <div v-if="bigTitle && (title || caption || clockTitle)" class="relative px-4 pb-3 pt-2 text-center">
     <p
       v-if="caption"
       class="pointer-events-none absolute inset-x-0 -top-2 text-[0.75rem] leading-none text-[var(--text-muted)]"
@@ -145,9 +142,12 @@ const updateOpen = ref(false)
         :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
         @click="hardReload"
       >Обновить</button>
+      <!-- Отказ — тоже кнопка: голый текст рядом с залитой кнопкой читается
+           подписью, а не вторым выходом. -->
       <button
         type="button"
-        class="mt-2 min-h-[52px] w-full rounded-2xl text-[1.0625rem] font-semibold text-[var(--text-secondary)]"
+        class="mt-2 min-h-[52px] w-full rounded-2xl border text-[1.0625rem] font-semibold text-[var(--text)]"
+        :style="{ borderColor: 'var(--rim)', background: 'var(--surface)' }"
         @click="updateOpen = false"
       >Оставить</button>
     </div>

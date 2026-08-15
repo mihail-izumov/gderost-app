@@ -5,19 +5,19 @@ import { formatRub } from '../../i18n/format.js'
 import { moduleGain } from '../../composables/energyModel.js'
 import { MODULES, RAIL, isLocked } from '../../i18n/energy.js'
 
-// Лента ступеней. Четыре карточки лестницей вовлечения: владелец и 90 минут →
-// владелец и серия разборов → команда и данные → система и поток.
+// Лента ступеней. Три карточки лестницей вовлечения: владелец и 90 минут →
+// владелец и серия разборов → команда и данные. Режим живёт баннером ниже.
 //
 // Замок стоит на заказе, а не на информации: карточка открывается и показывает
-// состав, цену и мощность. Серия заперта до состоявшегося разбора — продавать
-// раскладку плана человеку, чей план никто не видел, значит продавать наугад.
-// Режим заперт всегда: в него входят по вердикту буткемпа, и открыть его
-// нажатием в приложении нельзя.
+// состав, цену и мощность. Серия и буткемп заперты до состоявшегося разбора —
+// продавать раскладку плана человеку, чей план никто не видел, значит
+// продавать наугад.
 //
-// Состояние карточки называется словом, а не угадывается по цвету фона:
-// «Ожидание» — заказ закрыт, «Доступно» — можно заказывать, «Завершена» —
-// пройдено. Доступная карточка залита зелёным: это единственное место экрана,
-// где цвет означает «здесь можно действовать».
+// Доступная ступень залита зелёным целиком, и весь её текст — на цвете. Это
+// единственное место экрана, где цвет означает «здесь можно действовать»,
+// и полутон был слишком тихим для единственного действия на ленте. Бейдж
+// на ней белый: салатовый на зелёном — производный оттенок, а таких в системе
+// нет. Запертые карточки остаются обычными светлыми.
 //
 // Лента горизонтальная и в один ряд: паспорта сравниваются глазами за секунду,
 // а вертикальный список занял бы весь экран и утопил бы всё, что под ним.
@@ -32,12 +32,6 @@ const props = defineProps({
 })
 defineEmits(['open'])
 
-const STATE = {
-  wait: { label: 'Ожидание', bg: 'var(--surface-2)', ink: 'var(--text-muted)' },
-  open: { label: 'Доступно', bg: 'var(--positive)', ink: 'var(--ink-on-color)' },
-  done: { label: 'Завершена', bg: 'var(--text)', ink: 'var(--ink-on-color)' },
-}
-
 const cards = computed(() => RAIL.map((id) => {
   const mod = MODULES[id]
   const gain = moduleGain(id, props.energy)
@@ -47,6 +41,9 @@ const cards = computed(() => RAIL.map((id) => {
   const price = mod.price
     ? formatRub(mod.price) + (mod.priceUnit ? ' / мес' : '')
     : 'на разборе'
+  // На цветной заливке весь текст белый: цветного текста в системе нет,
+  // а полутонов на цвете — тем более.
+  const onColor = state !== 'wait'
   return {
     id,
     title: mod.title,
@@ -55,15 +52,16 @@ const cards = computed(() => RAIL.map((id) => {
     gain,
     state,
     locked,
-    // Запертая ступень объясняет замок своим словом: «Ожидание» без причины
-    // читается как ошибка приложения.
-    label: locked && mod.lockChip ? mod.lockChip : STATE[state].label,
-    chipBg: STATE[state].bg,
-    chipInk: STATE[state].ink,
-    // Заливкой отмечаем только то, что можно заказать прямо сейчас.
-    cardBg: state === 'open'
-      ? 'color-mix(in srgb, var(--positive) 12%, var(--surface))'
-      : 'var(--surface)',
+    onColor,
+    label: locked && mod.lockChip ? mod.lockChip : state === 'done' ? 'Завершена' : 'Доступно',
+    cardBg: state === 'open' ? 'var(--positive)'
+      : state === 'done' ? 'var(--text)'
+        : 'var(--surface)',
+    ink: onColor ? 'var(--ink-on-color)' : 'var(--text)',
+    inkMuted: onColor ? 'var(--ink-on-color-muted)' : 'var(--text-secondary)',
+    inkFaint: onColor ? 'var(--ink-on-color-muted)' : 'var(--text-muted)',
+    chipBg: onColor ? 'var(--ink-on-color)' : 'var(--surface-2)',
+    chipInk: onColor ? 'var(--text)' : 'var(--text-muted)',
   }
 }))
 </script>
@@ -79,34 +77,36 @@ const cards = computed(() => RAIL.map((id) => {
           @click="$emit('open', c.id)"
         >
           <span class="flex items-start justify-between gap-2">
-            <span class="text-[0.9375rem] font-bold leading-tight text-[var(--text)]">{{ c.title }}</span>
+            <span class="text-[0.9375rem] font-bold leading-tight" :style="{ color: c.ink }">{{ c.title }}</span>
             <!-- Замок вместо стрелки у запертой ступени: стрелка обещает шаг
                  вперёд, а шага вперёд отсюда пока нет. Паспорт всё равно
                  открывается — заперт заказ, а не чтение. -->
             <Lock
               v-if="c.locked"
-              class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]"
+              class="h-[18px] w-[18px] shrink-0"
+              :style="{ color: c.inkFaint }"
               :stroke-width="2"
               aria-hidden="true"
             />
             <ChevronRight
               v-else
-              class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]"
+              class="h-[18px] w-[18px] shrink-0"
+              :style="{ color: c.inkFaint }"
               :stroke-width="2.5"
               aria-hidden="true"
             />
           </span>
 
-          <span class="mt-1 block text-[0.75rem] leading-snug text-[var(--text-secondary)]">{{ c.subtitle }}</span>
+          <span class="mt-1 block text-[0.75rem] leading-snug" :style="{ color: c.inkMuted }">{{ c.subtitle }}</span>
 
           <span class="mt-3 flex items-end justify-between gap-2">
             <span>
-              <span class="block text-[0.625rem] uppercase tracking-wide text-[var(--text-muted)]">Расход</span>
-              <span class="block text-[0.9375rem] font-bold tabular-nums text-[var(--text)]">{{ c.price }}</span>
+              <span class="block text-[0.625rem] uppercase tracking-wide" :style="{ color: c.inkFaint }">Расход</span>
+              <span class="block text-[0.9375rem] font-bold tabular-nums" :style="{ color: c.ink }">{{ c.price }}</span>
             </span>
             <span class="text-right">
-              <span class="block text-[0.625rem] uppercase tracking-wide text-[var(--text-muted)]">Мощность</span>
-              <span class="block text-[0.9375rem] font-bold tabular-nums text-[var(--text)]">
+              <span class="block text-[0.625rem] uppercase tracking-wide" :style="{ color: c.inkFaint }">Мощность</span>
+              <span class="block text-[0.9375rem] font-bold tabular-nums" :style="{ color: c.ink }">
                 {{ c.gain > 0 ? `+${c.gain}%` : '—' }}
               </span>
             </span>

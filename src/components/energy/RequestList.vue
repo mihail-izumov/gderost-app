@@ -93,7 +93,7 @@ const razbor = MODULES.razbor
     <div
       v-else
       class="flex min-h-[11rem] flex-col items-center justify-center gap-1 rounded-2xl px-5 py-6 text-center"
-      :style="{ background: 'color-mix(in srgb, var(--positive) 12%, var(--surface))' }"
+      :style="{ background: 'var(--surface-2)' }"
     >
       <span
         class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide"

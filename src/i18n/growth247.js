@@ -29,9 +29,11 @@ export const HEAD = {
  * что своя работа не заперта никогда.
  */
 export const LEVEL_ROWS = [
-  { id: 'said', what: 'Контроль дня', has: true, by: '' },
-  { id: 'forecast', what: 'Прогноз выручки', has: true, by: '' },
-  { id: 'checked', what: 'Мастерплан с командой', has: false, by: 'буткемп' },
-  { id: 'action', what: 'Что именно сделать сегодня', has: false, by: 'разбор' },
-  { id: 'morning', what: 'Сигналы каждое утро', has: false, by: 'подписка' },
+  { id: 'said', what: 'Контроль дня', has: true, by: '', module: '' },
+  { id: 'forecast', what: 'Прогноз выручки', has: true, by: '', module: '' },
+  // Разбор стоит выше буткемпа: дорога идёт снизу вверх, и первая ступень
+  // не может лежать под той, которая ею открывается.
+  { id: 'action', what: 'Что именно сделать сегодня', has: false, by: 'разбор', module: 'razbor' },
+  { id: 'checked', what: 'Мастерплан с командой', has: false, by: 'буткемп', module: 'bootcamp' },
+  { id: 'morning', what: 'Сигналы каждое утро', has: false, by: 'подписка', module: 'runscale' },
 ]

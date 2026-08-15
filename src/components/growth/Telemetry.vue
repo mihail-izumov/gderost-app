@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { ChevronRight, Eye, Clock, Zap } from 'lucide-vue-next'
+import BottomSheet from '../BottomSheet.vue'
 import { COUNTERS, TELEMETRY, scoreNow } from '../../data/runscaleCounters.js'
 import { formatInt, formatPct, plural } from '../../i18n/format.js'
 import { HEAD } from '../../i18n/growth247.js'
@@ -24,12 +25,16 @@ import { HEAD } from '../../i18n/growth247.js'
 // когда он появится. Линия из ниоткуда была бы ровно тем враньём, ради
 // запрета которого заведён статус числа.
 
+defineEmits(['connect'])
+
 const byKey = (k) => COUNTERS.items.find((c) => c.key === k)
 const checkups = computed(() => byKey('checkups'))
 const signals = computed(() => byKey('signals'))
 const reviews = computed(() => byKey('reviews'))
 
 const open = ref('')
+// Круг с числом бизнесов открывает одну строку о том, что это число значит.
+const clientsOpen = ref(false)
 function toggle(id) { open.value = open.value === id ? '' : id }
 
 // Переключатель месяцев у каждой плитки свой: ряды у них разные.
@@ -86,15 +91,17 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
     <!-- Число в круге — сколько бизнесов система ведёт прямо сейчас. Стоит
          у заголовка, а не отдельной плиткой: это подпись к «вместе»,
          а не третий счётчик в ряду. -->
-    <div class="flex items-center justify-between gap-3">
+    <div class="flex items-center gap-2">
       <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
         {{ HEAD.telemetry }}
       </h2>
-      <span
-        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[0.8125rem] font-bold tabular-nums"
-        :style="{ background: 'var(--surface-black)', color: 'var(--ink-on-color)' }"
+      <button
+        type="button"
+        class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.75rem] font-bold tabular-nums"
+        :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
         :aria-label="`${TELEMETRY.businesses} ${plural(TELEMETRY.businesses, 'бизнес', 'бизнеса', 'бизнесов')} под наблюдением`"
-      >{{ formatInt(TELEMETRY.businesses) }}</span>
+        @click="clientsOpen = true"
+      >{{ formatInt(TELEMETRY.businesses) }}</button>
     </div>
 
     <div class="mt-2.5 grid grid-cols-2 gap-2">
@@ -116,18 +123,18 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
             aria-hidden="true"
           />
         </span>
-        <span class="mt-auto block text-[2rem] font-bold leading-none tabular-nums text-[var(--text)]">
+        <span class="mt-1 block text-[2rem] font-bold leading-none tabular-nums text-[var(--text)]">
           {{ formatInt(checkups.value) }}
         </span>
-        <span class="flex items-center gap-2 text-[0.75rem] text-[var(--text-secondary)]">
+        <span class="mt-auto flex h-6 items-center gap-2 text-[0.75rem] text-[var(--text-secondary)]">
           <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)]" aria-hidden="true">
-            <Zap class="h-3.5 w-3.5" :style="{ color: 'var(--accent)' }" :stroke-width="2.4" />
+            <Zap class="h-3.5 w-3.5" :style="{ color: 'var(--action)' }" :stroke-width="2.4" />
           </span>
           <span><b class="font-semibold tabular-nums text-[var(--text)]">{{ formatInt(signals.value) }}</b> {{ word(signals) }}</span>
         </span>
-        <span class="flex items-center gap-2 text-[0.75rem] text-[var(--text-secondary)]">
+        <span class="flex h-6 items-center gap-2 text-[0.75rem] text-[var(--text-secondary)]">
           <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)]" aria-hidden="true">
-            <Eye class="h-3.5 w-3.5" :style="{ color: 'var(--accent)' }" :stroke-width="2.2" />
+            <Eye class="h-3.5 w-3.5" :style="{ color: 'var(--action)' }" :stroke-width="2.2" />
           </span>
           <span><b class="font-semibold tabular-nums text-[var(--text)]">{{ formatPct(TELEMETRY.readsRate * 100, 0) }}</b> прочтений</span>
         </span>
@@ -151,14 +158,20 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
             aria-hidden="true"
           />
         </span>
-        <span class="mt-auto block text-[2rem] font-bold leading-none tabular-nums text-[var(--text)]">
+        <span class="mt-1 block text-[2rem] font-bold leading-none tabular-nums text-[var(--text)]">
           {{ formatInt(reviews.value) }}
         </span>
-        <span class="flex items-center gap-2 text-[0.75rem] text-[var(--text-secondary)]">
+        <span class="mt-auto flex h-6 items-center gap-2 text-[0.75rem] text-[var(--text-secondary)]">
           <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)]" aria-hidden="true">
-            <Clock class="h-3.5 w-3.5" :style="{ color: 'var(--accent)' }" :stroke-width="2.2" />
+            <Clock class="h-3.5 w-3.5" :style="{ color: 'var(--action)' }" :stroke-width="2.2" />
           </span>
-          <span>90 мин · вт и пт</span>
+          <span class="flex items-center gap-1">
+            <b class="font-semibold tabular-nums text-[var(--text)]">90</b> мин
+            <span
+              class="inline-flex items-center rounded px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide"
+              :style="{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }"
+            >вт и пт</span>
+          </span>
         </span>
       </button>
 
@@ -314,5 +327,20 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
         </div>
       </div>
     </div>
+
+    <BottomSheet :open="clientsOpen" @close="clientsOpen = false">
+      <div class="pb-2">
+        <h2 class="text-[1.25rem] font-bold leading-tight text-[var(--text)]">
+          Сегодня {{ formatInt(TELEMETRY.businesses) }}
+          {{ plural(TELEMETRY.businesses, 'бизнес растёт', 'бизнеса растут', 'бизнесов растут') }} на Ранскейл
+        </h2>
+        <button
+          type="button"
+          class="mt-4 min-h-[52px] w-full rounded-2xl text-[1.0625rem] font-bold"
+          :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
+          @click="clientsOpen = false; $emit('connect')"
+        >Подключить бизнес с инженером</button>
+      </div>
+    </BottomSheet>
   </section>
 </template>

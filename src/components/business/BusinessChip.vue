@@ -120,7 +120,7 @@ onBeforeUnmount(() => {
         <Plus class="h-5 w-5 shrink-0 text-[var(--text-secondary)]" :stroke-width="2.25" aria-hidden="true" />
         <span class="flex min-w-0 flex-col">
           <span class="text-[1rem] leading-tight text-[var(--text)]">Подключить бизнес</span>
-          <span class="text-[0.75rem] leading-tight text-[var(--text-muted)]">с экспертом</span>
+          <span class="text-[0.75rem] leading-tight text-[var(--text-muted)]">с бизнес-инженером</span>
         </span>
       </button>
     </div>

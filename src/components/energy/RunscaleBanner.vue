@@ -17,15 +17,15 @@ const mod = MODULES.runscale
   <button
     type="button"
     class="mt-2.5 flex w-full items-center gap-3.5 rounded-[22px] p-4 text-left"
-    :style="{ background: 'var(--surface-black)', color: 'var(--ink-on-color)' }"
+    :style="{ background: 'var(--action)', color: 'var(--ink-on-color)' }"
     @click="$emit('open', 'runscale')"
   >
     <span class="min-w-0 flex-1">
       <span class="block text-[1.0625rem] font-bold leading-tight">{{ mod.title }}</span>
-      <span class="mt-1 block text-[0.8125rem] leading-snug" :style="{ color: 'var(--ink-on-color-muted)' }">
+      <span class="mt-1 block text-[0.8125rem] leading-snug" :style="{ color: 'var(--ink-on-color)' }">
         {{ mod.subtitle }}
       </span>
     </span>
-    <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: 'var(--ink-on-color-muted)' }" :stroke-width="2.5" aria-hidden="true" />
+    <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: 'var(--ink-on-color)' }" :stroke-width="2.5" aria-hidden="true" />
   </button>
 </template>

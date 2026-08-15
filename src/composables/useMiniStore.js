@@ -126,8 +126,11 @@ export function useMiniStore() {
       state.days = []
       state.forecastLog = []
       const amount = Number(earned)
+      // Разнос включён сразу: владелец назвал сумму, и недели, целиком вошедшие
+      // в неё, иначе стояли бы пустыми — человек видел бы дыру там, где сам
+      // только что дал число. Раскладка обратима переключателем.
       state.carry = Number.isFinite(amount) && amount >= 0 && earnedUpTo
-        ? { upTo: String(earnedUpTo), amount }
+        ? { upTo: String(earnedUpTo), amount, spread: true }
         : null
       state.ready = true
     },
@@ -147,7 +150,7 @@ export function useMiniStore() {
     setCarry({ amount, upTo }) {
       const v = Number(amount)
       if (!Number.isFinite(v) || v < 0 || !upTo) return false
-      state.carry = { upTo: String(upTo), amount: v, spread: !!(state.carry && state.carry.spread) }
+      state.carry = { upTo: String(upTo), amount: v, spread: state.carry ? !!state.carry.spread : true }
       return true
     },
 

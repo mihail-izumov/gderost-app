@@ -10,7 +10,6 @@ import NextMonthSheet from '../components/NextMonthSheet.vue'
 import ShareSheet from '../components/ShareSheet.vue'
 import BottomSheet from '../components/BottomSheet.vue'
 import StoryOnboarding from '../components/StoryOnboarding.vue'
-import LadderBanner from '../components/energy/LadderBanner.vue'
 import HonestBadge from '../components/HonestBadge.vue'
 import FirstStepsCard from '../components/FirstStepsCard.vue'
 import CarrySheet from '../components/CarrySheet.vue'
@@ -253,10 +252,6 @@ function storyDone() {
       <ChevronRight class="h-5 w-5 shrink-0 text-[var(--text-muted)]" :stroke-width="2.5" aria-hidden="true" />
     </button>
 
-    <!-- Дорога маячит и здесь: человек, который ведёт свой месяц, видит
-         следующую ступень с того же экрана. Открывает вкладку, а не шторку —
-         на вкладке лежит всё, ради чего он туда идёт. -->
-    <LadderBanner class="mt-3" @open="emit('go', 'power')" />
 
     <div class="mt-3">
       <TryWeekCard />

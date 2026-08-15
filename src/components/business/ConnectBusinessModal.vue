@@ -18,9 +18,8 @@ const emit = defineEmits(['close'])
 
 const L = {
   title: 'Подключить бизнес',
-  lead: 'Эксперт Модуля Роста подключит ваши данные и соберёт полную систему под ваш бизнес: проверенные цифры и подсказку каждый день.',
-  note: 'Приложение ничего не отправляет в сеть. Ссылка открывает сайт системы в новой вкладке.',
-  submit: 'Открыть runscale.ru',
+  lead: 'Бизнес-инженер Ранскейл подключит ваши данные и соберёт систему под ваш бизнес: проверенные цифры и сигнал каждый день.',
+  submit: 'Отправить заявку',
 }
 
 const dialogRef = ref(null)
@@ -107,11 +106,11 @@ onBeforeUnmount(() => {
             target="_blank"
             rel="noopener noreferrer"
             data-test="connect-submit"
-            class="flex min-h-[48px] w-full items-center justify-center rounded-2xl bg-[var(--accent)] px-4 text-[1.0625rem] font-bold text-[var(--accent-ink)] active:opacity-90"
+            class="flex min-h-[48px] w-full items-center justify-center rounded-2xl px-4 text-[1.0625rem] font-bold active:opacity-90"
+            :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
             @click="hide"
           >{{ L.submit }}</a>
 
-          <p class="text-[0.75rem] leading-snug text-[var(--text-muted)]">{{ L.note }}</p>
         </div>
       </div>
     </div>

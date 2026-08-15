@@ -109,7 +109,10 @@ const TABS = computed(() => [
     id: 'runscale',
     label: 'Рост 24/7',
     iconKind: 'chevron',
-    title: '',
+    // Имя есть в липкой полосе при прокрутке, крупного заголовка нет:
+    // экран начинается с состояния.
+    title: 'Рост 24/7',
+    bigTitle: false,
     leadingAction: 'hardReload',
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',

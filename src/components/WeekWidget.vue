@@ -105,7 +105,9 @@ const title = computed(() => {
   return weekRangeLabel(w[0].key, w[w.length - 1].key)
 })
 
-// Считается вместе с сегодняшним днём: сегодня ещё можно работать.
+// Считается вместе с сегодняшним днём: сегодня ещё можно работать. Подпись
+// это и называет — «17 дней с сегодня» на пятнадцатое августа верно, а
+// «17 дней ост.» читалось как «после сегодня» и выглядело ошибкой на день.
 const daysLeft = computed(() => {
   const t = new Date(props.now)
   const dim = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate()
@@ -118,7 +120,7 @@ const leftPct = computed(() => {
   return (daysLeft.value / dim) * 100
 })
 
-const noteText = computed(() => props.note ?? `${daysLeft.value} ${daysWord(daysLeft.value)} ост.`)
+const noteText = computed(() => props.note ?? `${daysLeft.value} ${daysWord(daysLeft.value)} с сегодня`)
 const pillText = computed(() => props.pill ?? formatPct(leftPct.value, 0))
 
 // Разворот на весь месяц. Неделя остаётся видом по умолчанию: она отвечает
@@ -144,10 +146,10 @@ const rows = computed(() => (expanded.value && monthRows.value.length
       <h2 class="text-[1.25rem] font-bold leading-none" :style="{ color: skin.title }">{{ title }}</h2>
 
       <div v-if="noteText || pillText" class="flex shrink-0 items-center gap-2">
-        <span v-if="noteText" class="text-[0.75rem]" :style="{ color: skin.note }">{{ noteText }}</span>
+        <span v-if="noteText" class="text-[0.75rem] font-semibold" :style="{ color: skin.note }">{{ noteText }}</span>
         <span
           v-if="pillText"
-          class="rounded-full border px-2 py-0.5 text-[0.75rem] tabular-nums"
+          class="rounded-full border-2 px-2 py-0.5 text-[0.75rem] font-semibold tabular-nums"
           :style="{ borderColor: skin.pillBorder, color: skin.pillInk }"
         >{{ pillText }}</span>
       </div>
