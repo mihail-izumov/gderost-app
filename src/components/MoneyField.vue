@@ -29,11 +29,11 @@ function onInput(e) {
   <label class="block">
     <span v-if="label" class="block text-[0.8125rem] font-medium text-[var(--text-secondary)]">{{ label }}</span>
     <span v-if="hint" class="mt-0.5 block text-[0.75rem] leading-snug text-[var(--text-muted)]">{{ hint }}</span>
-    <span class="mt-2 flex items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-3
+    <span class="mt-2 flex w-full min-w-0 items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-3
                  focus-within:border-[var(--text-secondary)]">
       <input
         :id="id"
-        class="min-h-[44px] w-full bg-transparent font-mono text-[1.0625rem] text-[var(--text)]
+        class="min-h-[44px] w-full min-w-0 bg-transparent font-mono text-[1.0625rem] text-[var(--text)]
                outline-none placeholder:text-[var(--placeholder)]"
         type="text"
         inputmode="numeric"

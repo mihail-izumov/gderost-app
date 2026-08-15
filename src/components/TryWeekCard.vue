@@ -93,7 +93,7 @@ function reset() {
     <button
       v-if="!askReset"
       type="button"
-      class="min-h-[52px] w-full rounded-2xl border-2 text-[1.0625rem] font-normal"
+      class="min-h-[52px] w-full rounded-2xl border-2 text-[1.0625rem] font-semibold"
       :style="{ borderColor: 'var(--negative)', color: 'var(--negative)' }"
       @click="askReset = true"
     >Всё забыть</button>

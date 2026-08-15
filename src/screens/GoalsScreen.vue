@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { ArrowDown, ChevronRight, Sparkles } from 'lucide-vue-next'
+import { ArrowDown, ChevronRight } from 'lucide-vue-next'
 import WeekWidget from '../components/WeekWidget.vue'
 import ValueSheet from '../components/ValueSheet.vue'
 import BottomSheet from '../components/BottomSheet.vue'
@@ -107,11 +107,13 @@ const gaps = computed(() => {
   for (const g of computeGaps(m.value)) byKey[g.key] = { ...g, module: GAP_MODULE[g.key] || '' }
   return byKey
 })
-// Разрыв стоит под той плашкой, к которой относится.
+// Разрыв стоит под той плашкой, к которой относится. Строка без числа
+// (цель не поставлена) показывается тоже: без неё цепочка рвётся.
 const GAP_AFTER = { fact: 'fact-forecast', forecast: 'forecast-plan', plan: 'plan-goal' }
 function gapFor(key) {
   const g = gaps.value[GAP_AFTER[key]]
-  return g && g.value > 0 ? g : null
+  if (!g) return null
+  return g.value === null || g.value > 0 ? g : null
 }
 function gapColor(tone) {
   if (tone === 'bad') return 'var(--negative)'
@@ -166,7 +168,29 @@ function saveCarry(v) {
       :pill="widgetPill"
     />
 
-    <div class="mt-3 flex flex-col gap-2">
+    <!-- Метод стоит между календарём и числами: человек посмотрел свою неделю,
+         и здесь ему объясняют, откуда берутся числа под этим блоком. Заливка
+         и рост выше соседей — так его видно раньше, чем плашки. -->
+    <button
+      type="button"
+      class="mt-3 flex min-h-[84px] w-full items-center gap-3 rounded-2xl px-4 py-4 text-left"
+      :style="{ background: 'color-mix(in srgb, var(--action) 12%, var(--surface))' }"
+      @click="storyOpen = true"
+    >
+      <span class="min-w-0 flex-1">
+        <span class="block text-[1.0625rem] font-bold leading-tight text-[var(--text)]">Расти с прогнозом</span>
+        <span class="mt-1 block text-[0.875rem] leading-snug text-[var(--text-secondary)]">
+          Закрывайте разрывы быстрее
+        </span>
+      </span>
+      <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: 'var(--action)' }" :stroke-width="2.5" aria-hidden="true" />
+    </button>
+
+    <h2 class="mb-2 mt-5 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+      Движение к цели
+    </h2>
+
+    <div class="flex flex-col gap-2">
       <template v-for="r in rows" :key="r.key">
         <button
           type="button"
@@ -189,18 +213,22 @@ function saveCarry(v) {
 
         <!-- Расстояние до следующей величины. Ноль не показываем: расстояния
              нет. Где его двигает сессия — строка становится кнопкой. -->
+        <!-- Разрывы выровнены по левому краю: по центру они читались подписями
+             к плашкам, а не самостоятельным рядом чисел. -->
         <component
           :is="gapFor(r.key) && gapFor(r.key).module ? 'button' : 'div'"
           v-if="gapFor(r.key)"
           :type="gapFor(r.key).module ? 'button' : null"
-          class="flex w-full items-center justify-center gap-2 px-2 py-0.5"
+          class="flex w-full items-center gap-2 px-4 py-0.5 text-left"
           @click="gapFor(r.key).module ? moduleOpen = gapFor(r.key).module : null"
         >
           <ArrowDown class="h-3.5 w-3.5 shrink-0" :style="{ color: gapColor(gapFor(r.key).tone) }" :stroke-width="2.5" aria-hidden="true" />
           <span class="text-[0.75rem] text-[var(--text-muted)]">{{ gapFor(r.key).label }}</span>
-          <span class="text-[0.8125rem] font-bold tabular-nums" :style="{ color: gapColor(gapFor(r.key).tone) }">
-            {{ formatRub(gapFor(r.key).value) }}
-          </span>
+          <span
+            v-if="gapFor(r.key).value !== null"
+            class="text-[0.8125rem] font-bold tabular-nums"
+            :style="{ color: gapColor(gapFor(r.key).tone) }"
+          >{{ formatRub(gapFor(r.key).value) }}</span>
           <ChevronRight
             v-if="gapFor(r.key).module"
             class="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]"
@@ -210,25 +238,6 @@ function saveCarry(v) {
         </component>
       </template>
     </div>
-
-    <!-- Как работает прогноз — своим бейджем, а не мелкой ссылкой со знаком
-         вопроса: это не справка на всякий случай, а то, ради чего человек
-         сюда пришёл во второй раз. -->
-    <button
-      type="button"
-      class="mt-4 flex min-h-[52px] w-full items-center gap-2.5 rounded-2xl bg-[var(--surface)] px-4 text-left shadow-sm"
-      @click="storyOpen = true"
-    >
-      <span
-        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-        :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
-        aria-hidden="true"
-      >
-        <Sparkles class="h-4 w-4" :stroke-width="2.2" />
-      </span>
-      <span class="min-w-0 flex-1 text-[0.9375rem] font-bold text-[var(--text)]">Как работает прогноз?</span>
-      <ChevronRight class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" :stroke-width="2.5" aria-hidden="true" />
-    </button>
 
     <SiteFooter />
 

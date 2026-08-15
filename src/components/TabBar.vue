@@ -1,7 +1,17 @@
 <script setup>
+import { computed } from 'vue'
+import { Zap } from 'lucide-vue-next'
+import CalDateIcon from './icons/CalDateIcon.vue'
+import { chevronStyle } from '../composables/brandMask.js'
+
 // Таб-бар. Перенесён из рабочего Ранскейла: активная вкладка помечена жёлтой
 // пилюлей-заливкой под иконкой, подписи монохромные. Цветом здесь говорит
 // только состояние «здесь вы сейчас».
+//
+// Знаки у вкладок свои, а не библиотечные: «Сегодня» — календарь Ранскейла
+// с сегодняшним числом внутри (человек видит день, не открывая экран),
+// «Рост 24/7» — шеврон системы, «Сигналы» — залитая молния. Контурная иконка
+// рядом с двумя плотными знаками читалась недорисованной.
 //
 // Стекло на фоне — Tailwind-утилита backdrop-blur, а не своё свойство:
 // autoprefixer добавляет -webkit-backdrop-filter, без которого на iOS Safari
@@ -11,6 +21,9 @@ defineProps({
   active: { type: String, required: true },
 })
 defineEmits(['select'])
+
+const today = computed(() => new Date().getDate())
+const chevron = chevronStyle(20)
 </script>
 
 <template>
@@ -32,11 +45,25 @@ defineEmits(['select'])
         class="flex h-8 w-14 items-center justify-center rounded-full transition-colors duration-150"
         :class="active === tab.id ? 'bg-[var(--accent)]' : 'bg-transparent'"
       >
-        <component
-          :is="tab.icon"
+        <CalDateIcon
+          v-if="tab.iconKind === 'cal'"
+          class="h-[22px] w-[22px]"
+          :day="today"
+          :class="active === tab.id ? 'text-[var(--accent-ink)]' : 'text-[var(--text-muted)]'"
+        />
+        <span
+          v-else-if="tab.iconKind === 'chevron'"
+          class="block"
+          :class="active === tab.id ? 'bg-[var(--accent-ink)]' : 'bg-[var(--text-muted)]'"
+          :style="chevron"
+          aria-hidden="true"
+        />
+        <Zap
+          v-else
           class="h-[22px] w-[22px]"
           :class="active === tab.id ? 'text-[var(--accent-ink)]' : 'text-[var(--text-muted)]'"
-          :stroke-width="active === tab.id ? 2.4 : 2"
+          fill="currentColor"
+          :stroke-width="1"
         />
       </span>
       <span

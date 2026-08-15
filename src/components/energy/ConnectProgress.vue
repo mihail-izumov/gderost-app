@@ -4,9 +4,10 @@ import { LEVELS } from '../../composables/energyModel.js'
 
 // Плашка юнита со статусом подключения и прогрессом по пути к буткемпу.
 //
-// Статус — процесс, а не продукт: «Ранскейл Мини» это имя приложения,
-// а «Подключён» случается на буткемпе или с контрактом. Пока идёт первое
-// и не случилось второе, честное слово одно — «Подключается».
+// Статус называет то, что приложение делает прямо сейчас: считает дни,
+// которые внёс владелец. Слово «Подключается» обещало процесс, которого
+// со стороны приложения не идёт — подключение случается на буткемпе
+// и с контрактом, а не само по себе.
 //
 // Сплошной шкалы под числом больше нет: она показывала ровно тот же
 // процент, что стоит рядом цифрой, и первое, что человек делал на экране, —
@@ -42,26 +43,26 @@ const levels = LEVELS
             :style="{ background: 'var(--warning)' }"
             aria-hidden="true"
           ></span>
-          <span class="text-[0.8125rem]" :style="{ color: 'var(--ink-on-color-muted)' }">Подключается</span>
+          <span class="text-[0.8125rem]" :style="{ color: 'var(--ink-on-color-muted)' }">Считаем дни</span>
         </span>
       </span>
 
-      <!-- Знак «инфо» стоит слева от процента и ростом с него: состав числа —
-           единственное, что с этим числом можно сделать, и мелкий значок
-           в углу этого не сообщал. Кнопка обнимает оба элемента: попасть
-           пальцем можно и по знаку, и по самой цифре. -->
+      <!-- Знак «инфо» стоит в одной строке с процентом и ровно слева от него:
+           состав числа — единственное, что с этим числом можно сделать. Стоя
+           напротив подписи, знак читался значком раздела. Кнопка обнимает оба
+           элемента: попасть пальцем можно и по знаку, и по самой цифре. -->
       <button
         type="button"
-        class="-mr-1 flex shrink-0 items-center gap-2 rounded-xl px-1 py-1"
+        class="-mr-1 flex shrink-0 flex-col items-end rounded-xl px-1 py-1"
         aria-label="Из чего сложился процент"
         @click="$emit('info')"
       >
-        <Info class="h-7 w-7 shrink-0" :style="{ color: 'var(--ink-on-color-muted)' }" :stroke-width="2" aria-hidden="true" />
-        <span class="text-right">
-          <span class="block text-[0.625rem] uppercase tracking-wide" :style="{ color: 'var(--ink-on-color-muted)' }">
-            Энергия роста
-          </span>
-          <span class="block text-[1.75rem] font-bold leading-none tabular-nums">{{ pct }}%</span>
+        <span class="block text-[0.625rem] uppercase tracking-wide" :style="{ color: 'var(--ink-on-color-muted)' }">
+          Энергия роста
+        </span>
+        <span class="flex items-center gap-1.5">
+          <Info class="h-5 w-5 shrink-0" :style="{ color: 'var(--ink-on-color-muted)' }" :stroke-width="2" aria-hidden="true" />
+          <span class="text-[1.75rem] font-bold leading-none tabular-nums">{{ pct }}%</span>
         </span>
       </button>
     </div>

@@ -4,25 +4,27 @@ import { Clock, ChevronRight } from 'lucide-vue-next'
 import { MODULES } from '../../i18n/energy.js'
 import { dayLabel } from '../../i18n/format.js'
 
-// «Мои старты» — второй режим ленты сессий. Здесь то, что человек уже
-// отправил: модуль и дата.
+// «Мои старты» — второй режим ленты. Здесь то, что человек уже отправил,
+// и то, с чего он может начать.
 //
 // Своих статусов приложение не выдумывает: подтверждение и ссылку на оплату
 // присылает живой человек, и рисовать «на проверке» без связи с ним значило бы
 // обещать движение, которого приложение не видит. Строка «ждём ответа»
 // говорит правду и ничего сверх неё.
 //
-// Пусто — не пустой экран: раздел живёт переключателем рядом с сессиями,
-// и человек попадает сюда сам. Одна строка вместо списка отвечает на вопрос,
-// с чего начинать.
+// Пусто — не пустой экран: здесь стоит блок первой ступени ростом с карточку
+// ленты, чтобы переключатель не приводил в дырку. Из него открывается тот же
+// паспорт, что и с карточки.
 //
-// Когда появится контур заявок, статус приедет в ту же запись и встанет
-// на место подписи — экран для этого уже устроен.
+// Оценка разбора живёт ЗДЕСЬ и только тогда, когда разбор действительно
+// состоялся. Отметить его самому больше нельзя: самоотметка открывала замок
+// нажатием и ничего не значила. Признак `doneAt` ставит контур заявок —
+// до его появления кнопка есть в коде и не показывается ни разу.
 
 const props = defineProps({
   requests: { type: Array, default: () => [] },
 })
-defineEmits(['open'])
+defineEmits(['open', 'rate'])
 
 const rows = computed(() => props.requests
   .slice()
@@ -35,7 +37,11 @@ const rows = computed(() => props.requests
     // Статуса из контура ещё нет — стоит то, что известно наверняка.
     status: r.status || 'Отправлена',
     note: r.status ? '' : 'Ждём ответа: подтверждение и ссылка на оплату придут от нас',
+    // Разбор состоялся — это знает только контур заявок.
+    happened: r.module === 'razbor' && !!r.doneAt,
   })))
+
+const razbor = MODULES.razbor
 </script>
 
 <template>
@@ -71,14 +77,36 @@ const rows = computed(() => props.requests
 
           <ChevronRight class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" :stroke-width="2.5" aria-hidden="true" />
         </button>
+
+        <!-- Разбор состоялся: оценить его можно здесь и только здесь. -->
+        <button
+          v-if="r.happened"
+          type="button"
+          class="mt-1.5 min-h-[44px] w-full rounded-2xl bg-[var(--surface)] text-[0.9375rem] font-semibold"
+          :style="{ color: 'var(--action)' }"
+          @click="$emit('rate')"
+        >Оценить разбор</button>
       </li>
     </ul>
 
-    <p
+    <!-- Ничего не отправлено: первая ступень стоит ростом с карточку ленты. -->
+    <div
       v-else
-      class="rounded-2xl bg-[var(--surface)] px-4 py-6 text-center text-[1.0625rem] font-bold leading-snug text-[var(--text)]"
+      class="flex min-h-[11rem] flex-col items-center justify-center gap-1 rounded-2xl px-5 py-6 text-center"
+      :style="{ background: 'color-mix(in srgb, var(--positive) 12%, var(--surface))' }"
     >
-      Начни с разбора.<br>Рост не ждёт.
-    </p>
+      <span
+        class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide"
+        :style="{ background: 'var(--positive)', color: 'var(--ink-on-color)' }"
+      >Доступно</span>
+      <span class="mt-1.5 block text-[1.0625rem] font-bold leading-tight text-[var(--text)]">{{ razbor.title }}</span>
+      <span class="block text-[0.8125rem] leading-snug text-[var(--text-secondary)]">{{ razbor.subtitle }}</span>
+      <button
+        type="button"
+        class="mt-3 min-h-[44px] rounded-full px-6 text-[0.9375rem] font-bold"
+        :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
+        @click="$emit('open', 'razbor')"
+      >Детали</button>
+    </div>
   </section>
 </template>

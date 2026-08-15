@@ -7,7 +7,7 @@ import { encodeState, decodeState, readShared, shareUrl, hasSharePayload } from 
 import { MODULES, SESSIONS, BY_LABEL, isLocked, ORIGINS, SIGNAL } from '../src/i18n/energy.js'
 import { INTRO_STORY } from '../src/i18n/stories.js'
 import { HEAD, LEVEL_ROWS } from '../src/i18n/growth247.js'
-import { TELEMETRY, COUNTERS, scoreAvg } from '../src/data/runscaleCounters.js'
+import { TELEMETRY, COUNTERS, scoreNow } from '../src/data/runscaleCounters.js'
 import { computeTodaySignal } from '../src/composables/signalModel.js'
 
 let fails = 0
@@ -389,6 +389,11 @@ const gpd = computeGaps(m16d).find((g) => g.key === 'forecast-plan')
 ok(gpd.tone === 'bad' && близко(gpd.value, m16d.T - m16d.landing, 1e-6),
   'разрыв прогноз↔план посчитан и подписан направлением')
 ok(computeGaps(null).length === 0, 'без модели разрывов нет')
+// Цель не поставлена — строка до цели всё равно стоит, но без числа: цепочка
+// величин не рвётся, и выдуманного разрыва в ней не появляется.
+const set16e = { ...set16, month_goal: null }
+const g16e = computeGaps(computeMini(set16e, NOW)).find((g) => g.key === 'plan-goal')
+ok(g16e && g16e.value === null, 'без цели разрыв до неё стоит строкой без числа')
 
 // 17. Ссылка на месяц. Состояние уезжает в адрес и обязано вернуться тем же:
 // получатель видит те же числа, что отправитель, иначе ссылка врёт молча.
@@ -564,8 +569,8 @@ ok(!LEVEL_ROWS.some((r) => /недел/i.test(r.what)),
 ok(COUNTERS.items.every((c) => c.title && c.forms.length === 3 && Number.isFinite(c.value)),
   'у каждого счётчика есть заголовок, склонения и число')
 ok(/^\d{4}-\d{2}-\d{2}$/.test(COUNTERS.asOf), 'у счётчиков стоит дата среза')
-ok(scoreAvg([]) === null && scoreAvg([5, 6]) === 5.5,
-  'пустой ряд среднего не имеет, непустой считается до десятой')
+ok(scoreNow([]) === null && scoreNow([5, 6.4]) === 6.4,
+  'пустой ряд числа не имеет, у непустого берётся последняя оценка')
 ok(TELEMETRY.readsRate >= 0 && TELEMETRY.readsRate <= 1 && TELEMETRY.businesses >= 0,
   'доля прочтений — доля, число бизнесов не отрицательно')
 ok([...TELEMETRY.signalScores, ...TELEMETRY.reviewScores]

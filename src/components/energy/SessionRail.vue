@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { ChevronRight, Lock } from 'lucide-vue-next'
 import { formatRub } from '../../i18n/format.js'
 import { moduleGain } from '../../composables/energyModel.js'
-import { MODULES, SESSIONS, isLocked } from '../../i18n/energy.js'
+import { MODULES, RAIL, isLocked } from '../../i18n/energy.js'
 
 // Лента ступеней. Четыре карточки лестницей вовлечения: владелец и 90 минут →
 // владелец и серия разборов → команда и данные → система и поток.
@@ -38,7 +38,7 @@ const STATE = {
   done: { label: 'Завершена', bg: 'var(--text)', ink: 'var(--ink-on-color)' },
 }
 
-const cards = computed(() => SESSIONS.map((id) => {
+const cards = computed(() => RAIL.map((id) => {
   const mod = MODULES[id]
   const gain = moduleGain(id, props.energy)
   const locked = isLocked(id, props.unlocked)

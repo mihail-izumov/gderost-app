@@ -4,7 +4,7 @@ import { ChevronDown, Lock } from 'lucide-vue-next'
 import { mln, ths, thsSigned, dayGen, L, SIG_VAR } from '../../i18n/daily.js'
 import { plural } from '../../i18n/format.js'
 import { useMiniStore } from '../../composables/useMiniStore.js'
-import { shapeStatus } from '../../data/weekShape.js'
+import { shapeName } from '../../data/weekShape.js'
 
 // Недели Пн–Вс: раскрывающийся блок с таблицей дней (план · факт · надо).
 // Перенесено из рабочего Ранскейла вместе с решениями и их причинами.
@@ -45,8 +45,11 @@ const firstLocked = computed(() => {
 })
 
 const state = useMiniStore().state
+// В пилюле стоит выбранная форма, а не её статус: «допущение» одинаково
+// у пяти разных пресетов, и по нему нельзя узнать, что именно выбрано.
+// Длинное имя обрезается многоточием — статус читается в самой настройке.
 const shapeLabel = computed(() =>
-  shapeStatus(state.coef_src, 0, state.shape_id, state.shape_from).label)
+  shapeName(state.coef_src, state.shape_id, state.shape_from))
 
 function progFill(r) {
   const c = SIG_VAR[r.sig]
@@ -65,25 +68,29 @@ function progFill(r) {
            ту же настройку, что имя формы в блоке «Дни недели». -->
       <button
         type="button"
-        class="ml-auto inline-flex min-h-[36px] items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-3 text-[0.8125rem] font-medium text-[var(--text)]"
+        class="ml-auto flex min-h-[36px] min-w-0 items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-3 text-[0.8125rem] font-medium text-[var(--text)]"
         @click="emit('tune')"
       >
-        {{ L.coef }}: {{ shapeLabel }}
-        <ChevronDown class="h-4 w-4 text-[var(--text-muted)]" :stroke-width="2" aria-hidden="true" />
+        <span class="shrink-0">{{ L.coef }}:</span>
+        <span class="min-w-0 truncate">{{ shapeLabel }}</span>
+        <ChevronDown class="h-4 w-4 shrink-0 text-[var(--text-muted)]" :stroke-width="2" aria-hidden="true" />
       </button>
     </div>
 
+    <!-- Своё внесённое замок не прячет. Раньше запертая неделя не раскрывалась
+         вовсе, и человек, внёсший в неё дни, не мог их увидеть: замок толкает
+         закрыть дыры, а не отбирает уже сделанную работу. -->
     <details
       v-for="w in m.weeks"
       :key="`${w.idx}-${w.open}`"
-      :open="w.open && w.isCurrent"
+      :open="(w.open || w.hasFact) && w.isCurrent"
       class="mb-2 overflow-hidden rounded-2xl border bg-[var(--surface)]"
       :style="{ borderColor: w.isCurrent ? 'var(--text)' : 'var(--line)' }"
     >
       <summary
         class="flex list-none flex-col gap-2 p-3 [&::-webkit-details-marker]:hidden"
-        :class="w.open ? 'cursor-pointer' : 'cursor-default'"
-        @click="!w.open && $event.preventDefault()"
+        :class="w.open || w.hasFact ? 'cursor-pointer' : 'cursor-default'"
+        @click="!(w.open || w.hasFact) && $event.preventDefault()"
       >
         <div class="flex items-center gap-2">
           <span class="font-semibold text-[var(--text)]">Неделя {{ w.idx }}</span>
@@ -113,7 +120,7 @@ function progFill(r) {
            а замок, который запирает данные, обязан объясняться данными. Тап
            по числу ведёт в ввод этого дня: путь от объяснения до действия
            короче одного экрана. -->
-      <div v-if="!w.open" class="border-t border-[var(--line)] px-3 py-3">
+      <div v-if="!w.open && !w.hasFact" class="border-t border-[var(--line)] px-3 py-3">
         <template v-if="w.blockedBy && w.idx === firstLocked">
           <p class="text-[0.8125rem] leading-snug text-[var(--text-secondary)]">
             В неделе {{ w.blockedBy.idx }} нет выручки за
@@ -138,6 +145,15 @@ function progFill(r) {
       </div>
 
       <div v-else class="border-t border-[var(--line)]">
+        <!-- Заперта, но своё видно: строка объясняет замок и не отбирает
+             у человека уже внесённые дни. -->
+        <p
+          v-if="!w.open && w.blockedBy"
+          class="border-b border-[var(--line)] px-3 py-2 text-[0.75rem] leading-snug text-[var(--text-muted)]"
+        >
+          Неделя заперта: в неделе {{ w.blockedBy.idx }} нет выручки
+          за {{ w.blockedBy.days.join(', ') }}.
+        </p>
         <table class="w-full table-fixed border-collapse text-[0.8125rem] [font-variant-numeric:tabular-nums]">
           <thead>
             <tr class="text-[0.6875rem] uppercase tracking-wide text-[var(--text-muted)]">

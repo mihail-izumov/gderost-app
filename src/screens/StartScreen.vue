@@ -1,9 +1,9 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import WeekWidget from '../components/WeekWidget.vue'
 import LiveClock from '../components/LiveClock.vue'
 import CountersCard from '../components/CountersCard.vue'
-import { logoStyle } from '../composables/brandMask.js'
+import { chevronStyle, logoStyle } from '../composables/brandMask.js'
 import { BRAND } from '../i18n/brand.js'
 
 // Вход. Один экран, один путь и ни одного слова, которое пришлось бы
@@ -34,10 +34,43 @@ const MONTH_RU = [
 const monthTitle = computed(() => MONTH_RU[new Date().getMonth()])
 
 const logo = logoStyle(24)
+const chevron = chevronStyle(52)
 const lockup = `${(import.meta.env && import.meta.env.BASE_URL) || '/'}runscale-mini.svg`
+
+// Прелоадер. Имя продукта — большой файл, начертания грузятся отдельно, и до
+// их появления экран собирался рывком: сперва пустое место, потом резко буквы
+// во всю ширину. Первое, что видит человек, не должно дёргаться.
+//
+// Ждём два события: картинку имени и начертания. Страховка по времени
+// обязательна — если браузер не отдаст ни того, ни другого, экран обязан
+// открыться всё равно: показать витрину с неготовым шрифтом честнее,
+// чем держать человека на заставке.
+const ready = ref(false)
+let pending = 2
+function step() { if (--pending <= 0) ready.value = true }
+
+onMounted(() => {
+  if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(step).catch(step)
+  } else step()
+  setTimeout(() => { ready.value = true }, 4000)
+})
 </script>
 
 <template>
+  <!-- Заставка держится поверх витрины, пока она не готова. Внизу — одна
+       строка о том, что происходит: пустой экран с крутящимся знаком
+       не сообщает ничего. -->
+  <div
+    v-if="!ready"
+    class="fixed inset-0 z-[80] flex flex-col items-center justify-center gap-5 bg-[var(--bg)]"
+    role="status"
+    aria-live="polite"
+  >
+    <span class="block bg-[var(--text)] gr-pulse" :style="chevron" aria-hidden="true" />
+    <p class="text-[0.8125rem] text-[var(--text-muted)]">Загружаем Ранскейл Мини</p>
+  </div>
+
   <div class="min-h-[100dvh] w-full flex justify-center bg-[var(--bg)]">
     <div
       class="w-full max-w-[430px] min-h-[100dvh] flex flex-col px-6
@@ -70,6 +103,8 @@ const lockup = `${(import.meta.env && import.meta.env.BASE_URL) || '/'}runscale-
           :alt="BRAND.header"
           class="block w-full bc-fade-in"
           decoding="async"
+          @load="step"
+          @error="step"
         />
 
         <WeekWidget tone="black" :label="monthTitle" />
@@ -108,3 +143,17 @@ const lockup = `${(import.meta.env && import.meta.env.BASE_URL) || '/'}runscale-
     </div>
   </div>
 </template>
+
+<style scoped>
+/* Знак дышит, а не крутится: вращение обещает процесс с концом, которого
+   приложение не знает. При выключенной анимации знак просто стоит. */
+@keyframes gr-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+.gr-pulse { animation: gr-pulse 1.4s ease-in-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gr-pulse { animation: none; }
+}
+</style>

@@ -4,7 +4,7 @@ import { AlertCircle } from 'lucide-vue-next'
 import MoneyField from './MoneyField.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { todayISO } from '../composables/miniModel.js'
-import { formatRub, dayLabel, dowFullLabel } from '../i18n/format.js'
+import { formatRub, dayLabel, dayClosedLabel } from '../i18n/format.js'
 
 // Отчёт за день: дата и одна сумма. Больше ничего не спрашивается — всё, что
 // приложение считает, оно считает из выручки по дням.
@@ -29,18 +29,27 @@ const props = defineProps({
 })
 
 const today = todayISO()
+// Вчера. Сегодняшний день не вводится вовсе: он ещё идёт, и выручка за него
+// не итог, а промежуточное состояние. Внесённая днём цифра встала бы фактом
+// закрытого дня и потянула за собой прогноз всего месяца.
+const yesterday = (() => {
+  const d = new Date()
+  d.setDate(d.getDate() - 1)
+  return todayISO(d)
+})()
+
 const minDate = computed(() => store.firstOpenDay())
 const maxDate = computed(() => {
-  // Будущее не вводится: выручки, которой ещё не было, не бывает.
   const last = `${state.month}-${String(new Date(m.value.Y, m.value.M, 0).getDate()).padStart(2, '0')}`
-  return today < last ? today : last
+  return yesterday < last ? yesterday : last
 })
 
 // Вводить нечего, когда открытых дат не осталось.
 const inputClosed = computed(() => minDate.value > maxDate.value)
 
 /**
- * День по умолчанию — вчерашний, если он открыт и ещё не внесён; иначе сегодня.
+ * День по умолчанию — вчерашний, если он открыт и ещё не внесён; иначе
+ * последний доступный.
  *
  * Раньше подставлялась первая дыра месяца. У короткого входа первая дыра —
  * второе число, и человек, который каждый вечер вносит вчерашний день, каждый
@@ -50,12 +59,8 @@ const inputClosed = computed(() => minDate.value > maxDate.value)
 function defaultDate() {
   const lo = minDate.value
   const hi = maxDate.value
-  const d = new Date()
-  d.setDate(d.getDate() - 1)
-  const y = todayISO(d)
-  if (y >= lo && y <= hi && !store.hasDay(y)) return y
-  const top = today <= hi ? today : hi
-  return top >= lo ? top : lo
+  if (yesterday >= lo && yesterday <= hi && !store.hasDay(yesterday)) return yesterday
+  return hi >= lo ? hi : lo
 }
 
 const date = ref(props.preset || defaultDate())
@@ -98,11 +103,13 @@ function goToGap(iso) {
 </script>
 
 <template>
-  <section class="rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-4">
+  <!-- min-w-0 обязателен: без него содержимое считает ширину по своему
+       минимуму и вылезает за карточку на узком экране. -->
+  <section class="w-full min-w-0 overflow-hidden rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-4">
     <!-- Сохранено: одна строка и выход. Ни расчётов, ни второго поля. -->
     <template v-if="saved">
       <p class="text-[1.25rem] font-bold leading-tight text-[var(--text)]">
-        {{ dowFullLabel(saved.date) }} закрыт
+        {{ dayClosedLabel(saved.date) }}
       </p>
       <p class="mt-1 text-[0.875rem] leading-snug text-[var(--text-secondary)]">
         {{ dayLabel(saved.date) }} — {{ formatRub(saved.rev) }}
@@ -115,10 +122,13 @@ function goToGap(iso) {
         @click="emit('done')"
       >Отлично!</button>
 
+      <!-- Пропуск — кнопка, а не ссылка: действие того же веса стоит рядом
+           и должно выглядеть нажимаемым. -->
       <button
         v-if="nextGap"
         type="button"
-        class="mt-2 min-h-[44px] w-full rounded-xl text-[0.9375rem] font-medium text-[var(--text-secondary)]"
+        class="mt-2 min-h-[48px] w-full rounded-xl border text-[0.9375rem] font-semibold text-[var(--text)]"
+        :style="{ borderColor: 'var(--rim)', background: 'var(--surface-2)' }"
         @click="goToGap(nextGap)"
       >Внести пропуск: {{ dayLabel(nextGap) }}</button>
     </template>
@@ -136,9 +146,11 @@ function goToGap(iso) {
       <form v-else class="mt-3 flex flex-col gap-4" @submit.prevent="submit">
         <label class="block">
           <span class="block text-[0.8125rem] font-medium text-[var(--text-secondary)]">За какой день</span>
+          <!-- Поле даты на iOS имеет собственную ширину и без max-w вылезает
+               за карточку вместе с рамкой. -->
           <input
             v-model="date"
-            class="mt-2 min-h-[44px] w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-3
+            class="mt-2 block min-h-[44px] w-full min-w-0 max-w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-3
                    font-mono text-[1rem] text-[var(--text)] outline-none focus:border-[var(--text-secondary)]"
             type="date"
             :min="minDate"

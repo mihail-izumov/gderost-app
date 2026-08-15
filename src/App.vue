@@ -1,6 +1,5 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { CalendarCheck, Zap, Activity } from 'lucide-vue-next'
 import StartScreen from './screens/StartScreen.vue'
 import OnboardingScreen from './screens/OnboardingScreen.vue'
 import TodayScreen from './screens/TodayScreen.vue'
@@ -83,8 +82,11 @@ const TABS = computed(() => [
   {
     id: 'today',
     label: 'Сегодня',
-    icon: CalendarCheck,
-    title: 'Сегодня',
+    iconKind: 'cal',
+    title: '',
+    // Заголовком стоит идущее время: имя «Сегодня» уже подписано в таб-баре,
+    // а дата отвечает на вопрос, ради которого экран открывают.
+    clockTitle: true,
     leadingAction: 'hardReload',
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
@@ -95,13 +97,23 @@ const TABS = computed(() => [
   {
     id: 'power',
     label: 'Сигналы',
-    icon: Zap,
+    iconKind: 'zap',
     title: 'Сигналы',
     leadingAction: 'hardReload',
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
   },
-  { id: 'runscale', label: 'Рост 24/7', icon: Activity, title: 'Рост 24/7' },
+  // Заголовка нет: экран начинается с собственного состояния, и слово
+  // «Рост 24/7» стоит подписью в таб-баре.
+  {
+    id: 'runscale',
+    label: 'Рост 24/7',
+    iconKind: 'chevron',
+    title: '',
+    leadingAction: 'hardReload',
+    eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
+    eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
+  },
 ])
 
 // Подпись назад нейтральная: «Цели и планы» открываются и с «Сегодня»,

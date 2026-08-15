@@ -217,7 +217,7 @@ function storyDone() {
       <HomeWidget
         class="flex-1"
         :icon="Target"
-        name="Цели и планы"
+        name="Цели и&#10;планы"
         metric-label="Прогноз"
         :value-main="mlnRub(m.landing)"
         :trend="fcTrend"

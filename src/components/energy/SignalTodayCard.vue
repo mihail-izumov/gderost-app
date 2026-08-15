@@ -36,11 +36,9 @@ const rows = computed(() => {
   if (s.need != null) {
     out.push({ key: 'need', label: SIGNAL.need, value: formatRub(s.need) })
   }
-  out.push({
-    key: 'forecast',
-    label: SIGNAL.forecast,
-    value: formatRub(s.landing) + (s.planPct != null ? ` = ${s.planPct}% плана` : ''),
-  })
+  // Только рубли: процент плана рядом с суммой заставлял читать одну строку
+  // дважды, а отношение к плану стоит ниже своей строкой.
+  out.push({ key: 'forecast', label: SIGNAL.forecast, value: formatRub(s.landing) })
   // Совпадение направлением не называется; недобор и запас — своим словом.
   out.push({
     key: 'gap',

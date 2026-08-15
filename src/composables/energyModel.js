@@ -191,10 +191,13 @@ export function moduleGain(moduleId, energy) {
  */
 export function computeGaps(m) {
   if (!m) return []
+  // Подписи короткие нарочно: разрыв стоит под плашкой, которая уже названа,
+  // и повторять её имя в строке значит читать одно слово дважды. «Осталось
+  // заработать по прогнозу» под плашкой «Факт» повторяло и то и другое.
   const out = [
     {
       key: 'fact-forecast',
-      label: 'осталось заработать по прогнозу',
+      label: 'до прогноза',
       value: Math.max(0, (m.landing || 0) - (m.realizedRev || 0)),
       tone: 'neutral',
     },
@@ -205,19 +208,17 @@ export function computeGaps(m) {
       const same = Math.abs(d) < 1
       return {
         key: 'forecast-plan',
-        label: same ? 'прогноз сходится с планом' : (d < 0 ? 'прогноз ниже плана' : 'прогноз выше плана'),
+        label: same ? 'сходится с планом' : (d < 0 ? 'ниже плана' : 'выше плана'),
         value: same ? 0 : Math.abs(d),
         tone: same ? 'neutral' : (d < 0 ? 'bad' : 'good'),
       }
     })(),
   ]
-  if (m.goal) {
-    out.push({
-      key: 'plan-goal',
-      label: 'цель выше плана',
-      value: Math.max(0, m.goal - (m.T || 0)),
-      tone: 'neutral',
-    })
-  }
+  // Разрыв до цели стоит всегда, даже когда цели нет: пропуская строку, экран
+  // разрывал цепочку и делал вид, что между планом и целью ничего нет. Цель
+  // не поставлена — числа нет, и вместо него сказано, чего не хватает.
+  out.push(m.goal
+    ? { key: 'plan-goal', label: 'до цели', value: Math.max(0, m.goal - (m.T || 0)), tone: 'neutral' }
+    : { key: 'plan-goal', label: 'цель не поставлена', value: null, tone: 'neutral' })
   return out
 }

@@ -1,8 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Check, ChevronRight } from 'lucide-vue-next'
+import { Check } from 'lucide-vue-next'
 import BottomSheet from '../components/BottomSheet.vue'
-import LiveClock from '../components/LiveClock.vue'
 import ConnectProgress from '../components/energy/ConnectProgress.vue'
 import EnergyBreakdown from '../components/energy/EnergyBreakdown.vue'
 import Telemetry from '../components/growth/Telemetry.vue'
@@ -13,6 +12,7 @@ import { computeEnergy } from '../composables/energyModel.js'
 import { todayISO } from '../composables/miniModel.js'
 import { HEAD, LEVEL_ROWS } from '../i18n/growth247.js'
 import { plural } from '../i18n/format.js'
+import { monthOf } from '../i18n/format.js'
 
 // «Рост 24/7» — страница состояния, а не витрина системы.
 //
@@ -21,10 +21,9 @@ import { plural } from '../i18n/format.js'
 // каждый день, не видит своих пропусков и не понимает, почему следующая
 // неделя закрыта.
 //
-// Сверху вниз: повод (когда он есть) · живая строка · уровень с полосой пути ·
-// эта неделя · недели месяца · что входит в уровень · телеметрия · вход
-// на «Сигналы». Первый экран без прокрутки показывает своё состояние;
-// телеметрия и дорога живут ниже.
+// Сверху вниз: повод (когда он есть) · статус с полосой пути · эта неделя ·
+// недели месяца · что доступно сейчас · телеметрия. Первый экран без прокрутки
+// показывает своё состояние; числа системы живут ниже.
 //
 // ⚠ Замок недели снимается вводом данных и никогда оплатой. Продавать снятие
 // собственного замка нельзя: сначала создать препятствие, потом взять за него
@@ -43,6 +42,10 @@ const today = computed(() => todayISO())
 
 // Текущая неделя месяца приложения. На закрытом месяце текущей недели нет —
 // тогда блок молчит, а не показывает «0 из 7» про август в июле.
+// Заголовок списка недель называет месяц, о котором он говорит: «недели
+// месяца» на закрытом августе читались бы как недели текущего календаря.
+const weeksTitle = computed(() => (m.value ? `Недели ${monthOf(m.value.month)}` : 'Недели месяца'))
+
 const thisWeek = computed(() => (m.value ? m.value.weeks.find((w) => w.isCurrent) || null : null))
 const weekDone = computed(() => (thisWeek.value ? thisWeek.value.days.filter((d) => d.closed).length : 0))
 const weekTotal = computed(() => (thisWeek.value ? thisWeek.value.days.length : 0))
@@ -89,10 +92,7 @@ const reason = computed(() => {
       >Внести</button>
     </div>
 
-    <!-- 2 · Живая строка: время идёт и говорит «прямо сейчас» без единого слова -->
-    <LiveClock class="mb-3" />
-
-    <!-- 3 · Уровень и полоса пути -->
+    <!-- 2 · Статус и полоса пути -->
     <h2 class="mb-2 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
       {{ HEAD.level }}
     </h2>
@@ -122,15 +122,16 @@ const reason = computed(() => {
       <p class="mt-1.5 text-[0.75rem] text-[var(--text-muted)]">Счёт начнётся заново в понедельник.</p>
     </section>
 
-    <!-- 5 · Недели месяца -->
+    <!-- 4 · Недели месяца -->
     <div class="mt-4">
-      <WeekRows :m="m" :today="today" @enter="emit('go', 'day', $event)" />
+      <WeekRows :m="m" :today="today" :month-title="weeksTitle" @enter="emit('go', 'day', $event)" />
     </div>
 
-    <!-- 6 · Что входит в ваш уровень -->
+    <!-- 5 · Доступно сейчас. Пустой круг вместо прочерка: место под то, чего
+         ещё нет, а не знак отсутствия. Чем открывается — бейджем. -->
     <section class="mt-5">
       <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-        Что входит в ваш уровень
+        {{ HEAD.access }}
       </h2>
       <ul class="mt-2 overflow-hidden rounded-2xl bg-[var(--surface)]">
         <li
@@ -138,35 +139,34 @@ const reason = computed(() => {
           :key="r.id"
           class="flex min-h-[48px] items-center gap-3 border-b border-[var(--line)] px-4 py-2.5 last:border-b-0"
         >
-          <Check
+          <span
             v-if="r.has"
-            class="h-[18px] w-[18px] shrink-0"
-            :style="{ color: 'var(--positive)' }"
-            :stroke-width="2.5"
+            class="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full"
+            :style="{ background: 'var(--positive)' }"
             aria-hidden="true"
-          />
-          <span v-else class="h-[18px] w-[18px] shrink-0 text-center text-[0.9375rem] text-[var(--text-muted)]" aria-hidden="true">—</span>
+          >
+            <Check class="h-[13px] w-[13px]" :style="{ color: 'var(--ink-on-color)' }" :stroke-width="3" />
+          </span>
+          <span
+            v-else
+            class="h-[20px] w-[20px] shrink-0 rounded-full border-2"
+            :style="{ borderColor: 'var(--line)' }"
+            aria-hidden="true"
+          ></span>
           <span class="min-w-0 flex-1 text-[0.9375rem] leading-snug text-[var(--text)]">{{ r.what }}</span>
-          <span v-if="!r.has" class="shrink-0 text-[0.75rem] text-[var(--text-muted)]">{{ r.by }}</span>
+          <span
+            v-if="!r.has"
+            class="inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide"
+            :style="{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }"
+          >{{ r.by }}</span>
         </li>
       </ul>
     </section>
 
-    <!-- 7 · Телеметрия: сначала человек про себя, потом про систему -->
+    <!-- 6 · Числа системы: сначала человек про себя, потом про нас -->
     <div class="mt-5">
       <Telemetry />
     </div>
-
-    <!-- 8 · Вход на дорогу -->
-    <button
-      type="button"
-      class="mt-5 flex min-h-[52px] w-full items-center justify-center gap-1.5 rounded-full text-[0.9375rem] font-bold"
-      :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
-      @click="emit('go', 'power')"
-    >
-      {{ HEAD.cta }}
-      <ChevronRight class="h-[18px] w-[18px]" :stroke-width="2.5" aria-hidden="true" />
-    </button>
 
     <SiteFooter />
 

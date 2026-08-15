@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { ChevronLeft, RotateCw } from 'lucide-vue-next'
 import BusinessChip from './business/BusinessChip.vue'
 import BottomSheet from './BottomSheet.vue'
+import LiveClock from './LiveClock.vue'
 import { useNavCaption } from '../composables/useNavCaption.js'
 import { hardReload } from '../composables/useAppRefresh.js'
 
@@ -40,6 +41,10 @@ defineProps({
   // Подпись чипа бизнеса; пусто — чипа нет
   eyebrow: { type: String, default: null },
   eyebrowName: { type: String, default: '' },
+  // Заголовком экрана стоит идущее время. Так подписан «Сегодня»: имя экрана
+  // там ничего не добавляет к подписи в таб-баре, а дата и время отвечают
+  // на его единственный вопрос — какой сейчас день.
+  clockTitle: { type: Boolean, default: false },
 })
 defineEmits(['back'])
 
@@ -60,7 +65,13 @@ const updateOpen = ref(false)
       ? 'backdrop-blur bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] border-b border-[var(--line)]'
       : 'bg-transparent border-b border-transparent'"
   >
-    <div class="grid h-11 w-full grid-cols-[minmax(2.75rem,1fr)_auto_minmax(2.75rem,1fr)] items-center">
+    <!-- Полоса раскрывается только когда ей есть что держать: возврат назад
+         или компактный заголовок при прокрутке. Пустые 44 пикселя над экраном
+         читались дыркой от верхнего края. -->
+    <div
+      class="grid w-full grid-cols-[minmax(2.75rem,1fr)_auto_minmax(2.75rem,1fr)] items-center overflow-hidden transition-[height] duration-200"
+      :class="showBack || collapsed ? 'h-11' : 'h-0'"
+    >
       <div class="flex min-w-0 items-center justify-self-start pl-1">
         <button
           v-if="showBack"
@@ -75,12 +86,13 @@ const updateOpen = ref(false)
       </div>
 
       <div
-        v-if="title"
+        v-if="title || clockTitle"
         data-test="nav-compact-title"
         class="pointer-events-none flex min-w-0 items-center justify-center px-2 transition-opacity duration-200"
         :class="collapsed ? 'opacity-100' : 'opacity-0'"
       >
-        <span class="truncate text-[1.0625rem] font-semibold text-[var(--text)]">{{ title }}</span>
+        <LiveClock v-if="clockTitle" size="md" />
+        <span v-else class="truncate text-[1.0625rem] font-semibold text-[var(--text)]">{{ title }}</span>
       </div>
       <!-- заглушка центральной колонки: без неё правый слот съезжает в центр -->
       <div v-else aria-hidden="true"></div>
@@ -110,12 +122,13 @@ const updateOpen = ref(false)
 
   <!-- Крупный заголовок в потоке. Подпись — absolute НАД ним, чтобы h1
        не сдвигался и стоял на одном месте во всех разделах. -->
-  <div v-if="title || caption" class="relative px-4 pb-3 pt-2 text-center">
+  <div v-if="title || caption || clockTitle" class="relative px-4 pb-3 pt-2 text-center">
     <p
       v-if="caption"
       class="pointer-events-none absolute inset-x-0 -top-2 text-[0.75rem] leading-none text-[var(--text-muted)]"
     >{{ caption }}</p>
-    <h1 v-if="title" class="text-[2.125rem] font-bold leading-tight tracking-tight text-[var(--text)]">
+    <LiveClock v-if="clockTitle" size="lg" />
+    <h1 v-else-if="title" class="text-[2.125rem] font-bold leading-tight tracking-tight text-[var(--text)]">
       {{ title }}
     </h1>
   </div>

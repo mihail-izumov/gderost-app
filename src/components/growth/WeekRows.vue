@@ -20,6 +20,8 @@ const props = defineProps({
   // 'YYYY-MM-DD' сегодняшнего дня из модели: недели живут в месяце приложения,
   // а не в календаре устройства.
   today: { type: String, required: true },
+  // Заголовок с именем месяца — подставляется экраном.
+  monthTitle: { type: String, default: 'Недели месяца' },
 })
 const emit = defineEmits(['enter'])
 
@@ -63,7 +65,7 @@ const rows = computed(() => props.m.weeks.map((w) => {
 <template>
   <section>
     <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-      Недели месяца
+      {{ monthTitle }}
     </h2>
 
     <ul class="mt-2 overflow-hidden rounded-2xl bg-[var(--surface)]">

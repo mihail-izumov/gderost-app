@@ -10,6 +10,11 @@ import { stampDateLabel, stampTimeParts } from '../i18n/format.js'
 // таймером значит будить отрисовку шестьдесят раз в секунду ради одной точки.
 // При выключенной анимации в системе двоеточие просто стоит — время идёт всегда.
 
+// Крупный размер — заголовок экрана «Сегодня»: там время и есть имя экрана.
+defineProps({
+  size: { type: String, default: 'sm' }, // 'sm' | 'md' | 'lg'
+})
+
 const now = ref(new Date())
 const date = ref(stampDateLabel(now.value))
 const time = ref(stampTimeParts(now.value))
@@ -26,7 +31,14 @@ onUnmounted(() => { if (timer) clearInterval(timer); timer = null })
 </script>
 
 <template>
-  <p class="text-center font-mono text-[0.8125rem] tabular-nums text-[var(--text-muted)]">
+  <p
+    class="text-center tabular-nums"
+    :class="size === 'lg'
+      ? 'text-[1.75rem] font-bold leading-tight tracking-tight text-[var(--text)]'
+      : size === 'md'
+        ? 'text-[1.0625rem] font-semibold text-[var(--text)]'
+        : 'font-mono text-[0.8125rem] text-[var(--text-muted)]'"
+  >
     <span>{{ date }}</span>
     <span class="ml-1.5">{{ time.hh }}</span><span class="gr-blink">:</span><span>{{ time.mm }}</span>
   </p>

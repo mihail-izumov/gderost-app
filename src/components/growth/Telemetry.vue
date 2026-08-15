@@ -1,18 +1,20 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { ChevronRight, Eye, Clock, Zap } from 'lucide-vue-next'
-import { COUNTERS, TELEMETRY, scoreAvg } from '../../data/runscaleCounters.js'
-import { formatInt, formatPct, plural, stampISO } from '../../i18n/format.js'
+import { COUNTERS, TELEMETRY, scoreNow } from '../../data/runscaleCounters.js'
+import { formatInt, formatPct, plural } from '../../i18n/format.js'
+import { HEAD } from '../../i18n/growth247.js'
 
 // Телеметрия системы. Перенесена из готовой песочницы
 // `materials/draft/sandbox/counters-widgets-v6-sandbox.html` вместе с составом,
 // поведением и запретами спеки; тёмная палитра песочницы заменена токенами
 // светлой темы, разметка и логика графика — те же.
 //
-// Устройство: две раскрывающиеся плитки (проверки и разборы) и узкая плитка
-// бизнесов, которая не раскрывается — у неё нет глубины, и кликабельность
-// была бы обманкой. Внутри плитки: что означают её слова, и график пользы
-// 0–10 с переключателем месяцев.
+// Устройство: две раскрывающиеся плитки во всю ширину — проверки и разборы.
+// Внутри плитки: что означают её слова, и график пользы 0–10 с переключателем
+// месяцев; число рядом с графиком — последняя оценка, то есть правый край
+// линии. Бизнесы под наблюдением стоят числом в круге у заголовка: это
+// подпись к слову «вместе», а не третий счётчик в ряду.
 //
 // Запреты спеки перенесены дословно: ни выручки клиентов, ни процентов
 // выполнения их планов, ни названий компаний, ни оценок поимённо. Публикуются
@@ -22,7 +24,6 @@ import { formatInt, formatPct, plural, stampISO } from '../../i18n/format.js'
 // когда он появится. Линия из ниоткуда была бы ровно тем враньём, ради
 // запрета которого заведён статус числа.
 
-const asOf = computed(() => stampISO(COUNTERS.asOf))
 const byKey = (k) => COUNTERS.items.find((c) => c.key === k)
 const checkups = computed(() => byKey('checkups'))
 const signals = computed(() => byKey('signals'))
@@ -82,14 +83,21 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
 
 <template>
   <section>
-    <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-      Телеметрия
-    </h2>
-    <p class="mt-1 text-[0.75rem] leading-snug text-[var(--text-muted)]">
-      Числа Ранскейла на {{ asOf }}. Выручку клиентов не публикуем.
-    </p>
+    <!-- Число в круге — сколько бизнесов система ведёт прямо сейчас. Стоит
+         у заголовка, а не отдельной плиткой: это подпись к «вместе»,
+         а не третий счётчик в ряду. -->
+    <div class="flex items-center justify-between gap-3">
+      <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+        {{ HEAD.telemetry }}
+      </h2>
+      <span
+        class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[0.8125rem] font-bold tabular-nums"
+        :style="{ background: 'var(--surface-black)', color: 'var(--ink-on-color)' }"
+        :aria-label="`${TELEMETRY.businesses} ${plural(TELEMETRY.businesses, 'бизнес', 'бизнеса', 'бизнесов')} под наблюдением`"
+      >{{ formatInt(TELEMETRY.businesses) }}</span>
+    </div>
 
-    <div class="mt-2.5 grid grid-cols-[1fr_1fr_4.5rem] gap-2">
+    <div class="mt-2.5 grid grid-cols-2 gap-2">
       <!-- ПРОВЕРКИ: ежедневная петля -->
       <button
         type="button"
@@ -154,18 +162,6 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
         </span>
       </button>
 
-      <!-- БИЗНЕСЫ: узкая плитка-счётчик, без раскрытия -->
-      <div
-        class="flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-[var(--surface)] px-1.5 py-3 text-center"
-        aria-label="Бизнесов под наблюдением"
-      >
-        <span class="text-[1.625rem] font-bold leading-none tabular-nums text-[var(--text)]">
-          {{ formatInt(TELEMETRY.businesses) }}
-        </span>
-        <span class="text-[0.5625rem] font-semibold uppercase leading-tight tracking-wide text-[var(--text-muted)]">
-          {{ plural(TELEMETRY.businesses, 'бизнес', 'бизнеса', 'бизнесов') }}<br>под<br>наблюдением
-        </span>
-      </div>
     </div>
 
     <!-- Внутренности: ПРОВЕРКИ -->
@@ -204,8 +200,8 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
 
         <div class="grid grid-cols-[5.5rem_1fr] gap-2">
           <div class="flex min-h-[6.5rem] items-center justify-center rounded-xl bg-[var(--surface)] p-3">
-            <span v-if="scoreAvg(checkSeries.values) !== null" class="whitespace-nowrap text-[1.75rem] font-bold leading-none tabular-nums text-[var(--text)]">
-              {{ oneDecimal(scoreAvg(checkSeries.values)) }}<span class="text-[0.875rem] font-medium text-[var(--text-muted)]"> /10</span>
+            <span v-if="scoreNow(checkSeries.values) !== null" class="whitespace-nowrap text-[1.75rem] font-bold leading-none tabular-nums text-[var(--text)]">
+              {{ oneDecimal(scoreNow(checkSeries.values)) }}<span class="text-[0.875rem] font-medium text-[var(--text-muted)]"> /10</span>
             </span>
             <span v-else class="text-[1.75rem] font-bold leading-none text-[var(--text-muted)]">—</span>
           </div>
@@ -278,8 +274,8 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
 
         <div class="grid grid-cols-[5.5rem_1fr] gap-2">
           <div class="flex min-h-[6.5rem] items-center justify-center rounded-xl bg-[var(--surface)] p-3">
-            <span v-if="scoreAvg(reviewSeries.values) !== null" class="whitespace-nowrap text-[1.75rem] font-bold leading-none tabular-nums text-[var(--text)]">
-              {{ oneDecimal(scoreAvg(reviewSeries.values)) }}<span class="text-[0.875rem] font-medium text-[var(--text-muted)]"> /10</span>
+            <span v-if="scoreNow(reviewSeries.values) !== null" class="whitespace-nowrap text-[1.75rem] font-bold leading-none tabular-nums text-[var(--text)]">
+              {{ oneDecimal(scoreNow(reviewSeries.values)) }}<span class="text-[0.875rem] font-medium text-[var(--text-muted)]"> /10</span>
             </span>
             <span v-else class="text-[1.75rem] font-bold leading-none text-[var(--text-muted)]">—</span>
           </div>

@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Check, ChevronRight, Target } from 'lucide-vue-next'
+import { Check, ChevronRight } from 'lucide-vue-next'
 import ModulePassport from '../components/energy/ModulePassport.vue'
+import RunscaleBanner from '../components/energy/RunscaleBanner.vue'
 import SessionRail from '../components/energy/SessionRail.vue'
 import SignalTodayCard from '../components/energy/SignalTodayCard.vue'
 import RateRazborSheet from '../components/energy/RateRazborSheet.vue'
@@ -63,10 +64,6 @@ const railMode = ref('sessions')
 function openModule(id) {
   moduleOpen.value = id
 }
-function fromModuleToRate() {
-  moduleOpen.value = ''
-  rateOpen.value = true
-}
 // Финал сторис ведёт туда, где стоит уровень: «Проверить свой уровень» —
 // не совет, а дверь к числу, которое уже посчитано. Число уехало на страницу
 // состояния — дверь уехала за ним.
@@ -86,16 +83,21 @@ function storyDone() {
       @go="emit('go', $event)"
     />
 
-    <!-- Вход в цели и планы: числа, на которых стоит весь экран, правятся там,
-         и путь до них с этой вкладки был через две другие. -->
+    <!-- Метод сразу под сигналом: человек прочитал свои числа и здесь же узнаёт,
+         из чего они собраны. Заливка отделяет объяснение от товара ниже. -->
     <button
       type="button"
-      class="mt-2.5 flex min-h-[52px] w-full items-center gap-2.5 rounded-2xl bg-[var(--surface)] px-4 text-left"
-      @click="emit('go', 'goals')"
+      class="mt-2.5 flex min-h-[64px] w-full items-center gap-3 rounded-2xl px-4 py-3 text-left"
+      :style="{ background: 'color-mix(in srgb, var(--action) 12%, var(--surface))' }"
+      @click="storyOpen = true"
     >
-      <Target class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" :stroke-width="2" aria-hidden="true" />
-      <span class="min-w-0 flex-1 text-[0.9375rem] font-semibold text-[var(--text)]">Изменить цели и планы</span>
-      <ChevronRight class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" :stroke-width="2.5" aria-hidden="true" />
+      <span class="min-w-0 flex-1">
+        <span class="block text-[0.9375rem] font-bold leading-tight text-[var(--text)]">Расти по плану</span>
+        <span class="mt-0.5 block text-[0.75rem] leading-snug text-[var(--text-secondary)]">
+          Система роста: факт, прогноз, план и цель
+        </span>
+      </span>
+      <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: 'var(--action)' }" :stroke-width="2.5" aria-hidden="true" />
     </button>
 
     <!-- Переключатель режимов ленты вместо заголовка «Сессии». Во всю ширину:
@@ -114,15 +116,19 @@ function storyDone() {
       >{{ t.label }}</button>
     </div>
 
-    <SessionRail
-      v-if="railMode === 'sessions'"
-      :energy="energy"
-      :unlocked="unlocked"
-      :requests="state.requests"
-      :rated="unlocked"
-      @open="openModule"
-    />
-    <RequestList v-else :requests="state.requests" @open="openModule" />
+    <template v-if="railMode === 'sessions'">
+      <SessionRail
+        :energy="energy"
+        :unlocked="unlocked"
+        :requests="state.requests"
+        :rated="unlocked"
+        @open="openModule"
+      />
+      <!-- Режим — баннером под лентой: это не четвёртая карточка в ряду,
+           а другой разговор. -->
+      <RunscaleBanner @open="openModule" />
+    </template>
+    <RequestList v-else :requests="state.requests" @open="openModule" @rate="rateOpen = true" />
 
     <!-- Отметка разбора появляется только после самой оценки. У человека,
          который открыл ссылку впервые, разбора не было — приглашение оценить
@@ -145,23 +151,6 @@ function storyDone() {
       <span class="shrink-0 text-[0.8125rem] font-medium" :style="{ color: 'var(--action)' }">Изменить</span>
     </button>
 
-    <!-- Сущности объясняются сторис, а не абзацем на экране. Плашка в две
-         строки вместо строчки-сноски: то, чем меряется весь продукт, не может
-         выглядеть примечанием под лентой. -->
-    <button
-      type="button"
-      class="mt-3 flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-[var(--surface)] px-4 py-3 text-left"
-      @click="storyOpen = true"
-    >
-      <span class="min-w-0 flex-1">
-        <span class="block text-[0.9375rem] font-bold leading-tight text-[var(--text)]">Расти по плану</span>
-        <span class="mt-0.5 block text-[0.75rem] leading-snug text-[var(--text-muted)]">
-          Система роста: факт, прогноз, план и цель
-        </span>
-      </span>
-      <ChevronRight class="h-5 w-5 shrink-0 text-[var(--text-muted)]" :stroke-width="2.5" aria-hidden="true" />
-    </button>
-
     <SiteFooter />
 
     <BottomSheet :open="!!originOpen" @close="originOpen = ''">
@@ -174,7 +163,6 @@ function storyDone() {
         :energy="energy"
         :locked="isLocked(moduleOpen, unlocked)"
         :rated="unlocked"
-        @rate="fromModuleToRate"
         @close="moduleOpen = ''"
       />
     </BottomSheet>
