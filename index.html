@@ -7,6 +7,12 @@
          Явный sizes обязателен: без него Safari ищет 60×60 по умолчанию
          и, не найдя, ставит снимок экрана вместо знака. Precomposed —
          для старых версий, они игнорируют первую строку. -->
+    <!-- Предзагрузка: iOS запрашивает иконку в тот момент, когда человек
+         жмёт «На экран», и до этого браузер её не трогает — отсюда пауза
+         с пустым квадратом. С preload файл лежит в кэше браузера ещё
+         с открытия страницы и отдаётся мгновенно. Вес крошечный (1 КБ),
+         поэтому на первую отрисовку это не влияет. -->
+    <link rel="preload" as="image" href="/apple-touch-icon.png" fetchpriority="low" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="apple-touch-icon-precomposed" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />

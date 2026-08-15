@@ -121,10 +121,17 @@ watch(() => [props.active, props.subView], async () => {
       aria-hidden="true"
     >
       <span
-        class="mb-1 block transition-opacity"
+        class="block transition-opacity"
         :class="pullReady ? 'bg-[var(--action)] opacity-100' : 'bg-[var(--text-muted)] opacity-60'"
         :style="chevron"
       />
+      <!-- Подпись появляется, когда под неё есть место: на первых пикселях
+           жеста она обрезалась бы по половине строки. -->
+      <span
+        v-if="pull >= 52"
+        class="mb-1 mt-1 block whitespace-nowrap text-[0.75rem] font-medium"
+        :style="{ color: pullReady ? 'var(--action)' : 'var(--text-muted)' }"
+      >Обновить Ранскейл Мини</span>
     </div>
 
     <div
