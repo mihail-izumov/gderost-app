@@ -20,7 +20,7 @@ export const MODULES = {
   razbor: {
     id: 'razbor',
     title: 'Разбор разрыва',
-    subtitle: 'Девяносто минут на ваших цифрах',
+    subtitle: '90 мин на ваших цифрах',
     speed: '90 мин',
     price: 100000,
     team: 'Бизнес-инженер Ранскейл',

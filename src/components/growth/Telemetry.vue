@@ -168,9 +168,11 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
           <span class="flex items-center gap-1">
             <b class="font-semibold tabular-nums text-[var(--text)]">90</b> мин
             <span
+              v-for="d in ['вт', 'пт']"
+              :key="d"
               class="inline-flex items-center rounded px-1.5 py-0.5 text-[0.625rem] font-semibold uppercase tracking-wide"
               :style="{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }"
-            >вт и пт</span>
+            >{{ d }}</span>
           </span>
         </span>
       </button>

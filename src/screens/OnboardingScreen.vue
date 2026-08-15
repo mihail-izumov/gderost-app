@@ -68,10 +68,51 @@ function choose(m) {
 // Кто это — обязательный шаг. Без имени компании и юнита все дальнейшие
 // экраны говорят «Ваш бизнес», ссылка на месяц приходит без адресата,
 // а выгрузка получает имя файла без имени. Пропускать его нельзя.
-const whoOk = computed(() => company.value.trim().length > 0 && unit.value.trim().length > 0)
+function looksLikeNumber(v) {
+  const t = String(v).trim()
+  return t.length > 0 && /^[\d\s.,\-+]+$/.test(t)
+}
+
+// Что не так с именем. Пустое — просто не пускаем кнопкой; число вместо
+// названия — говорим прямо, иначе человек второй раз введёт то же самое.
+const whoError = computed(() => {
+  if (looksLikeNumber(company.value)) return 'Название компании — слово, а не число. Например: «Кофейня на углу».'
+  if (looksLikeNumber(unit.value)) return 'Бизнес-юнит — слово, а не число. Например: «Кухня» или «Доставка».'
+  if (company.value.trim().length === 1 || unit.value.trim().length === 1) return 'Одна буква — вряд ли название. Напишите так, как говорите сами.'
+  return ''
+})
+const whoOk = computed(() => company.value.trim().length > 1
+  && unit.value.trim().length > 1 && !whoError.value)
+
+// Границы плана. Верхняя и нижняя названы числами: «неверное значение»
+// не говорит человеку, что делать, а «меньше десяти тысяч» — говорит.
+const MIN_PLAN = 10_000
+const MAX_PLAN = 10_000_000_000
+const targetError = computed(() => {
+  const v = Number(target.value)
+  if (target.value === null) return ''
+  if (v < MIN_PLAN) return `План меньше ${formatRub(MIN_PLAN)} — проверьте разряды: обычно теряется три нуля.`
+  if (v > MAX_PLAN) return `План больше ${formatRub(MAX_PLAN)} — проверьте разряды: обычно лишние три нуля.`
+  return ''
+})
 const targetOk = computed(() => Number(target.value) > 0)
+const GOAL_MAX_RATIO = 1.5
 const goalConflict = computed(() =>
-  Number(goal.value) > 0 && targetOk.value && Number(goal.value) < Number(target.value))
+  Number(goal.value) > 0 && targetOk.value
+  && (Number(goal.value) < Number(target.value)
+    || Number(goal.value) > Number(target.value) * GOAL_MAX_RATIO))
+// Разные причины — разные слова: ниже плана это второй план, выше плана
+// в полтора раза это не цель, а другой план, и чинится он планом.
+const goalMessage = computed(() => {
+  const g = Number(goal.value)
+  if (!(g > 0) || !targetOk.value) return ''
+  const t = Number(target.value)
+  if (g < t) return `Цель ниже плана ${formatRub(t)}.`
+  if (g > t * GOAL_MAX_RATIO) {
+    return `Цель выше плана больше чем в полтора раза (${formatRub(t)} → ${formatRub(g)}). Столько не берут за месяц — пересчитайте план.`
+  }
+  return ''
+})
 const earnedHigh = computed(() =>
   targetOk.value && earned.value !== null && Number(earned.value) > Number(target.value) * 3)
 
@@ -81,7 +122,7 @@ const earnedHigh = computed(() =>
 const canNext = computed(() => {
   if (step.value === 'choice') return false
   if (step.value === 'who') return whoOk.value
-  if (step.value === 'plan') return targetOk.value
+  if (step.value === 'plan') return targetOk.value && !targetError.value
   if (step.value === 'goal') return !goalConflict.value
   return true
 })
@@ -90,8 +131,8 @@ const canNext = computed(() => {
 // точного ответа нет. Это не абзац-объяснение на экране — это условие поля,
 // без которого человек застревает и выдумывает ответ.
 const HINT = {
-  choice: 'Короткий путь доводит до чисел за два шага. Остальное приложение спросит там, где без этого не посчитает.',
-  who: 'Имя нужно, чтобы отличать бизнесы и подписывать файл выгрузки. Юнит — точка или направление, по которому вы считаете выручку. Один бизнес — напишите одно и то же.',
+  choice: 'Короткий путь — два вопроса, и вы сразу видите свои цифры. Остальное спросим позже, когда понадобится.',
+  who: 'Имя нужно, чтобы отличать бизнесы и подписывать файл выгрузки. Юнит — точка или направление, по которому вы считаете выручку. Если у вас несколько ресторанов, то напишите название одного из них.',
   plan: 'План — обязательство месяца, а не мечта. Не помните точно — возьмите прошлый месяц, поправить можно в любой день.',
   earned: 'Сумма за все дни с начала месяца одним числом. Точной нет — назовите близкую: приложение разложит её по дням и подпишет допущением.',
   goal: 'Цель — то, ради чего стараются сверх плана. Её можно не ставить, шкала построится до плана.',
@@ -146,14 +187,13 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
         <ChevronLeft class="h-6 w-6 text-[var(--text-secondary)]" aria-hidden="true" />
       </button>
 
-      <!-- Полоса шагов: сколько пройдено и сколько осталось, без слов -->
-      <div class="flex flex-1 gap-1.5">
-        <i
-          v-for="(s, i) in STEPS" :key="s"
-          class="h-1 flex-1 rounded-full"
-          :style="{ background: i <= at ? 'var(--text)' : 'var(--line)' }"
-        />
-      </div>
+      <!-- Шаг назван словами, а не полосой: полоска из четырёх насечек
+           не сообщает, сколько ещё спросят, и на первом экране, где шаг один,
+           читалась поломкой. -->
+      <p v-if="at > 0" class="flex-1 text-[0.8125rem] font-medium text-[var(--text-muted)]">
+        Шаг {{ at }} из {{ STEPS.length - 1 }}
+      </p>
+      <div v-else class="flex-1" aria-hidden="true"></div>
     </header>
 
     <!-- Системным начертанием, а не брендовым: это служебный шаг анкеты,
@@ -202,6 +242,7 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
             <span class="block text-[0.8125rem] font-medium text-[var(--text-secondary)]">Бизнес-юнит</span>
             <input v-model="unit" :class="FIELD" class="mt-2" type="text" autocomplete="off">
           </label>
+          <p v-if="whoError" class="text-[0.8125rem] leading-snug text-[var(--negative)]">{{ whoError }}</p>
         </template>
 
         <!-- 2. План — единственное обязательное число -->
@@ -212,6 +253,7 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
             :label="`План на ${monthLabel(month)}`"
             placeholder="3 000 000"
           />
+          <p v-if="targetError" class="text-[0.8125rem] leading-snug text-[var(--negative)]">{{ targetError }}</p>
         </template>
 
         <!-- 3. Прошлое одной суммой: месяц не обязан начинаться первого числа -->
@@ -248,8 +290,8 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
             label="Цель на месяц"
             placeholder="3 500 000"
           />
-          <p v-if="goalConflict" class="text-[0.8125rem] leading-snug text-[var(--negative)]">
-            Цель ниже плана {{ formatRub(target) }}.
+          <p v-if="goalMessage" class="text-[0.8125rem] leading-snug text-[var(--negative)]">
+            {{ goalMessage }}
           </p>
         </template>
       </div>

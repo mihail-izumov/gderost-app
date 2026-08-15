@@ -105,9 +105,8 @@ const title = computed(() => {
   return weekRangeLabel(w[0].key, w[w.length - 1].key)
 })
 
-// Считается вместе с сегодняшним днём: сегодня ещё можно работать. Подпись
-// это и называет — «17 дней с сегодня» на пятнадцатое августа верно, а
-// «17 дней ост.» читалось как «после сегодня» и выглядело ошибкой на день.
+// Считается вместе с сегодняшним днём: сегодня ещё можно работать, и хвост
+// плана разносится ровно по этим дням.
 const daysLeft = computed(() => {
   const t = new Date(props.now)
   const dim = new Date(t.getFullYear(), t.getMonth() + 1, 0).getDate()
@@ -120,7 +119,7 @@ const leftPct = computed(() => {
   return (daysLeft.value / dim) * 100
 })
 
-const noteText = computed(() => props.note ?? `${daysLeft.value} ${daysWord(daysLeft.value)} с сегодня`)
+const noteText = computed(() => props.note ?? `${daysLeft.value} ${daysWord(daysLeft.value)} ост.`)
 const pillText = computed(() => props.pill ?? formatPct(leftPct.value, 0))
 
 // Разворот на весь месяц. Неделя остаётся видом по умолчанию: она отвечает

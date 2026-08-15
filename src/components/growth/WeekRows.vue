@@ -50,9 +50,14 @@ const rows = computed(() => props.m.weeks.map((w) => {
   // Цвет статуса — тот же светофор, что у дней: зелёный закрыт, жёлтый
   // требует внимания, серый ничего не утверждает. Красного у недели нет:
   // отсутствие данных — не провал плана.
+  // Цвет говорит про данные, а не про выполнение плана. Зелёный отсюда убран:
+  // «закрыта» означает, что дни внесены, и зелёный читался как «план сделан» —
+  // про план неделя здесь не утверждает ничего. Осталась нейтраль: тёмная
+  // у закрытой, синяя у идущей (активное состояние), жёлтая там, где не хватает
+  // данных, серая у того, что ещё не наступило.
   const SKIN = {
-    done: { bg: 'var(--positive)', ink: 'var(--ink-on-color)', bar: 'var(--positive)' },
-    now: { bg: 'var(--text)', ink: 'var(--ink-on-color)', bar: 'var(--text)' },
+    done: { bg: 'var(--text)', ink: 'var(--ink-on-color)', bar: 'var(--text)' },
+    now: { bg: 'var(--action)', ink: 'var(--action-ink)', bar: 'var(--action)' },
     gaps: { bg: 'var(--warning)', ink: 'var(--accent-ink)', bar: 'var(--warning)' },
     locked: { bg: 'var(--surface-2)', ink: 'var(--text-muted)', bar: 'var(--line)' },
     ahead: { bg: 'var(--surface-2)', ink: 'var(--text-muted)', bar: 'var(--line)' },
@@ -64,7 +69,7 @@ const rows = computed(() => props.m.weeks.map((w) => {
     total,
     width: total ? Math.round((closed / total) * 100) : 0,
     status,
-    label: { locked: 'заперта', gaps: 'есть пропуски', now: 'идёт', done: 'закрыта', ahead: 'впереди' }[status],
+    label: { locked: 'ждём данные', gaps: 'есть пропуски', now: 'идёт', done: 'закрыта', ahead: 'готовимся' }[status],
     skin: SKIN[status],
     missing: w.missing,
     blockedBy: w.blockedBy,

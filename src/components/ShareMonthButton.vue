@@ -62,7 +62,7 @@ async function share() {
       ? 'min-h-[52px] rounded-2xl text-[1.0625rem] font-semibold'
       : 'min-h-[48px] rounded-full text-[0.9375rem] font-semibold'"
     :style="tone === 'accent'
-      ? { background: 'var(--accent)', color: 'var(--accent-ink)' }
+      ? { background: 'var(--positive)', color: 'var(--ink-on-color)' }
       : { background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--rim)' }"
     @click="share"
   >

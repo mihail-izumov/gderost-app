@@ -74,7 +74,7 @@ onBeforeUnmount(() => { if (io) { io.disconnect(); io = null } })
 </script>
 
 <template>
-  <div v-if="m" class="px-4 pb-28">
+  <div v-if="m" class="px-4">
     <div class="flex flex-col gap-3">
       <DailyHero :m="m" />
       <DailyKpis :m="m" />

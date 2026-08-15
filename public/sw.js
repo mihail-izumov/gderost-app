@@ -10,7 +10,7 @@ const SHELL_URL = BASE + 'index.html'
 const PRECACHE = [
   BASE, SHELL_URL,
   BASE + 'manifest.json',
-  BASE + 'icon-192.png', BASE + 'icon-512.png',
+  BASE + 'icon-192.png', BASE + 'icon-512.png', BASE + 'apple-touch-icon.png',
   BASE + 'runscale_chevron.svg', BASE + 'runscale_logo.svg',
   // Начертания бренда — по той же причине: они подключаются из CSS, в разметке
   // страницы их адресов нет. Без них первый запуск без сети покажет фолбэк,

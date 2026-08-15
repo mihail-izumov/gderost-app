@@ -95,16 +95,12 @@ const razbor = MODULES.razbor
       class="flex min-h-[11rem] flex-col items-center justify-center gap-1 rounded-2xl px-5 py-6 text-center"
       :style="{ background: 'var(--surface-2)' }"
     >
-      <span
-        class="inline-flex items-center rounded-md px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide"
-        :style="{ background: 'var(--positive)', color: 'var(--ink-on-color)' }"
-      >Доступно</span>
-      <span class="mt-1.5 block text-[1.0625rem] font-bold leading-tight text-[var(--text)]">{{ razbor.title }}</span>
+      <span class="block text-[1.0625rem] font-bold leading-tight text-[var(--text)]">{{ razbor.title }}</span>
       <span class="block text-[0.8125rem] leading-snug text-[var(--text-secondary)]">{{ razbor.subtitle }}</span>
       <button
         type="button"
         class="mt-3 min-h-[44px] rounded-full px-6 text-[0.9375rem] font-bold"
-        :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
+        :style="{ background: 'var(--positive)', color: 'var(--ink-on-color)' }"
         @click="$emit('open', 'razbor')"
       >Детали</button>
     </div>

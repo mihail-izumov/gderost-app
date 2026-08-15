@@ -33,6 +33,16 @@ const STEPS = ['со слов', 'посчитано', 'проверено']
 // Знак рядом с именем несёт состояние теми же цветами, что светофор дней:
 // все три деления — зелёный, неполный набор — жёлтый (мера и незавершённость).
 // Красного здесь не бывает: числа со слов не ошибка, а нижняя ступень.
+// Подпись называет состояние шкалы, а не пересказывает имя: делений три,
+// и человек обязан понимать, почему горят два. Третье ставит только проверка
+// на данных — в приложении оно не загорается никогда, и это его продающая часть.
+const NOTE = {
+  1: 'Заполнено 1 из 3: числа с ваших слов',
+  2: 'Заполнено 2 из 3: числа с ваших слов и расчёт. Третье — сверка с кассой',
+  3: 'Заполнено 3 из 3: числа сверены с кассой',
+}
+const note = computed(() => NOTE[props.filled] || NOTE[2])
+
 const tone = computed(() => (props.filled >= 3 ? 'var(--positive)' : 'var(--warning)'))
 const toneInk = computed(() => (props.filled >= 3 ? 'var(--ink-on-color)' : 'var(--accent-ink)'))
 </script>
@@ -54,16 +64,14 @@ const toneInk = computed(() => (props.filled >= 3 ? 'var(--ink-on-color)' : 'var
     </span>
     <span class="min-w-0 flex-1">
       <span class="block text-[0.9375rem] font-bold leading-tight text-[var(--text)]">Честная цифра</span>
-      <span class="mt-0.5 block text-[0.75rem] leading-snug text-[var(--text-muted)]">
-        Видно, откуда взялось каждое число
-      </span>
+      <span class="mt-0.5 block text-[0.75rem] leading-snug text-[var(--text-muted)]">{{ note }}</span>
     </span>
     <span class="flex shrink-0 items-center gap-[4px]" aria-hidden="true">
       <span
         v-for="(s, i) in STEPS"
         :key="s"
         class="h-[8px] w-[18px] rounded-full"
-        :style="{ background: i < filled ? 'var(--text)' : 'var(--line)' }"
+        :style="{ background: i < filled ? tone : 'var(--line)' }"
       ></span>
     </span>
   </button>

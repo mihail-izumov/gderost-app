@@ -22,7 +22,11 @@ defineProps({
   pct: { type: Number, default: 0 },
   levelId: { type: String, default: 'mini' },
 })
-defineEmits(['info'])
+defineEmits(['info', 'stage'])
+
+// Этап пути — вход в паспорт своей ступени. «Мини» товаром не является:
+// её не покупают, и кнопкой она не становится.
+const STAGE_MODULE = { razbory: 'razbor', bootcamp: 'bootcamp', runscale: 'runscale' }
 
 const levels = LEVELS
 </script>
@@ -69,11 +73,14 @@ const levels = LEVELS
 
     <!-- Этапы пути. Пройденный — светлый, будущий — приглушённый; текущий подписан. -->
     <ol class="mt-3.5 flex items-start justify-between gap-1.5">
-      <li
+      <component
+        :is="STAGE_MODULE[l.id] ? 'button' : 'li'"
         v-for="l in levels"
         :key="l.id"
-        class="flex min-w-0 flex-1 flex-col"
+        :type="STAGE_MODULE[l.id] ? 'button' : null"
+        class="flex min-w-0 flex-1 flex-col text-left"
         :aria-current="l.id === levelId ? 'step' : undefined"
+        @click="STAGE_MODULE[l.id] ? $emit('stage', STAGE_MODULE[l.id]) : null"
       >
         <span
           class="mb-1.5 h-[3px] w-full rounded-full"
@@ -87,7 +94,7 @@ const levels = LEVELS
             fontWeight: l.id === levelId ? 700 : 400,
           }"
         >{{ l.label }}</span>
-      </li>
+      </component>
     </ol>
   </section>
 </template>

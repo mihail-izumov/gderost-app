@@ -13,6 +13,7 @@ import { computeEnergy, computeGaps } from '../composables/energyModel.js'
 import { formatRub, formatGrowth, formatPct, daysWord } from '../i18n/format.js'
 import { monthCap } from '../i18n/home.js'
 import { FORECAST_STORY } from '../i18n/stories.js'
+import { isLocked } from '../i18n/energy.js'
 
 // Цели и планы — четыре величины, четыре плашки и расстояния между ними.
 //
@@ -72,7 +73,7 @@ const monthWeeks = computed(() => {
 })
 
 // Подпись и остаток — того же месяца, что и числа под виджетом.
-const widgetNote = computed(() => (m.value ? `${m.value.daysLeft} ${daysWord(m.value.daysLeft)} с сегодня` : ''))
+const widgetNote = computed(() => (m.value ? `${m.value.daysLeft} ${daysWord(m.value.daysLeft)} ост.` : ''))
 const widgetPill = computed(() => (m.value && m.value.days.length
   ? formatPct((m.value.daysLeft / m.value.days.length) * 100, 0)
   : ''))
@@ -249,7 +250,7 @@ function saveCarry(v) {
       <ModulePassport
         :module-id="moduleOpen"
         :energy="energy"
-        :locked="state.razborRating === null || state.razborRating === undefined"
+        :locked="isLocked(moduleOpen, state.razborRating !== null && state.razborRating !== undefined)"
         :rated="state.razborRating !== null && state.razborRating !== undefined"
         @close="moduleOpen = ''"
       />

@@ -6,6 +6,7 @@ import ConnectProgress from '../components/energy/ConnectProgress.vue'
 import EnergyBreakdown from '../components/energy/EnergyBreakdown.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
 import ConnectBusinessModal from '../components/business/ConnectBusinessModal.vue'
+import AddReportForm from '../components/AddReportForm.vue'
 import Telemetry from '../components/growth/Telemetry.vue'
 import WeekRows from '../components/growth/WeekRows.vue'
 import SiteFooter from '../components/SiteFooter.vue'
@@ -42,6 +43,11 @@ const m = store.model
 const breakdownOpen = ref(false)
 const moduleOpen = ref('')
 const connectOpen = ref(false)
+// Ввод дня открывается прямо здесь: человек смотрит на свои недели, и уводить
+// его на другой экран ради одной цифры значит терять место, куда он смотрел.
+const dayOpen = ref(false)
+const dayPick = ref('')
+function openDay(iso) { dayPick.value = iso || ''; dayOpen.value = true }
 const energy = computed(() => computeEnergy(state, m.value))
 const rated = computed(() => state.razborRating !== null && state.razborRating !== undefined)
 const today = computed(() => todayISO())
@@ -97,7 +103,7 @@ const reason = computed(() => {
         type="button"
         class="mt-2.5 min-h-[44px] w-full rounded-xl text-[0.9375rem] font-bold"
         :style="{ background: 'var(--warning)', color: 'var(--accent-ink)' }"
-        @click="emit('go', 'day', reason.iso)"
+        @click="openDay(reason.iso)"
       >Внести</button>
     </div>
 
@@ -110,6 +116,7 @@ const reason = computed(() => {
       :pct="energy.pct"
       :level-id="energy.level.id"
       @info="breakdownOpen = true"
+      @stage="moduleOpen = $event"
     />
 
     <!-- 4 · Эта неделя -->
@@ -133,7 +140,7 @@ const reason = computed(() => {
 
     <!-- 4 · Недели месяца -->
     <div class="mt-4">
-      <WeekRows :m="m" :today="today" :month-title="weeksTitle" @enter="emit('go', 'day', $event)" />
+      <WeekRows :m="m" :today="today" :month-title="weeksTitle" @enter="openDay" />
     </div>
 
     <!-- 5 · Доступно сейчас. Пустой круг вместо прочерка: место под то, чего
@@ -186,6 +193,10 @@ const reason = computed(() => {
     <SiteFooter />
 
     <ConnectBusinessModal :open="connectOpen" @close="connectOpen = false" />
+
+    <BottomSheet :open="dayOpen" @close="dayOpen = false">
+      <AddReportForm :preset="dayPick" @done="dayOpen = false" />
+    </BottomSheet>
 
     <BottomSheet :open="breakdownOpen" @close="breakdownOpen = false">
       <EnergyBreakdown :energy="energy" @close="breakdownOpen = false" />

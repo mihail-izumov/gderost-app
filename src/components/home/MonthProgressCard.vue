@@ -49,7 +49,7 @@ const current = computed(() => screens.value[Math.min(idx.value, screens.value.l
 const monthLabel = computed(() => (props.month ? monthCap(props.month) : ''))
 
 const daysWord = (n) =>
-  `${n} ${plural(n, ['день', 'дня', 'дней'])} с сегодня`
+  `${plural(n, ['Остался', 'Осталось', 'Осталось'])} ${n} ${plural(n, ['день', 'дня', 'дней'])}`
 
 const daysBadge = computed(() => {
   if (props.daysLeft == null) return ''

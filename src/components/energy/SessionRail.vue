@@ -58,8 +58,12 @@ const cards = computed(() => RAIL.map((id) => {
       : state === 'done' ? 'var(--text)'
         : 'var(--surface)',
     ink: onColor ? 'var(--ink-on-color)' : 'var(--text)',
-    inkMuted: onColor ? 'var(--ink-on-color-muted)' : 'var(--text-secondary)',
-    inkFaint: onColor ? 'var(--ink-on-color-muted)' : 'var(--text-muted)',
+    // На заливке весь текст белый, разница — в прозрачности: серый токен
+    // подобран против графита и на зелёном тонет.
+    inkMuted: onColor ? 'var(--ink-on-color)' : 'var(--text-secondary)',
+    inkFaint: onColor ? 'var(--ink-on-color)' : 'var(--text-muted)',
+    mutedOpacity: onColor ? 0.9 : 1,
+    faintOpacity: onColor ? 0.75 : 1,
     chipBg: onColor ? 'var(--ink-on-color)' : 'var(--surface-2)',
     chipInk: onColor ? 'var(--text)' : 'var(--text-muted)',
   }
@@ -97,15 +101,15 @@ const cards = computed(() => RAIL.map((id) => {
             />
           </span>
 
-          <span class="mt-1 block text-[0.75rem] leading-snug" :style="{ color: c.inkMuted }">{{ c.subtitle }}</span>
+          <span class="mt-1 block text-[0.75rem] leading-snug" :style="{ color: c.inkMuted, opacity: c.mutedOpacity }">{{ c.subtitle }}</span>
 
           <span class="mt-3 flex items-end justify-between gap-2">
             <span>
-              <span class="block text-[0.625rem] uppercase tracking-wide" :style="{ color: c.inkFaint }">Расход</span>
+              <span class="block text-[0.625rem] uppercase tracking-wide" :style="{ color: c.inkFaint, opacity: c.faintOpacity }">Расход</span>
               <span class="block text-[0.9375rem] font-bold tabular-nums" :style="{ color: c.ink }">{{ c.price }}</span>
             </span>
             <span class="text-right">
-              <span class="block text-[0.625rem] uppercase tracking-wide" :style="{ color: c.inkFaint }">Мощность</span>
+              <span class="block text-[0.625rem] uppercase tracking-wide" :style="{ color: c.inkFaint, opacity: c.faintOpacity }">Мощность</span>
               <span class="block text-[0.9375rem] font-bold tabular-nums" :style="{ color: c.ink }">
                 {{ c.gain > 0 ? `+${c.gain}%` : '—' }}
               </span>

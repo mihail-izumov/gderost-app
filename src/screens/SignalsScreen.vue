@@ -75,34 +75,24 @@ function storyDone() {
 
 <template>
   <div v-if="m" class="w-full px-4 pb-4">
+    <!-- Заголовки разделов разводят экран на два разговора: что у вас сегодня
+         и чем это усилить завтра. Без них карточки слипались в одну ленту. -->
+    <h2 class="mb-2 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">Сегодня</h2>
+
     <!-- Живой сигнал выше товара: полезное вперёд продаваемого. -->
     <SignalTodayCard
       :signal="signal"
       :over="store.monthOver.value"
       @origin="originOpen = $event"
       @go="emit('go', $event)"
+      @method="storyOpen = true"
     />
 
-    <!-- Метод сразу под сигналом: человек прочитал свои числа и здесь же узнаёт,
-         из чего они собраны. Заливка отделяет объяснение от товара ниже. -->
-    <button
-      type="button"
-      class="mt-2.5 flex min-h-[64px] w-full items-center gap-3 rounded-2xl px-4 py-3 text-left"
-      :style="{ background: 'var(--graphite)', color: 'var(--ink-on-color)' }"
-      @click="storyOpen = true"
-    >
-      <span class="min-w-0 flex-1">
-        <span class="block text-[0.9375rem] font-bold leading-tight">Расти по плану</span>
-        <span class="mt-0.5 block text-[0.75rem] leading-snug" :style="{ color: 'var(--ink-on-color-muted)' }">
-          Система роста: факт, прогноз, план и цель
-        </span>
-      </span>
-      <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: 'var(--ink-on-color-muted)' }" :stroke-width="2.5" aria-hidden="true" />
-    </button>
+    <h2 class="mb-2 mt-6 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">Завтра</h2>
 
     <!-- Переключатель режимов ленты вместо заголовка «Сессии». Во всю ширину:
          узкая пилюля у левого края читалась подписью, а не контролом. -->
-    <div class="mb-2 mt-4 flex w-full rounded-full bg-[var(--surface-2)] p-[3px]">
+    <div class="mb-2 flex w-full rounded-full bg-[var(--surface-2)] p-[3px]">
       <button
         v-for="t in [{ id: 'sessions', label: 'Разборы' }, { id: 'mine', label: 'Мои старты' }]"
         :key="t.id"
