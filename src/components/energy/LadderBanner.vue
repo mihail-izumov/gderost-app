@@ -31,14 +31,14 @@ defineEmits(['open'])
     </span>
     <span class="min-w-0 flex-1">
       <span class="flex items-center gap-2">
-        <span class="text-[1.0625rem] font-bold leading-tight">Разборы</span>
+        <span class="text-[1.0625rem] font-bold leading-tight">Сигналы</span>
         <span
           class="inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.6875rem] font-bold leading-none"
           :style="{ background: 'var(--line-on-color)', color: 'var(--ink-on-color)' }"
         >4 ступени</span>
       </span>
       <span class="mt-0.5 block text-[0.8125rem] leading-snug" :style="{ color: 'var(--ink-on-color-muted)' }">
-        От девяноста минут до режима с командой. Ваш уровень уже посчитан
+        Сигнал дня уже считается. Дорога — до сигналов каждый день
       </span>
     </span>
     <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: 'var(--ink-on-color-muted)' }" :stroke-width="2.5" aria-hidden="true" />

@@ -4,7 +4,8 @@ import { computeMini, nextMonthState, sigClass } from '../src/composables/miniMo
 import { calibrateFromDays, observationsByDow, shapeStatus, shapeName } from '../src/data/weekShape.js'
 import { computeEnergy, computeGaps, moduleGain, LEVELS, PART, PARTS, MODULE_LIFTS } from '../src/composables/energyModel.js'
 import { encodeState, decodeState, readShared, shareUrl, hasSharePayload } from '../src/composables/shareLink.js'
-import { MODULES, SESSIONS, BY_LABEL, isLocked } from '../src/i18n/energy.js'
+import { MODULES, SESSIONS, BY_LABEL, isLocked, ORIGINS } from '../src/i18n/energy.js'
+import { computeTodaySignal } from '../src/composables/signalModel.js'
 
 let fails = 0
 const ok = (cond, name) => {
@@ -463,6 +464,40 @@ ok(!weekClosed({ ...baseShare, carry: { upTo: '2026-08-13', amount: 1_200_000, s
   'стартовая сумма за прошлое неделю не закрывает')
 ok(!weekClosed({ ...baseShare, days: daysRange(10, 16) }),
   'текущая неделя, заполненная вперёд, повода не даёт')
+
+// Сигнал Мини. Правило контура: не из чего собрать утверждение — молчим.
+// Пустая карточка с нулями была бы шумом, и это проверяется машиной.
+ok(computeTodaySignal(null) === null, 'без модели сигнала нет')
+const mEmpty = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: [1,1,1,1,1,1,1], carry: null, days: [] }, NOW)
+ok(computeTodaySignal(mEmpty) === null, 'без единого числа сигнала нет')
+
+// Планка сигнала совпадает с моделью до рубля: сигнал — те же числа
+// в раме предмета торговли, а не второй расчёт рядом с первым.
+const sig = computeTodaySignal(m3)
+ok(sig !== null, 'на живом месяце сигнал собирается')
+ok(близко(sig.need ?? m3.todayNeed ?? 0, m3.todayNeed ?? 0, 1e-6), 'планка «надо сегодня» — из модели')
+ok(близко(sig.landing, m3.landing, 1e-6), 'прогноз сигнала — из модели')
+ok(sig.even && sig.gap === 0 && sig.surplus === 0,
+  'совпадение прогноза с планом направлением не называется')
+const mBehind = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: [1,1,1,1,1,1,1],
+  carry: null, days: [{ date: '2026-08-01', rev: 10_000 }] }, NOW)
+const sigB = computeTodaySignal(mBehind)
+ok(sigB.gap > 0 && близко(sigB.gap, mBehind.T - mBehind.landing, 1e-6),
+  'недобор сигнала равен разрыву модели')
+
+// Происхождение чисел: у каждого ключа есть полный текст, а статусов
+// только два — третий в приложении не выдаётся никогда.
+const originKeys = ['fact', 'forecast', 'plan', 'goal', 'need', 'gap']
+ok(originKeys.every((k) => {
+  const o = ORIGINS[k]
+  return o && o.title && o.what && o.from && o.next
+}), 'происхождение названо для всех шести чисел')
+ok(originKeys.every((k) => ['said', 'computed'].includes(ORIGINS[k].status)),
+  'статусы происхождения — только «со слов» и «посчитано»')
+
+// Предмет торговли назван на каждой ступени: строка сигналов обязательна.
+ok(SESSIONS.every((id) => MODULES[id].signals && MODULES[id].signals.length > 0),
+  'у каждой ступени названо, что она добавляет к сигналам')
 
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')
 process.exit(fails ? 1 : 0)

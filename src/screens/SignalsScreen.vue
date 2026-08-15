@@ -5,32 +5,30 @@ import ConnectProgress from '../components/energy/ConnectProgress.vue'
 import EnergyBreakdown from '../components/energy/EnergyBreakdown.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
 import SessionRail from '../components/energy/SessionRail.vue'
+import SignalTodayCard from '../components/energy/SignalTodayCard.vue'
 import RateRazborSheet from '../components/energy/RateRazborSheet.vue'
 import RequestList from '../components/energy/RequestList.vue'
 import BottomSheet from '../components/BottomSheet.vue'
+import NumberOriginSheet from '../components/NumberOriginSheet.vue'
 import StoryOnboarding from '../components/StoryOnboarding.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { computeEnergy } from '../composables/energyModel.js'
+import { computeTodaySignal } from '../composables/signalModel.js'
 import { ENTITY_STORY } from '../i18n/stories.js'
 import { isLocked } from '../i18n/energy.js'
 
-// «Разборы» — вкладка, на которой человек видит, где он на дороге и чем эта
-// дорога проходится.
+// «Сигналы» — вкладка предмета торговли.
 //
-// Экран стоит на одном развороте: плашка юнита с процентом, вход в цели
-// и планы, лента из четырёх ступеней с переключателем «Ступени / Мои старты».
-// Всё остальное живёт в шторках и открывается оттуда, где о нём зашла речь.
+// Ранскейл продаёт точные сигналы, которые приходят вовремя; разборы,
+// буткемп и подписка — способы получать их больше и точнее. Имя вкладки
+// обязывает: она начинается с сигналов, которые владелец уже получает
+// бесплатно, — иначе под вывеской «Сигналы» лежал бы прайс-лист.
 //
-// Отдельного баннера буткемпа здесь больше нет: буткемп стоит в ленте своей
-// карточкой, и второй вход к нему на том же экране был бы шумом.
-//
-// Карточек четырёх сущностей здесь больше нет. Уровни `N / 20` были видимой
-// частью формулы, но экран от них читался вторым дашбордом: те же четыре
-// числа, что на «Сегодня», плюс механика, которую надо изучать. Процент
-// остался на месте и считается по той же формуле, состав открывается
-// с самого числа. Расстояния между величинами уехали в «Цели и планы» —
-// туда, где эти величины и правятся.
+// Экран сверху вниз: плашка юнита с энергией, живой сигнал сегодня,
+// вход в цели и планы, лента из четырёх ступеней с переключателем
+// «Ступени / Мои старты». Подписка — конечная точка ленты: её цена, срок
+// и три месяца живут в паспорте, второго экрана у неё нет.
 //
 // Числа владельца на экране есть — значит и тон обычный: экран сообщает
 // состояние и не объясняет себя абзацами.
@@ -42,6 +40,7 @@ const m = store.model
 const state = store.state
 
 const energy = computed(() => computeEnergy(state, m.value))
+const signal = computed(() => computeTodaySignal(m.value))
 
 // Серия открывается отметкой о состоявшемся разборе. Проверить её нечем,
 // и заказ всё равно проходит через живого человека — отметка открывает
@@ -53,6 +52,9 @@ const breakdownOpen = ref(false)
 const rateOpen = ref(false)
 const moduleOpen = ref('')
 const storyOpen = ref(false)
+// Происхождение числа: ключ открытой шторки. Механика честной цифры —
+// тап по числу показывает, на чём оно стоит.
+const originOpen = ref('')
 // Лента показывает либо товар, либо своё: два списка об одном и том же,
 // и переключатель дешевле второго заголовка с пустым разделом под ним.
 const railMode = ref('sessions')
@@ -79,6 +81,15 @@ function storyDone() {
       :pct="energy.pct"
       :level-id="energy.level.id"
       @info="breakdownOpen = true"
+    />
+
+    <!-- Живой сигнал выше товара: полезное вперёд продаваемого. -->
+    <SignalTodayCard
+      class="mt-2.5"
+      :signal="signal"
+      :over="store.monthOver.value"
+      @origin="originOpen = $event"
+      @go="emit('go', $event)"
     />
 
     <!-- Вход в цели и планы: числа, на которых стоит весь экран, правятся там,
@@ -152,6 +163,10 @@ function storyDone() {
 
     <BottomSheet :open="breakdownOpen" @close="breakdownOpen = false">
       <EnergyBreakdown :energy="energy" @close="breakdownOpen = false" />
+    </BottomSheet>
+
+    <BottomSheet :open="!!originOpen" @close="originOpen = ''">
+      <NumberOriginSheet :origin-key="originOpen" @close="originOpen = ''" />
     </BottomSheet>
 
     <BottomSheet :open="!!moduleOpen" @close="moduleOpen = ''">

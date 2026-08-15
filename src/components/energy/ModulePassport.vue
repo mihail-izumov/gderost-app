@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { Lock } from 'lucide-vue-next'
 import { formatRub, dayLabel } from '../../i18n/format.js'
 import { moduleGain } from '../../composables/energyModel.js'
-import { MODULES, ORDER_STEPS } from '../../i18n/energy.js'
+import { MODULES, ORDER_STEPS, RUNSCALE_MONTHS } from '../../i18n/energy.js'
 import { useMiniStore } from '../../composables/useMiniStore.js'
 import { monthCap } from '../../i18n/home.js'
 import ShareMonthButton from '../ShareMonthButton.vue'
@@ -90,13 +90,34 @@ const tiles = computed(() => (!mod.value ? [] : [
         <dt class="shrink-0 text-[0.8125rem] font-semibold text-[var(--text)]">Приносите</dt>
         <dd class="text-right text-[0.8125rem] text-[var(--text-secondary)]">{{ bring }}</dd>
       </div>
-      <div class="flex items-baseline justify-between gap-3 py-2">
+      <div class="flex items-baseline justify-between gap-3 py-2" :class="mod.signals ? 'border-b border-[var(--line)]' : ''">
         <dt class="shrink-0 text-[0.8125rem] font-semibold text-[var(--text)]">Уносите</dt>
         <dd class="text-right text-[0.8125rem] text-[var(--text-secondary)]">{{ mod.take }}</dd>
+      </div>
+      <!-- Предмет торговли — сигналы: у каждой ступени названо, что она
+           добавляет к каналу. -->
+      <div v-if="mod.signals" class="flex items-baseline justify-between gap-3 py-2">
+        <dt class="shrink-0 text-[0.8125rem] font-semibold text-[var(--text)]">Сигналы</dt>
+        <dd class="text-right text-[0.8125rem] text-[var(--text-secondary)]">{{ mod.signals }}</dd>
       </div>
     </dl>
 
     <p v-if="mod.note" class="mt-1 text-[0.75rem] leading-snug text-[var(--text-muted)]">{{ mod.note }}</p>
+
+    <!-- Режим — единственная ступень с месяцами: подписка живёт в этом
+         паспорте целиком, второго экрана у неё нет. -->
+    <ol v-if="moduleId === 'runscale'" class="mt-3 flex flex-col gap-2.5">
+      <li v-for="(mo, i) in RUNSCALE_MONTHS" :key="mo.id" class="flex gap-2.5">
+        <span
+          class="mt-[1px] flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full text-[0.6875rem] font-bold"
+          :style="{ background: 'var(--surface-2)', color: 'var(--text-muted)' }"
+        >{{ i + 1 }}</span>
+        <span class="min-w-0">
+          <span class="block text-[0.875rem] font-semibold text-[var(--text)]">{{ mo.title }}</span>
+          <span class="mt-0.5 block text-[0.8125rem] leading-snug text-[var(--text-secondary)]">{{ mo.text }}</span>
+        </span>
+      </li>
+    </ol>
 
     <!-- Буткемп — единственная ступень, которая ставит числам последний
          статус. Шильд с тремя заполненными делениями показывает это ровно
