@@ -4,7 +4,9 @@ import { computeMini, nextMonthState, sigClass } from '../src/composables/miniMo
 import { calibrateFromDays, observationsByDow, shapeStatus, shapeName } from '../src/data/weekShape.js'
 import { computeEnergy, computeGaps, moduleGain, LEVELS, PART, PARTS, MODULE_LIFTS } from '../src/composables/energyModel.js'
 import { encodeState, decodeState, readShared, shareUrl, hasSharePayload } from '../src/composables/shareLink.js'
-import { MODULES, SESSIONS, BY_LABEL, isLocked, ORIGINS } from '../src/i18n/energy.js'
+import { MODULES, SESSIONS, BY_LABEL, isLocked, ORIGINS, SIGNAL } from '../src/i18n/energy.js'
+import { INTRO_STORY } from '../src/i18n/stories.js'
+import { STEPS as DAY_STEPS, HEAD, SAMPLE } from '../src/i18n/growth247.js'
 import { computeTodaySignal } from '../src/composables/signalModel.js'
 
 let fails = 0
@@ -498,6 +500,34 @@ ok(originKeys.every((k) => ['said', 'computed'].includes(ORIGINS[k].status)),
 // Предмет торговли назван на каждой ступени: строка сигналов обязательна.
 ok(SESSIONS.every((id) => MODULES[id].signals && MODULES[id].signals.length > 0),
   'у каждой ступени названо, что она добавляет к сигналам')
+
+// Голос витрины. Тот же словарь, что в `tools/proverka.mjs`: две проверки
+// обязаны говорить одно и то же, иначе разойдутся молча и веры не будет ни
+// одной. Здесь он ловит тексты, которые видит человек, — по значениям, а не
+// по файлам: словарь без чисел проверяется дословно.
+const VOICE_BAN = /контур|чекап|планк[аиуе]|вердикт|GO\s*\/\s*NO\s*GO|лаборатор/i
+const visible = [
+  ...INTRO_STORY.flatMap((s) => [s.title, s.text, s.cta || '']),
+  ...DAY_STEPS.flatMap((s) => [s.short, s.title, s.with]),
+  ...Object.values(HEAD),
+  ...Object.values(SAMPLE),
+  ...Object.values(SIGNAL),
+  ...SESSIONS.flatMap((id) => {
+    const m = MODULES[id]
+    return [m.title, m.subtitle, m.signals, m.bring, m.take, m.note || '', m.cta, m.lockNote || '']
+  }),
+  ...Object.values(ORIGINS).flatMap((o) => [o.title, o.what, o.from, o.next]),
+]
+ok(visible.every((s) => !VOICE_BAN.test(String(s))),
+  'на витрине нет внутренних слов: контур, чекап, планка, вердикт, лаборатория')
+
+// Онбординг входа: пять слайдов и говорящая кнопка на последнем — человек
+// узнаёт, как это работает, до того как у него просят числа.
+ok(INTRO_STORY.length === 5 && INTRO_STORY[4].cta, 'вход объясняется пятью слайдами до первого поля')
+
+// Круг дня: четыре шага, у каждого есть, что показать.
+ok(DAY_STEPS.length === 4 && DAY_STEPS.every((s) => s.short && s.title && s.with),
+  'в круге дня четыре шага, и у каждого назван свой слой')
 
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')
 process.exit(fails ? 1 : 0)

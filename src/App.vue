@@ -10,6 +10,8 @@ import RunscaleScreen from './screens/RunscaleScreen.vue'
 import GoalsScreen from './screens/GoalsScreen.vue'
 import DayControlScreen from './screens/DayControlScreen.vue'
 import AppShell from './components/AppShell.vue'
+import StoryOnboarding from './components/StoryOnboarding.vue'
+import { INTRO_STORY } from './i18n/stories.js'
 import { useMiniStore } from './composables/useMiniStore.js'
 import { readShared, hasSharePayload } from './composables/shareLink.js'
 
@@ -30,6 +32,19 @@ import { readShared, hasSharePayload } from './composables/shareLink.js'
 const store = useMiniStore()
 const entered = ref(store.state.ready)
 const tab = ref('today')
+
+// Пять слайдов между витриной и первым полем: человек узнаёт, как это
+// работает и что получит, до того как у него просят числа. Сюжет ничего
+// не пишет и закрывается в любой момент — закрыл значит «понятно», дальше
+// подключение. Второй раз сам не показывается: его место — витрина.
+const introOpen = ref(false)
+function startFromShowcase() {
+  introOpen.value = true
+}
+function introDone() {
+  introOpen.value = false
+  entered.value = true
+}
 
 // Месяц, пришедший ссылкой, показывается вместо приложения и хранилища
 // не касается: у открывшего может быть свой месяц, и подменять его чужим
@@ -85,7 +100,7 @@ const TABS = computed(() => [
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
   },
-  { id: 'runscale', label: 'Ранскейл', icon: Activity, title: 'Ранскейл' },
+  { id: 'runscale', label: 'Рост 24/7', icon: Activity, title: 'Рост 24/7' },
 ])
 
 // Подпись назад нейтральная: «Цели и планы» открываются и с «Сегодня»,
@@ -142,7 +157,15 @@ function selectTab(id) {
     </div>
   </div>
 
-  <StartScreen v-else-if="view === 'showcase'" @start="entered = true" />
+  <template v-else-if="view === 'showcase'">
+    <StartScreen @start="startFromShowcase" />
+    <StoryOnboarding
+      :open="introOpen"
+      :slides="INTRO_STORY"
+      @close="introDone"
+      @done="introDone"
+    />
+  </template>
 
   <!-- Сохранённое не читается. Сказать и дать выход — вместо белого экрана. -->
   <div v-else-if="broken" class="min-h-[100dvh] w-full bg-[var(--bg)]">

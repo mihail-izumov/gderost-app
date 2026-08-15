@@ -13,8 +13,8 @@
 export const COUNTERS = {
   asOf: '2026-08-10',
   items: [
-    { key: 'checkups', forms: ['чекап', 'чекапа', 'чекапов'], value: 59 },
-    { key: 'signals', forms: ['сигнал', 'сигнала', 'сигналов'], value: 29 },
+    { key: 'checkups', forms: ['проверка', 'проверки', 'проверок'], value: 59 },
+    { key: 'signals', forms: ['подсказка', 'подсказки', 'подсказок'], value: 29 },
     { key: 'reviews', forms: ['разбор', 'разбора', 'разборов'], value: 12 },
   ],
 }

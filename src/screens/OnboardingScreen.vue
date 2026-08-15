@@ -6,7 +6,12 @@ import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
 import { todayISO } from '../composables/miniModel.js'
 import { monthLabel, formatRub } from '../i18n/format.js'
 
-// Подключение бизнеса: четыре ответа, по одному экрану на каждый.
+// Подключение бизнеса. Первый шаг — выбор пути, дальше поля по одному экрану.
+//
+// Короткий путь основной: два числа — название и план, — и человек сразу
+// в живом приложении. Остальное приложение просит там, где без этого не может
+// посчитать следующее: пустая карточка говорит одно действие. Просить четыре
+// ответа до первой пользы значит просить доверия, которого ещё нет.
 //
 // Интерфейс информирует и уведомляет. Он не рассказывает, как устроен, зачем
 // нужен и почему безопасен: поле с понятным именем объясняет себя само, а
@@ -39,13 +44,26 @@ const goal = ref(null)
 // Первое число месяца: прошлого в этом месяце ещё нет, шаг лишний.
 const monthJustStarted = computed(() => today === firstOfMonth)
 
-const STEPS = computed(() => (monthJustStarted.value
-  ? ['who', 'plan', 'goal']
-  : ['who', 'plan', 'earned', 'goal']))
+// Путь выбирается первым экраном и меняет только длину анкеты: короткий
+// доводит до чисел за два шага, полный спрашивает всё сразу.
+const mode = ref('')
+
+const STEPS = computed(() => {
+  if (!mode.value) return ['choice']
+  if (mode.value === 'short') return ['choice', 'who', 'plan']
+  return monthJustStarted.value
+    ? ['choice', 'who', 'plan', 'goal']
+    : ['choice', 'who', 'plan', 'earned', 'goal']
+})
 
 const at = ref(0)
 const step = computed(() => STEPS.value[at.value])
 const last = computed(() => at.value === STEPS.value.length - 1)
+
+function choose(m) {
+  mode.value = m
+  at.value = 1
+}
 
 const targetOk = computed(() => Number(target.value) > 0)
 const goalConflict = computed(() =>
@@ -54,7 +72,10 @@ const earnedHigh = computed(() =>
   targetOk.value && earned.value !== null && Number(earned.value) > Number(target.value) * 3)
 
 // Дальше пускает только то, без чего расчёт неверен: план и непротиворечивая цель.
+// План обязателен на обоих путях: без обязательства месяца считать нечего —
+// ни прогноза к чему, ни «сколько надо сегодня» из чего.
 const canNext = computed(() => {
+  if (step.value === 'choice') return false
   if (step.value === 'plan') return targetOk.value
   if (step.value === 'goal') return !goalConflict.value
   return true
@@ -77,13 +98,14 @@ function skipGoal() {
 
 function submit() {
   if (!targetOk.value || goalConflict.value) return
+  const withPast = mode.value === 'full' && !monthJustStarted.value
   store.setup({
     company: company.value,
     unit: unit.value,
     target: target.value,
-    goal: goal.value,
-    earned: monthJustStarted.value ? null : earned.value,
-    earnedUpTo: monthJustStarted.value ? null : earnedUpTo.value,
+    goal: mode.value === 'full' ? goal.value : null,
+    earned: withPast ? earned.value : null,
+    earnedUpTo: withPast ? earnedUpTo.value : null,
     month,
   })
   emit('done')
@@ -118,13 +140,40 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
     </header>
 
     <h1 class="mt-8 font-brand text-[1.75rem] font-bold leading-tight tracking-tight text-[var(--text)]">
-      Подключить бизнес
+      {{ step === 'choice' ? 'С чего начнём' : 'Подключить бизнес' }}
     </h1>
 
     <form class="mt-8 flex flex-1 flex-col" @submit.prevent="next">
       <div class="flex flex-col gap-5">
+        <!-- 0. Путь. Короткий стоит первым и выглядит как основной: он
+             доводит до живых чисел за два шага, остальное приложение
+             попросит там, где без этого не посчитает. -->
+        <template v-if="step === 'choice'">
+          <button
+            type="button"
+            class="w-full rounded-2xl px-4 py-4 text-left"
+            :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
+            @click="choose('short')"
+          >
+            <span class="block text-[1.0625rem] font-bold leading-tight">Ввести два числа</span>
+            <span class="mt-1 block text-[0.875rem] leading-snug opacity-80">
+              Название и план на месяц. Остальное — потом, по ходу дела
+            </span>
+          </button>
+          <button
+            type="button"
+            class="w-full rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-4 text-left"
+            @click="choose('full')"
+          >
+            <span class="block text-[1.0625rem] font-bold leading-tight text-[var(--text)]">Заполнить всё сразу</span>
+            <span class="mt-1 block text-[0.875rem] leading-snug text-[var(--text-secondary)]">
+              Ещё заработанное с начала месяца и цель
+            </span>
+          </button>
+        </template>
+
         <!-- 1. Чей это месяц -->
-        <template v-if="step === 'who'">
+        <template v-else-if="step === 'who'">
           <label class="block">
             <span class="block text-[0.8125rem] font-medium text-[var(--text-secondary)]">Компания</span>
             <input v-model="company" :class="FIELD" class="mt-2" type="text" autocomplete="off">
@@ -187,6 +236,7 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
 
       <div class="mt-auto flex flex-col gap-3 pb-6 pt-10">
         <button
+          v-if="step !== 'choice'"
           type="submit"
           class="min-h-[52px] w-full rounded-xl text-[1.0625rem] font-semibold
                  transition-opacity disabled:opacity-40"

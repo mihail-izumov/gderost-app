@@ -12,6 +12,8 @@ import BottomSheet from '../components/BottomSheet.vue'
 import StoryOnboarding from '../components/StoryOnboarding.vue'
 import LadderBanner from '../components/energy/LadderBanner.vue'
 import HonestBadge from '../components/HonestBadge.vue'
+import FirstStepsCard from '../components/FirstStepsCard.vue'
+import CarrySheet from '../components/CarrySheet.vue'
 import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
 import { sigClass, todayISO } from '../composables/miniModel.js'
 import { mlnRub, mlnSigned, pct1, pctDelta, monthCap } from '../i18n/home.js'
@@ -37,6 +39,8 @@ const monthOver = store.monthOver
 
 const storyOpen = ref(false)
 const nextOpen = ref(false)
+// Что уже заработано: спрашивается там, где стало нужно, а не на входе.
+const carryOpen = ref(false)
 const nextMonth = computed(() => currentMonth())
 
 const slides = computed(() => (m.value ? [{
@@ -183,6 +187,10 @@ function storyDone() {
 
     <MonthProgressCard class="mb-3" :slides="slides" :month="m.month" :days-left="m.daysLeft" />
 
+    <!-- Продолжение объяснения на интерфейсе: короткий вход спросил два
+         числа, остальное приложение просит здесь, по одному действию. -->
+    <FirstStepsCard class="mb-3" :m="m" @go="emit('go', $event)" @carry="carryOpen = true" />
+
     <!-- Статус чисел стоит там же, где числа: под декой месяца. Устройство
          объясняет сторис, экран сообщает состояние. -->
     <div class="mb-3">
@@ -261,6 +269,10 @@ function storyDone() {
     <InstallBanner />
 
     <!-- Перенос месяца: шторка общего вида -->
+    <BottomSheet :open="carryOpen" @close="carryOpen = false">
+      <CarrySheet @close="carryOpen = false" />
+    </BottomSheet>
+
     <BottomSheet :open="nextOpen" @close="nextOpen = false">
       <NextMonthSheet @close="nextOpen = false" />
     </BottomSheet>
