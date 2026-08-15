@@ -194,7 +194,7 @@ function storyDone() {
     <!-- Статус чисел стоит там же, где числа: под декой месяца. Устройство
          объясняет сторис, экран сообщает состояние. -->
     <div class="mb-3">
-      <HonestBadge @open="openHonest" />
+      <HonestBadge large @open="openHonest" />
     </div>
 
     <div class="flex gap-3">

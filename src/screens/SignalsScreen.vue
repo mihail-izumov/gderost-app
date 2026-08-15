@@ -1,8 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { Check, ChevronRight, Target } from 'lucide-vue-next'
-import ConnectProgress from '../components/energy/ConnectProgress.vue'
-import EnergyBreakdown from '../components/energy/EnergyBreakdown.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
 import SessionRail from '../components/energy/SessionRail.vue'
 import SignalTodayCard from '../components/energy/SignalTodayCard.vue'
@@ -25,10 +23,14 @@ import { isLocked } from '../i18n/energy.js'
 // обязывает: она начинается с сигналов, которые владелец уже получает
 // бесплатно, — иначе под вывеской «Сигналы» лежал бы прайс-лист.
 //
-// Экран сверху вниз: плашка юнита с энергией, живой сигнал сегодня,
-// вход в цели и планы, лента из четырёх ступеней с переключателем
-// «Ступени / Мои старты». Подписка — конечная точка ленты: её цена, срок
-// и три месяца живут в паспорте, второго экрана у неё нет.
+// Экран сверху вниз: живой сигнал сегодня, вход в цели и планы, лента
+// из четырёх ступеней с переключателем «Разборы / Мои старты». Подписка —
+// конечная точка ленты: её цена, срок и три месяца живут в паспорте,
+// второго экрана у неё нет.
+//
+// Полоса уровня уехала на «Рост 24/7»: здесь она дублировала ленту ступеней —
+// те же четыре шага в двух видах на одном экране. Вместе с ней уехал и состав
+// энергии: расшифровка числа живёт там, где стоит число.
 //
 // Числа владельца на экране есть — значит и тон обычный: экран сообщает
 // состояние и не объясняет себя абзацами.
@@ -48,7 +50,6 @@ const signal = computed(() => computeTodaySignal(m.value))
 // самого разбора: на чужих карточках эта кнопка читалась как отмычка.
 const unlocked = computed(() => state.razborRating !== null && state.razborRating !== undefined)
 
-const breakdownOpen = ref(false)
 const rateOpen = ref(false)
 const moduleOpen = ref('')
 const storyOpen = ref(false)
@@ -66,26 +67,19 @@ function fromModuleToRate() {
   moduleOpen.value = ''
   rateOpen.value = true
 }
-// Финал сторис ведёт к составу энергии: «Проверить свой уровень» — не совет,
-// а дверь к числу, которое уже посчитано.
+// Финал сторис ведёт туда, где стоит уровень: «Проверить свой уровень» —
+// не совет, а дверь к числу, которое уже посчитано. Число уехало на страницу
+// состояния — дверь уехала за ним.
 function storyDone() {
   storyOpen.value = false
-  breakdownOpen.value = true
+  emit('go', 'runscale')
 }
 </script>
 
 <template>
   <div v-if="m" class="w-full px-4 pb-4">
-    <ConnectProgress
-      :unit="state.unit || state.company"
-      :pct="energy.pct"
-      :level-id="energy.level.id"
-      @info="breakdownOpen = true"
-    />
-
     <!-- Живой сигнал выше товара: полезное вперёд продаваемого. -->
     <SignalTodayCard
-      class="mt-2.5"
       :signal="signal"
       :over="store.monthOver.value"
       @origin="originOpen = $event"
@@ -104,13 +98,14 @@ function storyDone() {
       <ChevronRight class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" :stroke-width="2.5" aria-hidden="true" />
     </button>
 
-    <!-- Переключатель режимов ленты вместо заголовка «Сессии». -->
-    <div class="mb-2 mt-4 inline-flex rounded-full bg-[var(--surface-2)] p-[3px]">
+    <!-- Переключатель режимов ленты вместо заголовка «Сессии». Во всю ширину:
+         узкая пилюля у левого края читалась подписью, а не контролом. -->
+    <div class="mb-2 mt-4 flex w-full rounded-full bg-[var(--surface-2)] p-[3px]">
       <button
-        v-for="t in [{ id: 'sessions', label: 'Ступени' }, { id: 'mine', label: 'Мои старты' }]"
+        v-for="t in [{ id: 'sessions', label: 'Разборы' }, { id: 'mine', label: 'Мои старты' }]"
         :key="t.id"
         type="button"
-        class="min-h-[36px] rounded-full px-3.5 text-[0.8125rem] font-semibold transition-colors"
+        class="min-h-[40px] flex-1 rounded-full px-3.5 text-[0.9375rem] font-semibold transition-colors"
         :style="railMode === t.id
           ? { background: 'var(--surface)', color: 'var(--text)' }
           : { color: 'var(--text-muted)' }"
@@ -150,20 +145,24 @@ function storyDone() {
       <span class="shrink-0 text-[0.8125rem] font-medium" :style="{ color: 'var(--action)' }">Изменить</span>
     </button>
 
-    <!-- Сущности объясняются сторис, а не абзацем на экране. -->
+    <!-- Сущности объясняются сторис, а не абзацем на экране. Плашка в две
+         строки вместо строчки-сноски: то, чем меряется весь продукт, не может
+         выглядеть примечанием под лентой. -->
     <button
       type="button"
-      class="mx-auto mt-3 flex min-h-[44px] items-center gap-1.5 rounded-full px-3 text-[0.8125rem] font-medium text-[var(--text-muted)]"
+      class="mt-3 flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-[var(--surface)] px-4 py-3 text-left"
       @click="storyOpen = true"
     >
-      Что такое факт, прогноз, план и цель
+      <span class="min-w-0 flex-1">
+        <span class="block text-[0.9375rem] font-bold leading-tight text-[var(--text)]">Расти по плану</span>
+        <span class="mt-0.5 block text-[0.75rem] leading-snug text-[var(--text-muted)]">
+          Система роста: факт, прогноз, план и цель
+        </span>
+      </span>
+      <ChevronRight class="h-5 w-5 shrink-0 text-[var(--text-muted)]" :stroke-width="2.5" aria-hidden="true" />
     </button>
 
     <SiteFooter />
-
-    <BottomSheet :open="breakdownOpen" @close="breakdownOpen = false">
-      <EnergyBreakdown :energy="energy" @close="breakdownOpen = false" />
-    </BottomSheet>
 
     <BottomSheet :open="!!originOpen" @close="originOpen = ''">
       <NumberOriginSheet :origin-key="originOpen" @close="originOpen = ''" />

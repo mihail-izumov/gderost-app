@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { ChevronRight } from 'lucide-vue-next'
+import { ChevronRight, Lock } from 'lucide-vue-next'
 import { formatRub } from '../../i18n/format.js'
 import { moduleGain } from '../../composables/energyModel.js'
 import { MODULES, SESSIONS, isLocked } from '../../i18n/energy.js'
@@ -52,9 +52,9 @@ const cards = computed(() => SESSIONS.map((id) => {
     title: mod.title,
     subtitle: mod.subtitle,
     price,
-    speed: mod.speed,
     gain,
     state,
+    locked,
     // Запертая ступень объясняет замок своим словом: «Ожидание» без причины
     // читается как ошибка приложения.
     label: locked && mod.lockChip ? mod.lockChip : STATE[state].label,
@@ -80,7 +80,17 @@ const cards = computed(() => SESSIONS.map((id) => {
         >
           <span class="flex items-start justify-between gap-2">
             <span class="text-[0.9375rem] font-bold leading-tight text-[var(--text)]">{{ c.title }}</span>
+            <!-- Замок вместо стрелки у запертой ступени: стрелка обещает шаг
+                 вперёд, а шага вперёд отсюда пока нет. Паспорт всё равно
+                 открывается — заперт заказ, а не чтение. -->
+            <Lock
+              v-if="c.locked"
+              class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]"
+              :stroke-width="2"
+              aria-hidden="true"
+            />
             <ChevronRight
+              v-else
               class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]"
               :stroke-width="2.5"
               aria-hidden="true"
@@ -102,13 +112,15 @@ const cards = computed(() => SESSIONS.map((id) => {
             </span>
           </span>
 
-          <span class="mt-2.5 flex items-center justify-between gap-2">
+          <!-- Времени встречи на карточке нет: выбор ступени оно не двигает,
+               а место занимало. Длительность стоит в паспорте, где человек
+               уже решает, идти ли. -->
+          <span class="mt-2.5 flex items-center">
             <span
               class="inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.625rem]
                      font-medium uppercase tracking-wide"
               :style="{ background: c.chipBg, color: c.chipInk }"
             >{{ c.label }}</span>
-            <span class="truncate text-[0.6875rem] text-[var(--text-muted)]">{{ c.speed }}</span>
           </span>
         </button>
       </li>

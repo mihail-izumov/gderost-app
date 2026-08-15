@@ -94,6 +94,11 @@ function onDown(i, e) {
 }
 function move(e) {
   if (dragging.value === null) return
+  // Прокрутку перехватываем только пока тянут точку. Раньше `@touchmove.prevent`
+  // висел на всём окне и глушил любое движение пальцем: на телефоне шторка
+  // не листалась вовсе, и кнопка «Применить» под графиком была недостижима —
+  // настройкой формы недели нельзя было пользоваться.
+  if (e.cancelable) e.preventDefault()
   const v = valueFromEvent(e)
   if (v == null) return
   const next = [...draft.value]
@@ -161,7 +166,7 @@ const shortDays = computed(() => obs.value.filter((c) => c < OBS_FOR_DATA).lengt
   <div
     class="w-full"
     @mousemove="move" @mouseup="onUp" @mouseleave="onUp"
-    @touchmove.prevent="move" @touchend="onUp"
+    @touchmove="move" @touchend="onUp"
   >
     <header class="flex items-center gap-3 pb-3">
       <h2 class="text-[1.25rem] font-bold text-[var(--text)]">Дни недели</h2>

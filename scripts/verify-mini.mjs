@@ -6,7 +6,8 @@ import { computeEnergy, computeGaps, moduleGain, LEVELS, PART, PARTS, MODULE_LIF
 import { encodeState, decodeState, readShared, shareUrl, hasSharePayload } from '../src/composables/shareLink.js'
 import { MODULES, SESSIONS, BY_LABEL, isLocked, ORIGINS, SIGNAL } from '../src/i18n/energy.js'
 import { INTRO_STORY } from '../src/i18n/stories.js'
-import { STEPS as DAY_STEPS, HEAD, SAMPLE } from '../src/i18n/growth247.js'
+import { HEAD, LEVEL_ROWS } from '../src/i18n/growth247.js'
+import { TELEMETRY, COUNTERS, scoreAvg } from '../src/data/runscaleCounters.js'
 import { computeTodaySignal } from '../src/composables/signalModel.js'
 
 let fails = 0
@@ -69,6 +70,26 @@ ok(!w5[2].open, 'неделя 3 заперта: в неделе 2 дыры')
 const days5b = days5.concat(['05', '06', '07', '08', '09'].map((d) => ({ date: `2026-08-${d}`, rev: 100_000 })))
 const m5b = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: [1,1,1,1,1,1,1], carry: null, days: days5b }, NOW)
 ok(m5b.weeks[1].complete && m5b.weeks[2].open, 'ввод задним числом отпирает неделю 3')
+
+// Замок называет причину числами и снимается вводом последнего недостающего
+// дня — в тот же момент и никогда оплатой. Правило живёт здесь, потому что
+// экран берёт состояние недели только отсюда: второго правила замка в проекте
+// не заводится.
+ok(m5.weeks[1].missingDays.join() === '5,6,7,8,9',
+  'неделя перечисляет недостающие дни числами')
+ok(m5.weeks[2].blockedBy && m5.weeks[2].blockedBy.idx === 2
+  && m5.weeks[2].blockedBy.days.join() === '5,6,7,8,9',
+  'запертая неделя называет неделю-причину и её дыры')
+// Внесены все дыры, кроме последней (9 августа), — замок ещё стоит.
+const days5c = days5.concat(['05', '06', '07', '08'].map((d) => ({ date: `2026-08-${d}`, rev: 100_000 })))
+const m5c = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: [1,1,1,1,1,1,1], carry: null, days: days5c }, NOW)
+ok(!m5c.weeks[2].open && m5c.weeks[2].blockedBy.days.join() === '9',
+  'остался один недостающий день — замок стоит и называет именно его')
+ok(m5b.weeks[2].open && m5b.weeks[2].blockedBy === null,
+  'внесли последний недостающий день прошедшей недели → следующая открыта')
+// Ничего, кроме ввода, замок не снимает: оплата в расчёт недель не входит вовсе.
+ok(!('paid' in m5c.weeks[2]) && !('unlockedBy' in m5c.weeks[2]),
+  'в состоянии недели нет ни одного поля об оплате')
 
 // 6. Ноль — валидная выручка: день закрыт, недельный такт его принимает.
 const m6 = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: [1,1,1,1,1,1,1], carry: null,
@@ -346,8 +367,13 @@ ok(MODULES.razbor.price === 100000 && MODULES.masterplan.price === 250000
   && MODULES.bootcamp.price === 650000 && MODULES.runscale.price === 650000,
   'прайс: 100 000 · 250 000 · 650 000 · 650 000 в месяц')
 ok(isLocked('masterplan', false) && !isLocked('masterplan', true)
+  && isLocked('bootcamp', false) && !isLocked('bootcamp', true)
   && isLocked('runscale', true) && !isLocked('razbor', false),
-  'замок: серия — после разбора, режим — после буткемпа, вход открыт всегда')
+  'замок: серия и буткемп — после разбора, режим — после буткемпа, вход открыт всегда')
+// У каждой запертой ступени есть, чем подписать замок: «Ожидание» без причины
+// читается как ошибка приложения.
+ok(SESSIONS.filter((id) => isLocked(id, false)).every((id) => MODULES[id].lockChip && MODULES[id].lockNote),
+  'каждая запертая ступень объясняет замок своим словом')
 
 // Разрывы считаются на числах владельца и называются направлением.
 const gaps16 = computeGaps(m16)
@@ -508,9 +534,8 @@ ok(SESSIONS.every((id) => MODULES[id].signals && MODULES[id].signals.length > 0)
 const VOICE_BAN = /контур|чекап|планк[аиуе]|вердикт|GO\s*\/\s*NO\s*GO|лаборатор/i
 const visible = [
   ...INTRO_STORY.flatMap((s) => [s.title, s.text, s.cta || '']),
-  ...DAY_STEPS.flatMap((s) => [s.short, s.title, s.with]),
+  ...LEVEL_ROWS.flatMap((r) => [r.what, r.by]),
   ...Object.values(HEAD),
-  ...Object.values(SAMPLE),
   ...Object.values(SIGNAL),
   ...SESSIONS.flatMap((id) => {
     const m = MODULES[id]
@@ -525,9 +550,28 @@ ok(visible.every((s) => !VOICE_BAN.test(String(s))),
 // узнаёт, как это работает, до того как у него просят числа.
 ok(INTRO_STORY.length === 5 && INTRO_STORY[4].cta, 'вход объясняется пятью слайдами до первого поля')
 
-// Круг дня: четыре шага, у каждого есть, что показать.
-ok(DAY_STEPS.length === 4 && DAY_STEPS.every((s) => s.short && s.title && s.with),
-  'в круге дня четыре шага, и у каждого назван свой слой')
+// Страница состояния: таблица уровня называет и то, что есть, и то, чем
+// открывается остальное. Строка «нет» без имени модуля — упрёк, а не действие.
+ok(LEVEL_ROWS.length === 5 && LEVEL_ROWS.filter((r) => r.has).length === 2,
+  'в уровне пять строк, две из них уже есть в Мини')
+ok(LEVEL_ROWS.every((r) => (r.has ? r.by === '' : r.by.length > 0)),
+  'у каждой недостающей строки названо, чем она открывается')
+// Ввод дней в таблицу уровня не входит: своя работа не продаётся никогда.
+ok(!LEVEL_ROWS.some((r) => /недел/i.test(r.what)),
+  'неделя не стоит строкой уровня: замок снимается вводом, а не покупкой')
+
+// Телеметрия: числа из одного места, ряд без значений графиком не рисуется.
+ok(COUNTERS.items.every((c) => c.title && c.forms.length === 3 && Number.isFinite(c.value)),
+  'у каждого счётчика есть заголовок, склонения и число')
+ok(/^\d{4}-\d{2}-\d{2}$/.test(COUNTERS.asOf), 'у счётчиков стоит дата среза')
+ok(scoreAvg([]) === null && scoreAvg([5, 6]) === 5.5,
+  'пустой ряд среднего не имеет, непустой считается до десятой')
+ok(TELEMETRY.readsRate >= 0 && TELEMETRY.readsRate <= 1 && TELEMETRY.businesses >= 0,
+  'доля прочтений — доля, число бизнесов не отрицательно')
+ok([...TELEMETRY.signalScores, ...TELEMETRY.reviewScores]
+  .every((s) => s.id && s.label && Array.isArray(s.values)
+    && s.values.every((v) => v >= 0 && v <= 10)),
+  'оценки пользы лежат в шкале 0–10 и подписаны месяцем')
 
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')
 process.exit(fails ? 1 : 0)

@@ -180,11 +180,19 @@ export function useMiniStore() {
      *
      * День, уже вошедший в стартовую сумму, отдельно внести нельзя: его выручка
      * в этой сумме сидит, и вторая запись прибавила бы её к месяцу дважды.
+     *
+     * Возвращает `true` либо строку с причиной отказа. Раньше отказ был немым
+     * `false`, и форма печатала одно общее «День не принят: проверьте дату» —
+     * человек, попавший в стартовую сумму, был уверен, что день внесён,
+     * и не понимал, почему неделя не открылась.
      */
     putDay(date, rev) {
       const value = Number(rev)
-      if (!date || !Number.isFinite(value)) return false
-      if (state.carry && date <= state.carry.upTo) return false
+      if (!date) return 'Не выбран день.'
+      if (!Number.isFinite(value)) return 'Сумма не похожа на число.'
+      if (state.carry && date <= state.carry.upTo) {
+        return 'Этот день уже вошёл в стартовую сумму — второй раз его выручка сложилась бы дважды.'
+      }
       const before = model.value ? model.value.landing : null
       // День запоминает линейку, по которой его оценили. Поднимут план в конце
       // месяца — прошлые дни не покраснеют задним числом: их мерили не этим.
@@ -212,6 +220,11 @@ export function useMiniStore() {
         else state.forecastLog.push(entry)
       }
       return true
+    },
+
+    /** Внесён ли день по отдельности. Нужен форме, чтобы не предлагать дважды. */
+    hasDay(date) {
+      return state.days.some((d) => d.date === date)
     },
 
     /**

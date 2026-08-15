@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { X } from 'lucide-vue-next'
+import { ChevronLeft, X } from 'lucide-vue-next'
 
 // Сторис-онбординг — формат Whoosh: полноэкранные карточки,
 // сегментный прогресс сверху с таймером, кнопка закрытия в конце полосы
@@ -18,8 +18,14 @@ const props = defineProps({
   open: { type: Boolean, default: false },
   // [{ id, title, text, cta }] — cta последнего слайда говорит действием.
   slides: { type: Array, required: true },
+  // Ручной режим: таймера нет, листает только кнопка, и с любого слайда,
+  // включая первый, можно вернуться назад. Так работает вход: там сюжет —
+  // не развлечение между делом, а объяснение перед первым полем, и уносить
+  // его из-под глаз по таймеру нельзя. С первого слайда «назад» ведёт
+  // на витрину — это и есть шаг назад.
+  manual: { type: Boolean, default: false },
 })
-const emit = defineEmits(['close', 'done'])
+const emit = defineEmits(['close', 'done', 'back'])
 
 const DURATION = 6000
 const i = ref(0)
@@ -45,7 +51,7 @@ function tick(now) {
 
 function startTimer() {
   stopTimer()
-  if (reduced) { progress.value = 1; return }
+  if (props.manual || reduced) { progress.value = 1; return }
   progress.value = 0
   startedAt = performance.now()
   raf = requestAnimationFrame(tick)
@@ -61,7 +67,11 @@ function next() {
   else emit('done')
 }
 function prev() {
-  if (i.value > 0) { i.value -= 1 }
+  // С первого слайда шаг назад ведёт наружу: в ручном режиме это витрина,
+  // в остальных — просто закрытие. Кнопка, которая на первом экране ничего
+  // не делает, читается как поломка.
+  if (i.value === 0) { emit(props.manual ? 'back' : 'close'); return }
+  i.value -= 1
   startTimer()
 }
 
@@ -74,8 +84,11 @@ function release() {
 }
 
 // Тап: левая треть — назад, остальное — вперёд. Как в любых сторис,
-// поэтому объяснять зоны не нужно.
+// поэтому объяснять зоны не нужно. В ручном режиме тап не листает: там
+// переключение принадлежит кнопкам, и случайное касание не должно уносить
+// объяснение, которое человек ещё читает.
 function tap(e) {
+  if (props.manual) return
   const x = e.clientX - e.currentTarget.getBoundingClientRect().left
   if (x < e.currentTarget.clientWidth / 3) prev()
   else next()
@@ -108,6 +121,15 @@ const fill = (n) => (n < i.value ? 1 : n > i.value ? 0 : progress.value)
       <div
         class="flex items-center gap-1.5 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]"
       >
+        <button
+          v-if="manual"
+          type="button"
+          class="-my-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
+          aria-label="Шаг назад"
+          @click="prev"
+        >
+          <ChevronLeft class="h-5 w-5" :style="{ color: 'var(--ink-on-color-muted)' }" :stroke-width="2.25" aria-hidden="true" />
+        </button>
         <span
           v-for="(s, n) in slides"
           :key="s.id"

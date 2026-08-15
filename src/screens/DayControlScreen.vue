@@ -23,6 +23,12 @@ import { L } from '../i18n/daily.js'
 // как шли недели → каким был прогноз вчера → на чём вообще стоит разнос
 // по дням. Человек может остановиться на любом блоке и уйти с ответом.
 
+const props = defineProps({
+  // День, с которым сюда пришли со страницы состояния: ввод открывается сразу
+  // на нём. Пусто — обычный заход.
+  openDay: { type: String, default: '' },
+})
+
 const store = useMiniStore()
 const m = store.model
 const state = store.state
@@ -42,7 +48,10 @@ const asOf = computed(() => {
   return closed.length ? closed[closed.length - 1].iso : `${mm.month}-01`
 })
 
-onMounted(() => setCaption(`данные от ${stampISO(asOf.value)}`))
+onMounted(() => {
+  setCaption(`данные от ${stampISO(asOf.value)}`)
+  if (props.openDay) openSheet(props.openDay)
+})
 onUnmounted(() => clearCaption())
 
 function openSheet(iso = '') {
@@ -134,7 +143,9 @@ onBeforeUnmount(() => { if (io) { io.disconnect(); io = null } })
                 <X class="h-5 w-5 text-[var(--text-secondary)]" :stroke-width="2" aria-hidden="true" />
               </button>
             </div>
-            <AddReportForm :preset="pickedDate" />
+            <!-- Форма сама закрывает шторку: после «Отлично!» дело кончено,
+                 и искать крестик человеку незачем. -->
+            <AddReportForm :preset="pickedDate" @done="sheet = false" />
           </template>
           <!-- Свой крестик у настройки формы: у неё есть заголовок, и вторая
                кнопка закрытия над ним читалась бы как закрытие чего-то ещё. -->

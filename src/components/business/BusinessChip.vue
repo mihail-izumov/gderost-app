@@ -24,6 +24,10 @@ const props = defineProps({
   // Имя в списке отличается от подписи в чипе: в чипе капс — это стиль,
   // а не написание имени.
   name: { type: String, default: '' },
+  // Чип занимает всю доступную ширину. В потоке страницы места до кнопки
+  // обновления больше, чем тринадцать знаков, и обрезать имя юнита там,
+  // где место есть, незачем.
+  fullWidth: { type: Boolean, default: false },
 })
 
 const open = ref(false)
@@ -67,20 +71,22 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="rootRef" class="relative inline-flex">
+  <div ref="rootRef" class="relative" :class="fullWidth ? 'flex w-full min-w-0' : 'inline-flex'">
     <button
       type="button"
       data-test="business-chip"
-      class="inline-flex min-h-[44px] items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--text-muted)] focus-visible:ring-offset-0"
+      class="min-h-[44px] items-center outline-none focus-visible:ring-2 focus-visible:ring-[var(--text-muted)] focus-visible:ring-offset-0"
+      :class="fullWidth ? 'flex w-full min-w-0' : 'inline-flex'"
       :aria-expanded="open ? 'true' : 'false'"
       aria-haspopup="menu"
       @click="toggle"
     >
       <span
         data-test="business-chip-pill"
-        class="inline-flex h-[26px] max-w-[13rem] items-center gap-1.5 rounded-full bg-[var(--graphite)] pl-3.5 pr-2 text-[0.6875rem] font-medium uppercase tracking-[0.28em] text-[var(--ink-on-color)]"
+        class="h-[26px] items-center gap-1.5 rounded-full bg-[var(--graphite)] pl-3.5 pr-2 text-[0.6875rem] font-medium uppercase tracking-[0.28em] text-[var(--ink-on-color)]"
+        :class="fullWidth ? 'flex w-full min-w-0' : 'inline-flex max-w-[13rem]'"
       >
-        <span class="truncate">{{ label }}</span>
+        <span class="min-w-0 flex-1 truncate text-left">{{ label }}</span>
         <ChevronsUpDown class="h-3.5 w-3.5 shrink-0" :stroke-width="2.25" aria-hidden="true" />
       </span>
     </button>

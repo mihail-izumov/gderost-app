@@ -17,6 +17,11 @@ defineProps({
   filled: { type: Number, default: 2 },
   // Тёмная подложка: тот же шильд на чёрной карточке.
   onDark: { type: Boolean, default: false },
+  // Крупная плашка вместо пилюли: слева имя и одна строка о том, что это,
+  // справа те же деления. Пилюля под декой месяца читалась значком-украшением,
+  // и открыть её никто не пробовал — а за ней лежит то, чем меряется весь
+  // продукт.
+  large: { type: Boolean, default: false },
 })
 defineEmits(['open'])
 
@@ -25,6 +30,30 @@ const STEPS = ['со слов', 'посчитано', 'проверено']
 
 <template>
   <button
+    v-if="large"
+    type="button"
+    class="flex min-h-[64px] w-full items-center gap-3 rounded-2xl bg-[var(--surface)] px-4 py-3 text-left"
+    :aria-label="`Честная цифра: ${filled} из 3`"
+    @click="$emit('open')"
+  >
+    <span class="min-w-0 flex-1">
+      <span class="block text-[0.9375rem] font-bold leading-tight text-[var(--text)]">Честная цифра</span>
+      <span class="mt-0.5 block text-[0.75rem] leading-snug text-[var(--text-muted)]">
+        Видно, откуда взялось каждое число
+      </span>
+    </span>
+    <span class="flex shrink-0 items-center gap-[4px]" aria-hidden="true">
+      <span
+        v-for="(s, i) in STEPS"
+        :key="s"
+        class="h-[8px] w-[18px] rounded-full"
+        :style="{ background: i < filled ? 'var(--text)' : 'var(--line)' }"
+      ></span>
+    </span>
+  </button>
+
+  <button
+    v-else
     type="button"
     class="inline-flex min-h-[32px] items-center gap-2 rounded-full px-2.5 py-1"
     :style="{ background: onDark ? 'var(--line-on-color)' : 'var(--surface-2)' }"

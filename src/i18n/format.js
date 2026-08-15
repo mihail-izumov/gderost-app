@@ -124,6 +124,21 @@ export function dayLabel(iso) {
   return `${Number(d)} ${MONTH_RU_OF[mi - 1]}`
 }
 
+const DOW_RU_FULL = [
+  'Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота',
+]
+
+// 'YYYY-MM-DD' → 'Вторник'. Подтверждение ввода называет день словом: «Вторник
+// закрыт» человек прочитывает без сверки с календарём, «12.08 закрыт» — нет.
+export function dowFullLabel(iso) {
+  if (typeof iso !== 'string') return DASH
+  const [y, m, d] = iso.split('-').map(Number)
+  if (!y || !m || !d) return DASH
+  const dt = new Date(y, m - 1, d)
+  if (Number.isNaN(dt.getTime())) return DASH
+  return DOW_RU_FULL[dt.getDay()]
+}
+
 const MONTH_RU_ABBR = [
   'янв', 'фев', 'мар', 'апр', 'мая', 'июн',
   'июл', 'авг', 'сен', 'окт', 'ноя', 'дек',

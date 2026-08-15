@@ -1,109 +1,177 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { Check, ChevronRight } from 'lucide-vue-next'
 import BottomSheet from '../components/BottomSheet.vue'
-import DayCircle from '../components/growth/DayCircle.vue'
-import StepLayer from '../components/growth/StepLayer.vue'
+import LiveClock from '../components/LiveClock.vue'
+import ConnectProgress from '../components/energy/ConnectProgress.vue'
+import EnergyBreakdown from '../components/energy/EnergyBreakdown.vue'
+import Telemetry from '../components/growth/Telemetry.vue'
+import WeekRows from '../components/growth/WeekRows.vue'
+import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
-import { computeTodaySignal } from '../composables/signalModel.js'
-import { HEAD, STEPS } from '../i18n/growth247.js'
-import { formatRub, dayLabel, plural } from '../i18n/format.js'
+import { computeEnergy } from '../composables/energyModel.js'
+import { todayISO } from '../composables/miniModel.js'
+import { HEAD, LEVEL_ROWS } from '../i18n/growth247.js'
+import { plural } from '../i18n/format.js'
 
-// «Рост 24/7» — примерка дня, а не витрина системы.
+// «Рост 24/7» — страница состояния, а не витрина системы.
 //
-// Экран отвечает на один вопрос: как выглядит день владельца, за цифрами
-// которого следят круглосуточно. Поэтому здесь нет описаний продукта,
-// цен и сравнений: цена и состав лежат на «Сигналах», где стоит дорога.
+// Образец — страница расхода в Claude: прозрачно, полосами, без лишних слов.
+// Экран закрывает названный пробел: владелец не видит, что вносить нужно
+// каждый день, не видит своих пропусков и не понимает, почему следующая
+// неделя закрыта.
 //
-// Один разворот без прокрутки: круг из четырёх шагов дня в центре, под ним
-// строка про свои цифры и вход на дорогу. Глубина открывается тапом по шагу:
-// сверху слоя — состояние владельца на его числах, ниже — как этот шаг
-// проходит с системой. Круг горит от того, что человек ввёл сам; чужих
-// данных не выдумываем.
+// Сверху вниз: повод (когда он есть) · живая строка · уровень с полосой пути ·
+// эта неделя · недели месяца · что входит в уровень · телеметрия · вход
+// на «Сигналы». Первый экран без прокрутки показывает своё состояние;
+// телеметрия и дорога живут ниже.
+//
+// ⚠ Замок недели снимается вводом данных и никогда оплатой. Продавать снятие
+// собственного замка нельзя: сначала создать препятствие, потом взять за него
+// деньги — ровно то, за что метод ругает чужие калькуляторы. Разбор открывает
+// не неделю, а глубину, и это стоит строкой в таблице уровня.
 
 const emit = defineEmits(['go'])
 
 const store = useMiniStore()
+const state = store.state
 const m = store.model
-const open = ref('')
 
-const signal = computed(() => computeTodaySignal(m.value))
+const breakdownOpen = ref(false)
+const energy = computed(() => computeEnergy(state, m.value))
+const today = computed(() => todayISO())
 
-// Шаг горит, когда у владельца есть, чем его наполнить: внесённые дни,
-// посчитанный сигнал, поставленная цель. Драйверов в приложении нет —
-// четвёртый шаг не горит никогда, и это честная пустота, а не недоделка.
-const steps = computed(() => {
-  const mm = m.value
-  const entered = mm ? mm.realizedCount : 0
-  return STEPS.map((s) => ({
-    ...s,
-    on: s.id === 'data' ? entered > 0
-      : s.id === 'hint' ? !!signal.value
-        : s.id === 'action' ? false
-          : false,
-  }))
-})
+// Текущая неделя месяца приложения. На закрытом месяце текущей недели нет —
+// тогда блок молчит, а не показывает «0 из 7» про август в июле.
+const thisWeek = computed(() => (m.value ? m.value.weeks.find((w) => w.isCurrent) || null : null))
+const weekDone = computed(() => (thisWeek.value ? thisWeek.value.days.filter((d) => d.closed).length : 0))
+const weekTotal = computed(() => (thisWeek.value ? thisWeek.value.days.length : 0))
 
-// Центр круга — то, ради чего человек сюда пришёл: его собственное
-// требование на сегодня. Нет чисел — центр говорит, с чего начать.
-const center = computed(() => {
-  const s = signal.value
-  if (s && s.need != null) return { value: formatRub(s.need), label: 'надо сегодня' }
-  if (s) return { value: formatRub(s.landing), label: 'прогноз месяца' }
-  return { value: '', label: 'Внесите первый день — здесь появятся ваши числа' }
-})
-
-// Строка «у вас сейчас» для каждого слоя: только посчитанное, без оценок.
-const youLine = computed(() => {
-  const mm = m.value
-  const s = signal.value
-  const last = mm && mm.days ? [...mm.days].reverse().find((d) => d.entered) : null
-  return {
-    data: mm && mm.realizedCount > 0
-      ? `Внесено ${mm.realizedCount} ${plural(mm.realizedCount, 'день', 'дня', 'дней')}${last ? `, последний — ${dayLabel(last.iso)}` : ''}. Вносите вы, одной цифрой в вечер.`
-      : 'Пока не внесено ни одного дня. Вносите вы, одной цифрой в вечер.',
-    hint: s
-      ? `Сегодня надо ${s.need != null ? formatRub(s.need) : '—'}, прогноз месяца ${formatRub(s.landing)}. Считает приложение, когда вы его откроете.`
-      : 'Подсказка появится, как только будет что считать.',
-    action: 'Приложение считает, сколько надо, но не говорит, как: оно не знает, на чём именно вы зарабатываете.',
-    result: 'Задумки месяца живут в голове — через неделю уже не вспомнить, что дало рост.',
+// Повод-плашка. Есть пропуски в прошедших неделях — говорим о них и даём
+// кнопку; повода нет — плашки нет. Пустая плашка «всё хорошо» приучает
+// не читать это место вовсе.
+const reason = computed(() => {
+  if (!m.value) return null
+  const blocked = m.value.weeks.find((w) => !w.open)
+  if (blocked && blocked.blockedBy) {
+    const n = blocked.blockedBy.days.length
+    return {
+      text: `В неделе ${blocked.blockedBy.idx} нет цифр за ${n} ${plural(n, 'день', 'дня', 'дней')}. Следующая неделя откроется, когда внесёте.`,
+      iso: blocked.blockedBy.iso[0],
+    }
   }
+  const gap = m.value.weeks.find((w) => w.missing > 0)
+  if (gap) {
+    const n = gap.missing
+    return {
+      text: `Не внесено ${n} ${plural(n, 'день', 'дня', 'дней')}: ${gap.missingDays.join(', ')}.`,
+      iso: gap.missingISO[0],
+    }
+  }
+  return null
 })
-
-const openStep = computed(() => STEPS.find((s) => s.id === open.value) || null)
 </script>
 
 <template>
-  <div class="flex min-h-[calc(100dvh-9rem)] w-full flex-col px-4 pb-4">
-    <!-- Заголовок ставит шапка. Здесь — одна строка о том, что показано. -->
-    <p class="text-[0.9375rem] leading-snug text-[var(--text-secondary)]">{{ HEAD.lead }}</p>
-
-    <div class="flex flex-1 items-center justify-center py-2">
-      <DayCircle
-        :steps="steps"
-        :center-value="center.value"
-        :center-label="center.label"
-        @open="open = $event"
-      />
+  <div v-if="m" class="w-full px-4 pb-4">
+    <!-- 1 · Повод -->
+    <div
+      v-if="reason"
+      class="mb-3 rounded-2xl border p-3.5"
+      :style="{ borderColor: 'var(--warning)', background: 'var(--surface)' }"
+    >
+      <p class="text-[0.875rem] leading-snug text-[var(--text)]">{{ reason.text }}</p>
+      <button
+        type="button"
+        class="mt-2.5 min-h-[44px] w-full rounded-xl text-[0.9375rem] font-semibold"
+        :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
+        @click="emit('go', 'day', reason.iso)"
+      >Внести</button>
     </div>
 
-    <p class="text-center text-[0.8125rem] leading-snug text-[var(--text-muted)]">{{ HEAD.ownDogfood }}</p>
+    <!-- 2 · Живая строка: время идёт и говорит «прямо сейчас» без единого слова -->
+    <LiveClock class="mb-3" />
 
+    <!-- 3 · Уровень и полоса пути -->
+    <h2 class="mb-2 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+      {{ HEAD.level }}
+    </h2>
+    <ConnectProgress
+      :unit="state.unit || state.company"
+      :pct="energy.pct"
+      :level-id="energy.level.id"
+      @info="breakdownOpen = true"
+    />
+
+    <!-- 4 · Эта неделя -->
+    <section v-if="thisWeek" class="mt-4">
+      <div class="flex items-baseline justify-between gap-3">
+        <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+          {{ HEAD.week }}
+        </h2>
+        <span class="text-[0.8125rem] font-semibold tabular-nums text-[var(--text)]">
+          {{ weekDone }} из {{ weekTotal }}
+        </span>
+      </div>
+      <span class="mt-2 block h-[8px] w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
+        <span
+          class="block h-full rounded-full"
+          :style="{ width: `${weekTotal ? Math.round((weekDone / weekTotal) * 100) : 0}%`, background: 'var(--text)' }"
+        ></span>
+      </span>
+      <p class="mt-1.5 text-[0.75rem] text-[var(--text-muted)]">Счёт начнётся заново в понедельник.</p>
+    </section>
+
+    <!-- 5 · Недели месяца -->
+    <div class="mt-4">
+      <WeekRows :m="m" :today="today" @enter="emit('go', 'day', $event)" />
+    </div>
+
+    <!-- 6 · Что входит в ваш уровень -->
+    <section class="mt-5">
+      <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+        Что входит в ваш уровень
+      </h2>
+      <ul class="mt-2 overflow-hidden rounded-2xl bg-[var(--surface)]">
+        <li
+          v-for="r in LEVEL_ROWS"
+          :key="r.id"
+          class="flex min-h-[48px] items-center gap-3 border-b border-[var(--line)] px-4 py-2.5 last:border-b-0"
+        >
+          <Check
+            v-if="r.has"
+            class="h-[18px] w-[18px] shrink-0"
+            :style="{ color: 'var(--positive)' }"
+            :stroke-width="2.5"
+            aria-hidden="true"
+          />
+          <span v-else class="h-[18px] w-[18px] shrink-0 text-center text-[0.9375rem] text-[var(--text-muted)]" aria-hidden="true">—</span>
+          <span class="min-w-0 flex-1 text-[0.9375rem] leading-snug text-[var(--text)]">{{ r.what }}</span>
+          <span v-if="!r.has" class="shrink-0 text-[0.75rem] text-[var(--text-muted)]">{{ r.by }}</span>
+        </li>
+      </ul>
+    </section>
+
+    <!-- 7 · Телеметрия: сначала человек про себя, потом про систему -->
+    <div class="mt-5">
+      <Telemetry />
+    </div>
+
+    <!-- 8 · Вход на дорогу -->
     <button
       type="button"
-      class="mt-2.5 min-h-[48px] w-full rounded-full text-[0.9375rem] font-bold"
+      class="mt-5 flex min-h-[52px] w-full items-center justify-center gap-1.5 rounded-full text-[0.9375rem] font-bold"
       :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
       @click="emit('go', 'power')"
-    >{{ HEAD.cta }}</button>
+    >
+      {{ HEAD.cta }}
+      <ChevronRight class="h-[18px] w-[18px]" :stroke-width="2.5" aria-hidden="true" />
+    </button>
 
-    <BottomSheet :open="!!openStep" @close="open = ''">
-      <StepLayer
-        v-if="openStep"
-        :step="openStep"
-        :you="youLine[openStep.id]"
-        :sample="openStep.id === 'hint' ? 'hint' : openStep.id === 'action' ? 'action' : ''"
-        :counters="openStep.id === 'data'"
-        @close="open = ''"
-      />
+    <SiteFooter />
+
+    <BottomSheet :open="breakdownOpen" @close="breakdownOpen = false">
+      <EnergyBreakdown :energy="energy" @close="breakdownOpen = false" />
     </BottomSheet>
   </div>
 </template>

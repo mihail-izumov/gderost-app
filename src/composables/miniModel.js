@@ -260,7 +260,14 @@ export function computeMini(set, now = new Date()) {
     w.ratio = w.partOfPlan > 0 ? w.fact / w.partOfPlan : null
     w.leftDays = w.days.filter((x) => !x.closed).length
     w.need = sum(w.days.filter((x) => !x.closed), (x) => x.need || 0)
-    w.missing = w.days.filter((x) => x.due).length
+    // Каких именно дней не хватает — числами и датами. Замок запирает данные,
+    // а не деньги, значит обязан объясняться данными: «откроется, когда
+    // закроются прошедшие дни» не отвечает на вопрос «какие именно».
+    // Без этого списка человек, внёсший день, не понимает, почему замок стоит,
+    // и читает его как поломку или как платную стену.
+    w.missingDays = w.days.filter((x) => x.due).map((x) => x.dd)
+    w.missingISO = w.days.filter((x) => x.due).map((x) => x.iso)
+    w.missing = w.missingDays.length
     w.complete = w.missing === 0
     w.isCurrent = w.days.some((x) => x.isToday)
     w.open = prevComplete
@@ -286,6 +293,16 @@ export function computeMini(set, now = new Date()) {
       sig: x.inCarry ? 'carry' : x.entered ? sigClass(x.fact / x.planAt) : 'idle',
       progWidth: x.entered ? Math.min(100, (x.fact / x.planAt) * 100) : 0,
     }))
+  })
+
+  // Кто держит замок. Запертых недель может быть несколько подряд, но причина
+  // у всех одна — первая незакрытая неделя. Она и называется на экране вместе
+  // со своими дырами, чтобы «внесите прошедшие дни» перестало быть загадкой.
+  const firstIncomplete = weeks.find((w) => !w.complete) || null
+  weeks.forEach((w) => {
+    w.blockedBy = w.open || !firstIncomplete
+      ? null
+      : { idx: firstIncomplete.idx, days: [...firstIncomplete.missingDays], iso: [...firstIncomplete.missingISO] }
   })
 
   // Статистика введённых дней по светофору (суммовое прошлое не участвует).

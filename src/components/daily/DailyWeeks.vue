@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { ChevronDown, Lock } from 'lucide-vue-next'
 import { mln, ths, thsSigned, dayGen, L, SIG_VAR } from '../../i18n/daily.js'
+import { plural } from '../../i18n/format.js'
 import { useMiniStore } from '../../composables/useMiniStore.js'
 import { shapeStatus } from '../../data/weekShape.js'
 
@@ -36,6 +37,13 @@ const props = defineProps({ m: { type: Object, required: true } })
 const emit = defineEmits(['pick', 'tune'])
 const monthGen = (dd) => dayGen(dd, props.m.month)
 
+// Причина замка называется один раз — у первой запертой недели: дальше она
+// та же самая, и повторённая трижды строка перестаёт читаться.
+const firstLocked = computed(() => {
+  const w = props.m.weeks.find((x) => !x.open)
+  return w ? w.idx : 0
+})
+
 const state = useMiniStore().state
 const shapeLabel = computed(() =>
   shapeStatus(state.coef_src, 0, state.shape_id, state.shape_from).label)
@@ -67,7 +75,7 @@ function progFill(r) {
 
     <details
       v-for="w in m.weeks"
-      :key="w.idx"
+      :key="`${w.idx}-${w.open}`"
       :open="w.open && w.isCurrent"
       class="mb-2 overflow-hidden rounded-2xl border bg-[var(--surface)]"
       :style="{ borderColor: w.isCurrent ? 'var(--text)' : 'var(--line)' }"
@@ -100,10 +108,30 @@ function progFill(r) {
         </div>
       </summary>
 
-      <!-- Запертая неделя объяснена словами, а не значком: замок без причины
-           читается как платная стена, а платной стены здесь нет. -->
+      <!-- Запертая неделя называет причину числами: каких именно дней не хватает
+           и в какой неделе. «Прошедшие дни предыдущих недель» — это загадка,
+           а замок, который запирает данные, обязан объясняться данными. Тап
+           по числу ведёт в ввод этого дня: путь от объяснения до действия
+           короче одного экрана. -->
       <div v-if="!w.open" class="border-t border-[var(--line)] px-3 py-3">
-        <p class="text-[0.8125rem] leading-snug text-[var(--text-secondary)]">
+        <template v-if="w.blockedBy && w.idx === firstLocked">
+          <p class="text-[0.8125rem] leading-snug text-[var(--text-secondary)]">
+            В неделе {{ w.blockedBy.idx }} нет выручки за
+            {{ w.blockedBy.days.length }} {{ plural(w.blockedBy.days.length, 'день', 'дня', 'дней') }}.
+            Внесите их — эта неделя откроется сама, платить за это не нужно.
+          </p>
+          <div class="mt-2 flex flex-wrap gap-1.5">
+            <button
+              v-for="(iso, k) in w.blockedBy.iso"
+              :key="iso"
+              type="button"
+              class="inline-flex min-h-[36px] items-center rounded-full bg-[var(--surface-2)] px-3 text-[0.8125rem] font-semibold"
+              :style="{ color: 'var(--action)' }"
+              @click.stop="emit('pick', iso)"
+            >{{ w.blockedBy.days[k] }} {{ monthGen(w.blockedBy.days[k]).split(' ')[1] }}</button>
+          </div>
+        </template>
+        <p v-else class="text-[0.8125rem] leading-snug text-[var(--text-secondary)]">
           Откроется, когда закроются прошедшие дни предыдущих недель. Внесите их —
           и недели дальше раскроются сами, платить за это не нужно.
         </p>

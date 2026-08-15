@@ -25,9 +25,10 @@ import { readShared, hasSharePayload } from './composables/shareLink.js'
 // приходят каждый день. Навигация тем самым сама рассказывает, как устроен
 // продукт, и не требует отдельного экрана-объяснения.
 //
-// Заголовка на Главной нет вовсе: имя продукта внутри приложения не пишется
-// нигде, а экран и так подписан «Сегодня» в таб-баре. Вместо заголовка в шапке
-// живёт чип бизнеса — постоянный контекст экрана.
+// Заголовок экрана есть у каждой вкладки и ведёт себя одинаково: крупный
+// в потоке, компактный по центру липкой полосы при прокрутке. Чип бизнеса
+// и обновление стоят в потоке над заголовком и уезжают вместе со страницей.
+// Имя продукта внутри приложения по-прежнему не пишется нигде.
 
 const store = useMiniStore()
 const entered = ref(store.state.ready)
@@ -83,7 +84,7 @@ const TABS = computed(() => [
     id: 'today',
     label: 'Сегодня',
     icon: CalendarCheck,
-    title: '',
+    title: 'Сегодня',
     leadingAction: 'hardReload',
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
@@ -125,14 +126,24 @@ watch(() => store.state.ready, (ready) => {
   if (!ready) { entered.value = false; tab.value = 'today'; subView.value = '' }
 })
 
-function go(where) {
-  if (SUB_VIEWS[where]) { subView.value = where; return }
+// Второй аргумент — день, который надо открыть в вводе. Страница состояния
+// показывает пропуски и обязана довести до ввода именно того дня, о котором
+// говорит: «внесите прошедшие дни» без адреса возвращает человека к поиску.
+const dayPreset = ref('')
+
+function go(where, arg) {
+  if (SUB_VIEWS[where]) {
+    dayPreset.value = where === 'day' && typeof arg === 'string' ? arg : ''
+    subView.value = where
+    return
+  }
   subView.value = ''
   tab.value = where
 }
 
 function selectTab(id) {
   subView.value = ''
+  dayPreset.value = ''
   tab.value = id
 }
 </script>
@@ -159,10 +170,15 @@ function selectTab(id) {
 
   <template v-else-if="view === 'showcase'">
     <StartScreen @start="startFromShowcase" />
+    <!-- Ручной режим: таймера нет, листает кнопка, с первого слайда шаг назад
+         возвращает на витрину. Объяснение перед первым полем не должно
+         уезжать само. -->
     <StoryOnboarding
       :open="introOpen"
       :slides="INTRO_STORY"
+      manual
       @close="introDone"
+      @back="introOpen = false"
       @done="introDone"
     />
   </template>
@@ -216,7 +232,7 @@ function selectTab(id) {
       Скачайте файл месяца или откройте сайт не в приватном режиме.
     </p>
 
-    <DayControlScreen v-if="subView === 'day'" />
+    <DayControlScreen v-if="subView === 'day'" :open-day="dayPreset" />
     <GoalsScreen v-else-if="subView === 'goals'" @back="subView = ''" />
     <template v-else>
       <TodayScreen v-if="tab === 'today'" @go="go" />

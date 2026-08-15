@@ -1,25 +1,29 @@
 <script setup>
-import { ChevronLeft } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { ChevronLeft, RotateCw } from 'lucide-vue-next'
 import BusinessChip from './business/BusinessChip.vue'
-import { RotateCw } from 'lucide-vue-next'
+import BottomSheet from './BottomSheet.vue'
 import { useNavCaption } from '../composables/useNavCaption.js'
 import { hardReload } from '../composables/useAppRefresh.js'
 
 // Шапка навигации. Перенесена из рабочего Ранскейла вместе с правилами,
 // которые там выстрадывались по одному.
 //
-// Устройство: липкая компактная полоса сверху (слева back или чип бизнеса,
-// по центру компактный заголовок, справа служебное действие) и в потоке
-// скролла — крупный центрированный заголовок с подписью над ним.
+// Устройство: липкая полоса сверху держит только то, что обязано быть видно
+// всегда, — возврат назад и компактный заголовок экрана, проявляющийся при
+// прокрутке. Всё остальное живёт в потоке страницы и уезжает вместе с ней.
+//
+// Чип бизнеса и перезагрузка уехали из липкой полосы в поток (правка Михаила
+// 15.08). Причина: прилепленные к верху, они забирали место у заголовка экрана,
+// и при прокрутке в шапке стояли три разные вещи сразу. Теперь при прокрутке
+// в липкой полосе появляется по центру имя экрана — одинаково на всех разделах.
+// Чип занял освободившуюся ширину до кнопки перезагрузки: имя юнита длиннее
+// тринадцати знаков обрезалось на ровном месте.
 //
 // Три колонки, центральная — `auto`: заголовок занимает свою ширину и стоит
 // ровно по центру, потому что боковые `minmax(2.75rem, 1fr)` делят остаток
-// поровну. Фиксированные боковые отступы зажимали компактный заголовок и он
-// обрезался. На узком экране сжимается подпись «Назад», а не заголовок;
+// поровну. На узком экране сжимается подпись «Назад», а не заголовок;
 // 2.75rem = 44pt тач-таргета боковым слотам гарантированы.
-//
-// Чип бизнеса живёт В ЛИПКОЙ ПОЛОСЕ, а не в потоке под ней: контекст экрана
-// не должен уезжать при прокрутке. Служебная кнопка за это уехала вправо.
 //
 // Стекло и фон появляются ТОЛЬКО при collapsed: на самом верху шапка
 // полностью прозрачна, иначе невидимый слой размытия размывает подпись.
@@ -40,6 +44,13 @@ defineProps({
 defineEmits(['back'])
 
 const { caption } = useNavCaption()
+
+// Обновление спрашивает. Кнопка чистила кэш и перезагружала страницу молча,
+// и человек, задевший её пальцем, видел мигание без объяснения. Спросить —
+// одно касание; сказать, что данные при этом целы, — обязанность: кнопка
+// со стрелкой в приложении, где всё хранится на устройстве, читается
+// как «стереть и начать заново».
+const updateOpen = ref(false)
 </script>
 
 <template>
@@ -60,9 +71,6 @@ const { caption } = useNavCaption()
           <ChevronLeft class="h-6 w-6 shrink-0" :stroke-width="2.25" />
           <span v-if="backLabel" class="truncate text-[1.0625rem] leading-none">{{ backLabel }}</span>
         </button>
-        <div v-else-if="eyebrow" class="pl-2">
-          <BusinessChip :label="eyebrow" :name="eyebrowName" />
-        </div>
         <div v-else class="min-h-[44px] min-w-[44px]" aria-hidden="true"></div>
       </div>
 
@@ -77,21 +85,28 @@ const { caption } = useNavCaption()
       <!-- заглушка центральной колонки: без неё правый слот съезжает в центр -->
       <div v-else aria-hidden="true"></div>
 
-      <div class="flex min-w-0 items-center justify-self-end gap-1 pr-1">
-        <button
-          v-if="!showBack && leadingAction === 'hardReload'"
-          type="button"
-          data-test="nav-hard-reload"
-          class="flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg text-[var(--text)] active:bg-[var(--surface-2)]"
-          aria-label="Жёсткая перезагрузка (загрузить свежую версию)"
-          title="Загрузить свежую версию"
-          @click="hardReload"
-        >
-          <RotateCw class="h-5 w-5" :stroke-width="2" />
-        </button>
-      </div>
+      <div class="min-h-[44px] min-w-[44px]" aria-hidden="true"></div>
     </div>
   </header>
+
+  <!-- Контекст экрана в потоке: чип бизнеса во всю ширину до кнопки обновления. -->
+  <div v-if="!showBack && (eyebrow || leadingAction === 'hardReload')" class="flex items-center gap-1 px-3">
+    <div v-if="eyebrow" class="min-w-0 flex-1">
+      <BusinessChip :label="eyebrow" :name="eyebrowName" full-width />
+    </div>
+    <div v-else class="flex-1" aria-hidden="true"></div>
+    <button
+      v-if="leadingAction === 'hardReload'"
+      type="button"
+      data-test="nav-hard-reload"
+      class="flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center rounded-lg text-[var(--text)] active:bg-[var(--surface-2)]"
+      aria-label="Обновить до последней версии"
+      title="Обновить до последней версии"
+      @click="updateOpen = true"
+    >
+      <RotateCw class="h-5 w-5" :stroke-width="2" />
+    </button>
+  </div>
 
   <!-- Крупный заголовок в потоке. Подпись — absolute НАД ним, чтобы h1
        не сдвигался и стоял на одном месте во всех разделах. -->
@@ -104,4 +119,24 @@ const { caption } = useNavCaption()
       {{ title }}
     </h1>
   </div>
+
+  <BottomSheet :open="updateOpen" @close="updateOpen = false">
+    <div class="pb-2">
+      <h2 class="text-[1.25rem] font-bold leading-tight text-[var(--text)]">Обновить до последней версии?</h2>
+      <p class="mt-1.5 text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
+        Данные сохранятся. Ранскейл станет полезнее.
+      </p>
+      <button
+        type="button"
+        class="mt-4 min-h-[52px] w-full rounded-2xl text-[1.0625rem] font-bold"
+        :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
+        @click="hardReload"
+      >Обновить</button>
+      <button
+        type="button"
+        class="mt-2 min-h-[52px] w-full rounded-2xl text-[1.0625rem] font-semibold text-[var(--text-secondary)]"
+        @click="updateOpen = false"
+      >Оставить</button>
+    </div>
+  </BottomSheet>
 </template>
