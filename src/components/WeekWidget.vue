@@ -56,8 +56,12 @@ const skin = computed(() => (dark.value
     todayBg: 'var(--ink-on-color)',
     todayInk: 'var(--surface-black)',
     emptyMark: 'var(--line-on-color)',
-    note: 'var(--ink-on-color-muted)',
-    pillBorder: 'var(--line-on-color)',
+    // Остаток месяца и обводка процента — цветом действия: это две величины,
+    // которые двигают человека к кнопке, и серым они тонули в чёрном.
+    // Синий взят осветлённый: обычный на чёрном не добирает контраста
+    // для мелкого текста.
+    note: 'var(--action-on-dark)',
+    pillBorder: 'var(--action-on-dark)',
     pillInk: 'var(--ink-on-color)',
   }
   : {

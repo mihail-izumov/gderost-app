@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { ChevronRight } from 'lucide-vue-next'
+import { ChevronDown } from 'lucide-vue-next'
 import WeekWidget from '../components/WeekWidget.vue'
 import BrandLockup from '../components/BrandLockup.vue'
 import BottomSheet from '../components/BottomSheet.vue'
@@ -13,8 +13,8 @@ import { formatInt, plural } from '../i18n/format.js'
 // объяснять голосом. Что здесь принято и что отменено — `docs/ВИТРИНА-вход.md`.
 //
 // Сверху вниз читается как одна мысль:
-//   где рост → на треке → день делает месяц → вот чем считаем → вот твои дни
-//   → закрой план.
+//   вот кто говорит → день делает месяц → вот что это за предмет → вот твои
+//   дни → закрой план → а вот кто считает.
 //
 // Три вещи, которых здесь больше нет, и причины:
 //   · часы — дату несёт календарь, живость системы несёт число на кнопке;
@@ -26,7 +26,7 @@ import { formatInt, plural } from '../i18n/format.js'
 //     на страницу, где Трека нет. Живёт в шторке «Где Рост».
 //
 // Имя продукта набирается связкой `BrandLockup`, а не картинкой: файл
-// `runscale-mini.svg` кончился вместе с именем «Мини».
+// `runscale-mini.svg` кончился вместе с прежним именем продукта.
 
 defineEmits(['start'])
 
@@ -136,61 +136,36 @@ onBeforeUnmount(() => {
              pt-[max(1.5rem,env(safe-area-inset-top))]
              pb-[max(1rem,env(safe-area-inset-bottom))]"
     >
-      <!-- Имя витрины и её единственное число одной кнопкой. Шеврон вправо —
-           тот же аффорданс, которым в приложении открывается всё, что уходит
-           вглубь. Стрелка вниз обещала бы разворот на месте, а открывается
-           шторка: аффорданс обязан совпадать с тем, что произойдёт. -->
-      <header>
-        <button
-          type="button"
-          class="flex w-full items-center gap-2 rounded-2xl border border-[var(--rim)]
-                 bg-[var(--surface)] py-2.5 pl-4 pr-3 text-left active:opacity-70"
-          @click="whereOpen = true"
-        >
-          <span class="shrink-0 text-[1.0625rem] font-bold leading-none text-[var(--text)]">
-            {{ BRAND.question }}
-          </span>
-          <!-- Число в квадратном знаке: цифра держит собственный вес и
-               не тонет в строке, а строка при этом обходится без карточки. -->
-          <span class="ml-auto flex items-center gap-1.5">
-            <span
-              class="flex h-[1.65em] min-w-[1.65em] items-center justify-center rounded-[0.45em]
-                     px-[0.3em] text-[0.8125rem] font-bold leading-none tabular-nums"
-              :style="{ background: 'var(--text)', color: 'var(--ink-on-color)' }"
-            >{{ countNumber }}</span>
-            <span class="text-[0.8125rem] leading-none text-[var(--text-secondary)]">
-              {{ countWord }}
-            </span>
-          </span>
-          <ChevronRight
-            class="h-5 w-5 shrink-0 text-[var(--text-muted)]"
-            :stroke-width="2.5"
-            aria-hidden="true"
-          />
-        </button>
+      <!-- Имя продукта стоит первым: до всякого высказывания человек обязан
+           увидеть, кто говорит. -->
+      <header class="flex justify-center">
+        <BrandLockup size="2rem" />
       </header>
 
-      <!-- Герой по центру оставшейся высоты: воздух над ним и под ним делится
-           поровну, поэтому блок дышит и на 375, и на 430. Кнопка при этом
-           остаётся в нижней половине экрана — в зоне большого пальца.
-           Имя, высказывание и дескриптор идут по центру одной осью: три
-           разных выключки на первом экране читались бы как три разных
-           голоса. -->
+      <!-- Высказывание по центру оставшейся высоты: воздух над ним и под ним
+           делится поровну, поэтому блок дышит и на 375, и на 430. Кнопка
+           при этом остаётся в нижней половине экрана — в зоне большого
+           пальца. Всё на одной оси: три разных выключки на первом экране
+           читались бы как три разных голоса. -->
       <main class="flex flex-1 flex-col justify-center gap-5 py-6">
         <div class="flex flex-col items-center gap-3 text-center">
-          <BrandLockup size="2rem" />
-
+          <!-- Прописными и без точки: строка работает вывеской, а вывеска
+               предложением не заканчивается. Начертание на ступень легче
+               брендового, зато с разгонкой — плотный жирный прописной набор
+               во всю ширину читается криком, а высказывание не кричит. -->
           <div ref="heroBox" class="w-full">
             <h1
               ref="heroText"
-              class="inline-block whitespace-nowrap font-brand leading-[0.9] text-[var(--text)]"
+              class="inline-block whitespace-nowrap font-label leading-[0.95] tracking-[0.06em] text-[var(--text)]"
             >{{ BRAND.hero }}</h1>
           </div>
 
+          <!-- Дескриптор машинным начертанием: он называет предмет, а не
+               произносит его голосом бренда. -->
           <div ref="tagBox" class="w-full">
             <p
               ref="tagText"
-              class="inline-block whitespace-nowrap font-semibold leading-snug text-[var(--text-secondary)]"
+              class="inline-block whitespace-nowrap font-mono font-semibold leading-snug text-[var(--text-secondary)]"
             >{{ BRAND.tagline }}</p>
           </div>
         </div>
@@ -205,13 +180,47 @@ onBeforeUnmount(() => {
         >{{ cta }}</button>
 
         <!-- Чего с человека не спросят и что не утечёт. Два возражения,
-             от которых зависит, введёт он настоящие цифры или выдуманные.
-             Машинное начертание отделяет служебную строку от голоса
-             продукта выше. -->
+             от которых зависит, введёт он настоящие цифры или выдуманные. -->
         <p class="text-center font-mono text-[0.8125rem] leading-relaxed text-[var(--text-secondary)]">
           {{ BRAND.honesty }}
         </p>
       </main>
+
+      <!-- Кто считает — последней строкой, внизу. Вопрос «а вы кто» возникает
+           после того, как человек посмотрел на предложение, а не до.
+           Обводки нет, отделяет тень: плашка лежит поверх холста, а не
+           врезана в него. Шеврон вниз — туда, откуда выедет шторка. -->
+      <footer class="pt-5">
+        <button
+          type="button"
+          class="flex min-h-[68px] w-full items-center gap-3 rounded-2xl bg-[var(--surface)]
+                 px-4 py-4 text-left shadow-lg active:opacity-70"
+          @click="whereOpen = true"
+        >
+          <!-- Число в квадратном знаке: цифра держит собственный вес
+               и не тонет в строке, а строка обходится без карточки. -->
+          <span class="flex items-center gap-2">
+            <span
+              class="flex h-[1.7em] min-w-[1.7em] items-center justify-center rounded-[0.45em]
+                     px-[0.3em] text-[0.9375rem] font-bold leading-none tabular-nums"
+              :style="{ background: 'var(--text)', color: 'var(--ink-on-color)' }"
+            >{{ countNumber }}</span>
+            <span class="text-[0.875rem] leading-none text-[var(--text-secondary)]">
+              {{ countWord }}
+            </span>
+          </span>
+          <span class="ml-auto flex shrink-0 items-center gap-1">
+            <span class="text-[1.0625rem] font-bold leading-none text-[var(--text)]">
+              {{ BRAND.question }}
+            </span>
+            <ChevronDown
+              class="h-5 w-5 shrink-0 text-[var(--text-muted)]"
+              :stroke-width="2.5"
+              aria-hidden="true"
+            />
+          </span>
+        </button>
+      </footer>
     </div>
   </div>
 

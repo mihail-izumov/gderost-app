@@ -108,7 +108,7 @@ const TABS = computed(() => [
   {
     id: 'runscale',
     label: 'Рост 24/7',
-    iconKind: 'chevron',
+    iconKind: 'growth',
     // Имя есть в липкой полосе при прокрутке, крупного заголовка нет:
     // экран начинается с состояния.
     title: 'Рост 24/7',

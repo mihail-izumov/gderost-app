@@ -1,15 +1,15 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Share, X } from 'lucide-vue-next'
-import { chevronStyle } from '../composables/brandMask.js'
 
 // Баннер «Откройте Ранскейл как приложение». Перенесено из рабочего Ранскейла:
 // знак слева, заголовок в две строки, пилюля «Подробнее» с шевроном вниз,
 // крестик справа сверху, модалка-инструкция в четыре шага.
 //
-// Вместо иконки приложения — фирменный шеврон белым на чёрном: временная
-// иконка приложения сейчас заглушка, и ставить её в баннер про установку
-// значит показывать человеку то, чего он на домашнем экране не захочет.
+// Слева стоит настоящая иконка приложения — тот самый файл, который ляжет
+// на домашний экран. Раньше там был фирменный шеврон; знак марки на месте
+// иконки перестаёт быть знаком марки, а баннер про установку заодно показывал
+// не то, что человек получит. Теперь показывает ровно то.
 //
 // Логика показа:
 //   • уже запущено как установленное приложение → не показываем вовсе;
@@ -25,7 +25,7 @@ const dismissed = ref(false)
 const standalone = ref(false)
 const modalOpen = ref(false)
 
-const chevron = chevronStyle(34)
+const appIcon = `${(import.meta.env && import.meta.env.BASE_URL) || '/'}apple-touch-icon.png`
 
 function detectStandalone() {
   if (typeof window === 'undefined') return false
@@ -74,16 +74,18 @@ const steps = [
 <template>
   <div v-if="visible" class="mt-2">
     <div class="relative flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-lg">
-      <span
-        class="relative flex h-[4.5rem] w-[4.5rem] shrink-0 items-center justify-center overflow-hidden rounded-2xl"
-        :style="{ background: 'var(--action)' }"
-      >
-        <span class="block" :style="{ ...chevron, background: 'var(--ink-on-color)' }" aria-hidden="true" />
+      <span class="relative block h-[4.5rem] w-[4.5rem] shrink-0 overflow-hidden rounded-2xl">
+        <img
+          :src="appIcon"
+          alt=""
+          class="block h-full w-full object-cover"
+          decoding="async"
+        />
         <span class="bc-shine" aria-hidden="true" />
       </span>
       <div class="flex min-w-0 flex-1 flex-col gap-1 pr-8">
         <span class="text-[0.9375rem] font-semibold leading-[1.15] text-[var(--text)]">
-          Откройте Ранскейл Мини<br>как приложение
+          Откройте Ранскейл Трек<br>как приложение
         </span>
         <button
           type="button"

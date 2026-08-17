@@ -24,7 +24,7 @@ defineProps({
 })
 defineEmits(['info', 'stage'])
 
-// Этап пути — вход в паспорт своей ступени. «Мини» товаром не является:
+// Этап пути — вход в паспорт своей ступени. «Трек» товаром не является:
 // её не покупают, и кнопкой она не становится.
 const STAGE_MODULE = { razbory: 'razbor', bootcamp: 'bootcamp', runscale: 'runscale' }
 

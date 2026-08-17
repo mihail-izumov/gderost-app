@@ -3,7 +3,7 @@ import { computed, nextTick, ref, watch } from 'vue'
 import NavigationBar from './NavigationBar.vue'
 import TabBar from './TabBar.vue'
 import CalDateIcon from './icons/CalDateIcon.vue'
-import { chevronStyle } from '../composables/brandMask.js'
+import { ArrowDown } from 'lucide-vue-next'
 import { hardReload } from '../composables/useAppRefresh.js'
 
 // Оболочка приложения. Перенесена из рабочего Ранскейла.
@@ -53,7 +53,6 @@ const navHidden = ref(false)
 const navPinned = ref(false)
 
 const today = computed(() => new Date().getDate())
-const chevron = chevronStyle(26)
 
 function onScroll(e) {
   const top = e.target.scrollTop
@@ -120,10 +119,15 @@ watch(() => [props.active, props.subView], async () => {
       :style="{ height: `${pull}px` }"
       aria-hidden="true"
     >
-      <span
-        class="block transition-opacity"
-        :class="pullReady ? 'bg-[var(--action)] opacity-100' : 'bg-[var(--text-muted)] opacity-60'"
-        :style="chevron"
+      <!-- Стрелка вниз, пока тянут, и вверх на пороге срабатывания: знак
+           говорит, куда идёт жест, а не какой марки приложение. Шеврон
+           Ранскейла иконкой не работает нигде. -->
+      <ArrowDown
+        class="h-[22px] w-[22px] transition-all duration-150"
+        :class="pullReady
+          ? 'rotate-180 text-[var(--action)] opacity-100'
+          : 'text-[var(--text-muted)] opacity-60'"
+        :stroke-width="2.5"
       />
       <!-- Подпись появляется, когда под неё есть место: на первых пикселях
            жеста она обрезалась бы по половине строки. -->
@@ -131,7 +135,7 @@ watch(() => [props.active, props.subView], async () => {
         v-if="pull >= 52"
         class="mb-1 mt-1 block whitespace-nowrap text-[0.75rem] font-medium"
         :style="{ color: pullReady ? 'var(--action)' : 'var(--text-muted)' }"
-      >Обновить Ранскейл Мини</span>
+      >Обновить Ранскейл Трек</span>
     </div>
 
     <div
