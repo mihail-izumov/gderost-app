@@ -121,7 +121,7 @@ const fill = (n) => (n < i.value ? 1 : n > i.value ? 0 : progress.value)
       <!-- Рельеф за слайдом. Ключ — сам слайд: пролистывая сюжет, человек
            каждый раз видит другой участок карты и другой наклон, поэтому
            смена кадра заметна даже там, где текст короткий. -->
-      <TopoLayer :seed="slide.id" ink="var(--ink-on-color)" :opacity="0.11" :spread="2.6" />
+      <TopoLayer :seed="slide.id" ink="var(--ink-on-color)" :opacity="0.055" :spread="2.6" />
       <!-- Полоса прогресса с закрытием в её конце — паттерн Whoosh. -->
       <div
         class="flex items-center gap-1.5 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]"

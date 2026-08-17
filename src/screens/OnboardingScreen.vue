@@ -179,7 +179,7 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
   <div class="relative isolate flex min-h-[calc(100dvh-4rem)] w-full flex-col overflow-hidden">
     <!-- Рельеф за анкетой. Ключ — шаг: каждый следующий вопрос стоит
          на своём участке карты, и переход между шагами виден фоном. -->
-    <TopoLayer :seed="`шаг-${step}`" ink="var(--text)" :opacity="0.05" :spread="2.4" />
+    <TopoLayer :seed="`шаг-${step}`" ink="var(--text)" :opacity="0.026" :spread="2.4" />
 
     <header class="flex items-center gap-2 pt-2">
       <button

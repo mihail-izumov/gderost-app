@@ -70,7 +70,7 @@ const cards = computed(() => RAIL.map((id) => {
     // Рельеф на заднем плане карточки: на заливке линии белые и видны чуть
     // сильнее, на светлой — тёмные и почти на пределе различимости.
     topoInk: onColor ? 'var(--ink-on-color)' : 'var(--text)',
-    topoOpacity: onColor ? 0.14 : 0.055,
+    topoOpacity: onColor ? 0.07 : 0.028,
   }
 }))
 </script>

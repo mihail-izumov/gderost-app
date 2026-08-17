@@ -44,7 +44,7 @@ const skin = computed(() => TONE[props.tone] || TONE.idle)
   >
     <!-- Рельеф на заднем плане. Ключ — имя виджета: у соседних карточек
          в деке разные участки карты и разный наклон. -->
-    <TopoLayer :seed="name" ink="var(--text)" :opacity="0.055" />
+    <TopoLayer :seed="name" ink="var(--text)" :opacity="0.028" />
 
     <div class="mb-3.5 flex items-center gap-2.5">
       <span
