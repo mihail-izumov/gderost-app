@@ -1,6 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { Gauge, Target, BookOpen, ChevronRight } from 'lucide-vue-next'
+import { BookOpen, ChevronRight } from 'lucide-vue-next'
+import DayControlIcon from '../components/icons/DayControlIcon.vue'
+import PlansIcon from '../components/icons/PlansIcon.vue'
 import MonthProgressCard from '../components/home/MonthProgressCard.vue'
 import HomeWidget from '../components/home/HomeWidget.vue'
 import InstallBanner from '../components/InstallBanner.vue'
@@ -199,7 +201,7 @@ function storyDone() {
     <div class="flex gap-3">
       <HomeWidget
         class="flex-1"
-        :icon="Gauge"
+        :icon="DayControlIcon"
         name="Контроль&#10;Дня"
         metric-label="План/Факт"
         :value-main="m.onPlan == null ? '—' : pct1(m.onPlan)"
@@ -215,7 +217,7 @@ function storyDone() {
            не выводятся; рядом цель — второе число, которого слева нет. -->
       <HomeWidget
         class="flex-1"
-        :icon="Target"
+        :icon="PlansIcon"
         name="Цели и&#10;планы"
         metric-label="Прогноз"
         :value-main="mlnRub(m.landing)"
