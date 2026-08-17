@@ -5,9 +5,7 @@ import BottomSheet from '../components/BottomSheet.vue'
 import ConnectProgress from '../components/energy/ConnectProgress.vue'
 import EnergyBreakdown from '../components/energy/EnergyBreakdown.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
-import ConnectBusinessModal from '../components/business/ConnectBusinessModal.vue'
 import AddReportForm from '../components/AddReportForm.vue'
-import Telemetry from '../components/growth/Telemetry.vue'
 import WeekRows from '../components/growth/WeekRows.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
@@ -26,8 +24,10 @@ import { monthOf } from '../i18n/format.js'
 // неделя закрыта.
 //
 // Сверху вниз: повод (когда он есть) · статус с полосой пути · эта неделя ·
-// недели месяца · что доступно сейчас · телеметрия. Первый экран без прокрутки
-// показывает своё состояние; числа системы живут ниже.
+// недели месяца · что доступно сейчас. Числа системы («Растём вместе») уехали
+// на «Ультру»: они отвечают на вопрос «кто вы такие», а он возникает там,
+// где идёт разговор о работе команды. Здесь человек смотрит свои дни, а не
+// наши, и страница целиком принадлежит ему.
 //
 // ⚠ Замок недели снимается вводом данных и никогда оплатой. Продавать снятие
 // собственного замка нельзя: сначала создать препятствие, потом взять за него
@@ -42,7 +42,6 @@ const m = store.model
 
 const breakdownOpen = ref(false)
 const moduleOpen = ref('')
-const connectOpen = ref(false)
 // Ввод дня открывается прямо здесь: человек смотрит на свои недели, и уводить
 // его на другой экран ради одной цифры значит терять место, куда он смотрел.
 const dayOpen = ref(false)
@@ -185,14 +184,7 @@ const reason = computed(() => {
       </ul>
     </section>
 
-    <!-- 6 · Числа системы: сначала человек про себя, потом про нас -->
-    <div class="mt-5">
-      <Telemetry @connect="connectOpen = true" />
-    </div>
-
     <SiteFooter />
-
-    <ConnectBusinessModal :open="connectOpen" @close="connectOpen = false" />
 
     <BottomSheet :open="dayOpen" @close="dayOpen = false">
       <AddReportForm :preset="dayPick" @done="dayOpen = false" />

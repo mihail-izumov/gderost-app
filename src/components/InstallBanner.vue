@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Share, X } from 'lucide-vue-next'
 
-// Баннер «Откройте Ранскейл как приложение». Перенесено из рабочего Ранскейла:
+// Баннер «Откройте Ранскеил как приложение». Перенесено из рабочего Ранскеила:
 // знак слева, заголовок в две строки, пилюля «Подробнее» с шевроном вниз,
 // крестик справа сверху, модалка-инструкция в четыре шага.
 //
@@ -85,7 +85,7 @@ const steps = [
       </span>
       <div class="flex min-w-0 flex-1 flex-col gap-1 pr-8">
         <span class="text-[0.9375rem] font-semibold leading-[1.15] text-[var(--text)]">
-          Откройте Ранскейл Трек<br>как приложение
+          Откройте Ранскеил Трек<br>как приложение
         </span>
         <button
           type="button"
@@ -136,7 +136,7 @@ const steps = [
 
         <div class="flex-1 overflow-y-auto px-4 py-4">
           <h2 class="text-[1.25rem] font-semibold leading-snug text-[var(--text)]">
-            Как пользоваться Ранскейлом на айфоне
+            Как пользоваться Ранскеилом на айфоне
           </h2>
           <p class="mt-2 text-[1rem] leading-relaxed text-[var(--text-secondary)]">
             Это веб-приложение — устанавливать из App Store ничего не нужно.
@@ -145,7 +145,7 @@ const steps = [
           </p>
 
           <h3 class="mt-5 text-[0.8125rem] font-medium uppercase tracking-wide text-[var(--text-muted)]">
-            Добавьте Ранскейл на домашний экран
+            Добавьте Ранскеил на домашний экран
           </h3>
           <ol class="mt-3 flex flex-col gap-3">
             <li v-for="(step, i) in steps" :key="i" class="flex items-start gap-3">

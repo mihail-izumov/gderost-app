@@ -2,7 +2,6 @@
 import { computed, ref } from 'vue'
 import { Check, ChevronRight } from 'lucide-vue-next'
 import ModulePassport from '../components/energy/ModulePassport.vue'
-import RunscaleBanner from '../components/energy/RunscaleBanner.vue'
 import SessionRail from '../components/energy/SessionRail.vue'
 import SignalTodayCard from '../components/energy/SignalTodayCard.vue'
 import RateRazborSheet from '../components/energy/RateRazborSheet.vue'
@@ -19,7 +18,7 @@ import { isLocked } from '../i18n/energy.js'
 
 // «Сигналы» — вкладка предмета торговли.
 //
-// Ранскейл продаёт точные сигналы, которые приходят вовремя; разборы,
+// Ранскеил продаёт точные сигналы, которые приходят вовремя; разборы,
 // буткемп и подписка — способы получать их больше и точнее. Имя вкладки
 // обязывает: она начинается с сигналов, которые владелец уже получает
 // бесплатно, — иначе под вывеской «Сигналы» лежал бы прайс-лист.
@@ -114,9 +113,6 @@ function storyDone() {
         :rated="unlocked"
         @open="openModule"
       />
-      <!-- Режим — баннером под лентой: это не четвёртая карточка в ряду,
-           а другой разговор. -->
-      <RunscaleBanner @open="openModule" />
     </template>
     <RequestList v-else :requests="state.requests" @open="openModule" @rate="rateOpen = true" />
 

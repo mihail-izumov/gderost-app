@@ -35,7 +35,7 @@ const url = computed(() => (typeof window === 'undefined'
 async function share() {
   const link = url.value
   if (!link) return
-  const title = `${store.state.unit || store.state.company || 'Мой бизнес'} — месяц в Ранскейл Трек`
+  const title = `${store.state.unit || store.state.company || 'Мой бизнес'} — месяц в Ранскеил Трек`
   try {
     if (navigator.share) {
       await navigator.share({ title, url: link })

@@ -6,7 +6,7 @@ import CalDateIcon from './icons/CalDateIcon.vue'
 import { ArrowDown } from 'lucide-vue-next'
 import { hardReload } from '../composables/useAppRefresh.js'
 
-// Оболочка приложения. Перенесена из рабочего Ранскейла.
+// Оболочка приложения. Перенесена из рабочего Ранскеила.
 //
 // Принимает конфиг вкладок, активную вкладку и опциональную под-страницу.
 // Под-страница имеет приоритет над вкладкой.
@@ -121,7 +121,7 @@ watch(() => [props.active, props.subView], async () => {
     >
       <!-- Стрелка вниз, пока тянут, и вверх на пороге срабатывания: знак
            говорит, куда идёт жест, а не какой марки приложение. Шеврон
-           Ранскейла иконкой не работает нигде. -->
+           Ранскеила иконкой не работает нигде. -->
       <ArrowDown
         class="h-[22px] w-[22px] transition-all duration-150"
         :class="pullReady
@@ -135,7 +135,7 @@ watch(() => [props.active, props.subView], async () => {
         v-if="pull >= 52"
         class="mb-1 mt-1 block whitespace-nowrap text-[0.75rem] font-medium"
         :style="{ color: pullReady ? 'var(--action)' : 'var(--text-muted)' }"
-      >Обновить Ранскейл Трек</span>
+      >Обновить Трек</span>
     </div>
 
     <div

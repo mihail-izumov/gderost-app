@@ -334,14 +334,14 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
       <div class="pb-2">
         <h2 class="text-[1.25rem] font-bold leading-tight text-[var(--text)]">
           Сегодня {{ formatInt(TELEMETRY.businesses) }}
-          {{ plural(TELEMETRY.businesses, 'бизнес растёт', 'бизнеса растут', 'бизнесов растут') }} на Ранскейл
+          {{ plural(TELEMETRY.businesses, 'бизнес растёт', 'бизнеса растут', 'бизнесов растут') }} на Ранскеил
         </h2>
         <button
           type="button"
           class="mt-4 min-h-[52px] w-full rounded-2xl text-[1.0625rem] font-bold"
           :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
           @click="clientsOpen = false; $emit('connect')"
-        >Подключить бизнес с инженером</button>
+        >Подключить бизнес с инженером Ранскеил</button>
       </div>
     </BottomSheet>
   </section>

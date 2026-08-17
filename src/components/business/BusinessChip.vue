@@ -3,7 +3,7 @@ import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { Check, ChevronsUpDown, Plus } from 'lucide-vue-next'
 import ConnectBusinessModal from './ConnectBusinessModal.vue'
 
-// Чип бизнеса в шапке. Перенесён из рабочего Ранскейла вместе с решениями.
+// Чип бизнеса в шапке. Перенесён из рабочего Ранскеила вместе с решениями.
 //
 // Стрелка ВВЕРХ-ВНИЗ, а не вниз: одинарный шеврон вниз читается как
 // «раскрыть список», двойной — как «переключить между». Здесь верен второй.
@@ -120,7 +120,7 @@ onBeforeUnmount(() => {
         <Plus class="h-5 w-5 shrink-0 text-[var(--text-secondary)]" :stroke-width="2.25" aria-hidden="true" />
         <span class="flex min-w-0 flex-col">
           <span class="text-[1rem] leading-tight text-[var(--text)]">Подключить бизнес</span>
-          <span class="text-[0.75rem] leading-tight text-[var(--text-muted)]">с бизнес-инженером</span>
+          <span class="text-[0.75rem] leading-tight text-[var(--text-muted)]">с инженером Ранскеил</span>
         </span>
       </button>
     </div>

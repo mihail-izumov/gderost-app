@@ -7,7 +7,7 @@ import LiveClock from './LiveClock.vue'
 import { useNavCaption } from '../composables/useNavCaption.js'
 import { hardReload } from '../composables/useAppRefresh.js'
 
-// Шапка навигации. Перенесена из рабочего Ранскейла вместе с правилами,
+// Шапка навигации. Перенесена из рабочего Ранскеила вместе с правилами,
 // которые там выстрадывались по одному.
 //
 // ⚠ Липкая полоса НЕ занимает места в потоке. Пока она умела расти с нуля
@@ -109,12 +109,12 @@ const updateOpen = ref(false)
       v-if="leadingAction === 'hardReload'"
       type="button"
       data-test="nav-hard-reload"
-      class="flex h-[26px] shrink-0 items-center rounded-full border px-3 text-[0.6875rem] font-medium uppercase tracking-[0.18em]
+      class="font-label flex h-[26px] shrink-0 items-center rounded-full border px-3 text-[0.75rem] uppercase tracking-[0.12em]
              text-[var(--text-secondary)] active:bg-[var(--surface-2)]"
       :style="{ borderColor: 'var(--line)' }"
-      aria-label="Обновить до последней версии"
+      aria-label="Обновить Трек до последней версии"
       @click="updateOpen = true"
-    >Обновить</button>
+    >Обновить Трек</button>
   </div>
 
   <!-- Крупный заголовок в потоке. Подпись — absolute НАД ним, чтобы h1
@@ -134,14 +134,14 @@ const updateOpen = ref(false)
     <div class="pb-2">
       <h2 class="text-[1.25rem] font-bold leading-tight text-[var(--text)]">Обновить до последней версии?</h2>
       <p class="mt-1.5 text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
-        Данные сохранятся. Ранскейл станет полезнее.
+        Данные сохранятся. Ранскеил станет полезнее.
       </p>
       <button
         type="button"
         class="mt-4 min-h-[52px] w-full rounded-2xl text-[1.0625rem] font-bold"
         :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
         @click="hardReload"
-      >Обновить</button>
+      >Обновить Трек</button>
       <!-- Отказ — тоже кнопка: голый текст рядом с залитой кнопкой читается
            подписью, а не вторым выходом. -->
       <button

@@ -1,64 +1,84 @@
 <script setup>
 import { computed, ref } from 'vue'
-import HeroBlock from '../components/HeroBlock.vue'
+import { ChevronRight } from 'lucide-vue-next'
 import BottomSheet from '../components/BottomSheet.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
+import ConnectBusinessModal from '../components/business/ConnectBusinessModal.vue'
+import Telemetry from '../components/growth/Telemetry.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { computeEnergy } from '../composables/energyModel.js'
-import { MODULES, isLocked } from '../i18n/energy.js'
+import { isLocked } from '../i18n/energy.js'
 import { ULTRA } from '../i18n/ultra.js'
 
-// «Ультра» — верхняя комплектация линейки, показанная тем же блоком, каким
-// говорит витрина: крупная фраза прописными и подпись категории под ней.
-// Блок общий (`HeroBlock`), поэтому кегль, интерлиньяж и разгонка здесь
-// те же, что на входе, и правка одного места доезжает до обоих.
+// «Ультра» — верхняя комплектация линейки.
 //
-// Знака продукта над фразой нет. Внутри приложения имя «Ранскейл Трек»
-// не печатается нигде: человек уже внутри, и вывеска над головой ему больше
-// ничего не сообщает. Здесь она сообщала бы вдобавок неверное — страница
-// про верхнюю ступень, а не про Трек.
+// Экран собран по общему лекалу разделов: крупный заголовок отдаёт оболочка
+// (он же уезжает в липкую полосу при прокрутке), содержимое идёт секциями
+// в один столбец с теми же отступами, что на «Прогрессе» и «Сигналах».
+// Своей вёрстки у страницы нет — раздел, набранный по-своему, читается чужим
+// приложением, даже когда каждый его блок по отдельности хорош.
 //
-// Фраза «через 30 дней бизнес растёт по плану» отменена на входе как обещание
-// платформы, которому там не место (`docs/ВИТРИНА-вход.md` §5). Здесь это
-// ровно её адрес: страница верхней комплектации и есть то место, где обещание
-// платформы законно.
+// Прописной набор во всю ширину сюда не переехал: это голос витрины,
+// а внутри приложения говорит интерфейс. Обещание «через 30 дней бизнес
+// растёт по плану» отменено на входе Трека как обещание платформы, которому
+// там не место (`docs/ВИТРИНА-вход.md` §5); здесь у него адрес — за ним стоит
+// работа команды, а не приложение.
 //
-// Ничего нового экран не выдумывает. Ниже блока стоит паспорт ступени —
-// тот же самый компонент и те же данные, что открываются шторкой с «Сигналов»
-// и с «Прогресса». Второго описания одной услуги в приложении не заводится.
+// Ничего нового экран не выдумывает. Состав ступени живёт в паспорте — том же
+// компоненте и тех же данных, что открываются с «Прогресса». Второго описания
+// одной услуги в приложении не заводится.
+//
+// «Растём вместе» переехало сюда с «Прогресса» целиком. Причина: числа системы
+// отвечают на вопрос «кто вы такие», а он возникает там, где идёт разговор
+// о работе команды. На странице собственного состояния он звучал в чужом
+// месте — человек пришёл смотреть свои дни, а не наши.
 
 const store = useMiniStore()
 const energy = computed(() => computeEnergy(store.state, store.model.value))
 const rated = computed(() => store.state.razborRating !== null && store.state.razborRating !== undefined)
 
 const passportOpen = ref(false)
-const mod = MODULES.runscale
+const connectOpen = ref(false)
 </script>
 
 <template>
-  <div class="flex flex-col gap-6 px-1 pb-6">
-    <HeroBlock :lines="ULTRA.hero" :tagline="ULTRA.tagline" :max-px="64" />
-
-    <p class="text-center text-[0.9375rem] leading-relaxed text-[var(--text-secondary)]">
+  <div class="px-4 pb-2">
+    <p class="text-[1.375rem] font-bold leading-tight tracking-tight text-[var(--text)]">
+      {{ ULTRA.promise }}
+    </p>
+    <p class="mt-2.5 text-[0.9375rem] leading-relaxed text-[var(--text-secondary)]">
       {{ ULTRA.body }}
     </p>
 
-    <!-- Вход в паспорт: состав, скорость, расход и заказ живут там и только
-         там. Кнопка называет, что откроется, а не зовёт «узнать больше». -->
+    <!-- Вход в паспорт ступени. Подписан тем, что человек получает, а не
+         именем режима: имя он прочитает внутри, когда решит посмотреть. -->
     <button
       type="button"
-      class="flex w-full items-center gap-3.5 rounded-[22px] p-4 text-left"
+      class="mt-5 flex w-full items-center gap-3.5 rounded-[22px] p-4 text-left"
       :style="{ background: 'var(--action)', color: 'var(--ink-on-color)' }"
       @click="passportOpen = true"
     >
-      <span class="min-w-0 flex-1">
-        <span class="block text-[1.0625rem] font-bold leading-tight">{{ mod.title }}</span>
-        <span class="mt-1 block text-[0.8125rem] leading-snug">{{ mod.subtitle }}</span>
+      <span class="min-w-0 flex-1 text-[1.0625rem] font-bold leading-tight">
+        {{ ULTRA.bannerLine1 }}<br>{{ ULTRA.bannerLine2 }}
       </span>
+      <ChevronRight
+        class="h-5 w-5 shrink-0"
+        :style="{ color: 'var(--ink-on-color)' }"
+        :stroke-width="2.5"
+        aria-hidden="true"
+      />
     </button>
 
+    <!-- Числа системы: сперва про то, что делает команда, потом чем это
+         подтверждено. -->
+    <div class="mt-5">
+      <Telemetry @connect="connectOpen = true" />
+    </div>
+
     <SiteFooter />
+
+    <ConnectBusinessModal :open="connectOpen" @close="connectOpen = false" />
 
     <BottomSheet :open="passportOpen" @close="passportOpen = false">
       <ModulePassport

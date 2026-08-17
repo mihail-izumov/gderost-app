@@ -3,7 +3,7 @@ export default {
   content: ['./index.html', './src/**/*.{vue,js}'],
   theme: {
     extend: {
-      // Роли начертаний перенесены из рабочего Ранскейла.
+      // Роли начертаний перенесены из рабочего Ранскеила.
       // @font-face — в src/styles/main.css, файлы — в public/fonts.
       // Фолбэки обязательны: font-display:swap показывает их, пока грузится брендовый.
       fontFamily: {

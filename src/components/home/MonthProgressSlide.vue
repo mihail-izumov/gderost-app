@@ -4,7 +4,7 @@ import { Check } from 'lucide-vue-next'
 import { mlnRub } from '../../i18n/home.js'
 import { monthLayout, markStyle } from '../../composables/monthLayout.js'
 
-// Один экран деки месяца. Перенесено из рабочего Ранскейла один в один:
+// Один экран деки месяца. Перенесено из рабочего Ранскеила один в один:
 // шелл карты, свайп, шапка и точки живут в MonthProgressCard.vue, здесь
 // только полоса и подписи.
 //
