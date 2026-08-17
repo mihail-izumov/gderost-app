@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { ChevronRight, Lock } from 'lucide-vue-next'
+import TopoLayer from '../TopoLayer.vue'
 import { formatRub } from '../../i18n/format.js'
 import { moduleGain } from '../../composables/energyModel.js'
 import { MODULES, RAIL, isLocked } from '../../i18n/energy.js'
@@ -66,6 +67,10 @@ const cards = computed(() => RAIL.map((id) => {
     faintOpacity: onColor ? 0.75 : 1,
     chipBg: onColor ? 'var(--ink-on-color)' : 'var(--surface-2)',
     chipInk: onColor ? 'var(--text)' : 'var(--text-muted)',
+    // Рельеф на заднем плане карточки: на заливке линии белые и видны чуть
+    // сильнее, на светлой — тёмные и почти на пределе различимости.
+    topoInk: onColor ? 'var(--ink-on-color)' : 'var(--text)',
+    topoOpacity: onColor ? 0.14 : 0.055,
   }
 }))
 </script>
@@ -76,10 +81,12 @@ const cards = computed(() => RAIL.map((id) => {
       <li v-for="c in cards" :key="c.id" class="w-[15.5rem] shrink-0 snap-start">
         <button
           type="button"
-          class="flex h-full w-full flex-col rounded-2xl p-3.5 text-left"
+          class="relative isolate flex h-full w-full flex-col overflow-hidden rounded-2xl p-3.5 text-left"
           :style="{ background: c.cardBg }"
           @click="$emit('open', c.id)"
         >
+          <TopoLayer :seed="`ступень-${c.id}`" :ink="c.topoInk" :opacity="c.topoOpacity" />
+
           <span class="flex items-start justify-between gap-2">
             <span class="text-[0.9375rem] font-bold leading-tight" :style="{ color: c.ink }">{{ c.title }}</span>
             <!-- Замок вместо стрелки у запертой ступени: стрелка обещает шаг

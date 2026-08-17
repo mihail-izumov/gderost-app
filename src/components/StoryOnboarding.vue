@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { ChevronLeft, X } from 'lucide-vue-next'
+import TopoLayer from './TopoLayer.vue'
 
 // Сторис-онбординг — формат Whoosh: полноэкранные карточки,
 // сегментный прогресс сверху с таймером, кнопка закрытия в конце полосы
@@ -116,7 +117,11 @@ const fill = (n) => (n < i.value ? 1 : n > i.value ? 0 : progress.value)
       aria-modal="true"
       :aria-label="slide.title"
     >
-    <div class="flex w-full max-w-[430px] flex-col">
+    <div class="relative isolate flex w-full max-w-[430px] flex-col overflow-hidden">
+      <!-- Рельеф за слайдом. Ключ — сам слайд: пролистывая сюжет, человек
+           каждый раз видит другой участок карты и другой наклон, поэтому
+           смена кадра заметна даже там, где текст короткий. -->
+      <TopoLayer :seed="slide.id" ink="var(--ink-on-color)" :opacity="0.11" :spread="2.6" />
       <!-- Полоса прогресса с закрытием в её конце — паттерн Whoosh. -->
       <div
         class="flex items-center gap-1.5 px-4 pt-[max(0.75rem,env(safe-area-inset-top))]"

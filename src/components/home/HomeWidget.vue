@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { MoveUpRight, MoveDownRight, MoveRight } from 'lucide-vue-next'
+import TopoLayer from '../TopoLayer.vue'
 
 // Виджет-кнопка на Главной. Перенесено из рабочего Ранскеила один в один.
 // Стрелка тренда — три состояния, серая монохромная в круге.
@@ -38,9 +39,13 @@ const skin = computed(() => TONE[props.tone] || TONE.idle)
 <template>
   <button
     type="button"
-    class="flex min-h-[172px] flex-col rounded-[22px] bg-[var(--surface)] p-[15px] text-left shadow-sm transition-colors active:bg-[var(--surface-2)]"
+    class="relative isolate flex min-h-[172px] flex-col overflow-hidden rounded-[22px] bg-[var(--surface)] p-[15px] text-left shadow-sm transition-colors active:bg-[var(--surface-2)]"
     @click="$emit('select')"
   >
+    <!-- Рельеф на заднем плане. Ключ — имя виджета: у соседних карточек
+         в деке разные участки карты и разный наклон. -->
+    <TopoLayer :seed="name" ink="var(--text)" :opacity="0.055" />
+
     <div class="mb-3.5 flex items-center gap-2.5">
       <span
         class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
