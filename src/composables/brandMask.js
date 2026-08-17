@@ -27,13 +27,22 @@ function maskOf(file) {
 // Пропорция знака шеврона из его viewBox.
 export const CHEVRON_RATIO = 1080 / 923.72
 
-/** Шеврон Ранскейла заданной высоты в пикселях. */
-export function chevronStyle(heightPx) {
-  const h = Number(heightPx) || 24
+/**
+ * Шеврон Ранскейла заданной высоты.
+ *
+ * Число читается пикселями, строка берётся как есть — так знак можно задать
+ * в `em` и связать его с кеглем соседнего текста. В имени продукта высота
+ * шеврона равна высоте прописной буквы: свяжи их пикселями — и при смене
+ * кегля они разъедутся, а поймать это на глаз уже нельзя.
+ */
+export function chevronStyle(height) {
+  const h = typeof height === 'number'
+    ? `${height}px`
+    : (String(height || '').trim() || '24px')
   return {
     ...maskOf('runscale_chevron.svg'),
-    height: `${h}px`,
-    width: `${Math.round(h * CHEVRON_RATIO)}px`,
+    height: h,
+    width: `calc(${h} * ${CHEVRON_RATIO})`,
     aspectRatio: '1080 / 923.72',
   }
 }
