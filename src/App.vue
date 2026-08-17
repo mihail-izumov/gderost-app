@@ -6,6 +6,7 @@ import TodayScreen from './screens/TodayScreen.vue'
 import SignalsScreen from './screens/SignalsScreen.vue'
 import SharedMonthScreen from './screens/SharedMonthScreen.vue'
 import RunscaleScreen from './screens/RunscaleScreen.vue'
+import UltraScreen from './screens/UltraScreen.vue'
 import GoalsScreen from './screens/GoalsScreen.vue'
 import DayControlScreen from './screens/DayControlScreen.vue'
 import AppShell from './components/AppShell.vue'
@@ -91,6 +92,23 @@ const TABS = computed(() => [
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
   },
+  // «Прогресс» стоит вторым, сразу за своими цифрами: сегодня человек вносит
+  // день, следом смотрит, куда он его двинул. «Сигналы» — предмет торговли,
+  // и разговор о нём идёт после того, как своё состояние увидено, а не до.
+  // Раньше порядок был обратным, и человек попадал в продажу раньше, чем
+  // в собственную картину.
+  {
+    id: 'runscale',
+    label: 'Прогресс',
+    iconKind: 'growth',
+    // Имя есть в липкой полосе при прокрутке, крупного заголовка нет:
+    // экран начинается с состояния.
+    title: 'Прогресс',
+    bigTitle: false,
+    leadingAction: 'hardReload',
+    eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
+    eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
+  },
   // Чип бизнеса и перезагрузка живут и здесь: «Сигналы» говорят про тот же
   // юнит, что «Сегодня», и переключаться между ними, теряя контекст в шапке,
   // человеку незачем.
@@ -103,19 +121,15 @@ const TABS = computed(() => [
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
   },
-  // Заголовка нет: экран начинается с собственного состояния, и слово
-  // «Рост 24/7» стоит подписью в таб-баре.
+  // Верхняя комплектация линейки. Чипа бизнеса и перезагрузки здесь нет:
+  // страница говорит не про юнит владельца, а про то, что делает команда, —
+  // подпись «ВАШ БИЗНЕС» над ней относилась бы не к тому.
   {
-    id: 'runscale',
-    label: 'Рост 24/7',
-    iconKind: 'growth',
-    // Имя есть в липкой полосе при прокрутке, крупного заголовка нет:
-    // экран начинается с состояния.
-    title: 'Рост 24/7',
+    id: 'ultra',
+    label: 'Ультра',
+    iconKind: 'ultra',
+    title: 'Ультра',
     bigTitle: false,
-    leadingAction: 'hardReload',
-    eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
-    eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
   },
 ])
 
@@ -252,6 +266,7 @@ function selectTab(id) {
     <template v-else>
       <TodayScreen v-if="tab === 'today'" @go="go" />
       <SignalsScreen v-else-if="tab === 'power'" @go="go" />
+      <UltraScreen v-else-if="tab === 'ultra'" />
       <RunscaleScreen v-else @go="go" />
     </template>
   </AppShell>

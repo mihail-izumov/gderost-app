@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { TrendingUp, Zap } from 'lucide-vue-next'
+import { Gem, TrendingUp, Zap } from 'lucide-vue-next'
 import CalDateIcon from './icons/CalDateIcon.vue'
 
 // Таб-бар — плавающая капсула по стандарту iOS: скруглённая плашка с воздухом
@@ -13,7 +13,8 @@ import CalDateIcon from './icons/CalDateIcon.vue'
 //
 // Знаки у вкладок свои, а не библиотечные: «Сегодня» — календарь Ранскейла
 // с сегодняшним числом внутри (человек видит день, не открывая экран),
-// «Рост 24/7» — растущая линия, «Сигналы» — залитая молния.
+// «Прогресс» — растущая линия, «Сигналы» — залитая молния,
+// «Ультра» — залитый камень: верхняя комплектация линейки.
 //
 // Шеврона здесь нет и не будет: знак марки, поставленный на место иконки,
 // перестаёт быть знаком марки и начинает означать «раздел». Он живёт только
@@ -59,6 +60,13 @@ const today = computed(() => new Date().getDate())
         class="h-[20px] w-[20px]"
         :class="active === tab.id ? 'text-[var(--action-ink)]' : 'text-[var(--text-muted)]'"
         :stroke-width="2.5"
+      />
+      <Gem
+        v-else-if="tab.iconKind === 'ultra'"
+        class="h-[20px] w-[20px]"
+        :class="active === tab.id ? 'text-[var(--action-ink)]' : 'text-[var(--text-muted)]'"
+        fill="currentColor"
+        :stroke-width="1"
       />
       <Zap
         v-else
