@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { ChevronLeft } from 'lucide-vue-next'
 import BusinessChip from './business/BusinessChip.vue'
 import BottomSheet from './BottomSheet.vue'
@@ -28,7 +28,7 @@ import { hardReload } from '../composables/useAppRefresh.js'
 // Крупный заголовок центрирован — сознательное отклонение от iOS-умолчания,
 // перенесено как есть.
 
-defineProps({
+const props = defineProps({
   title: { type: String, default: '' },
   collapsed: { type: Boolean, default: false },
   showBack: { type: Boolean, default: false },
@@ -48,6 +48,11 @@ defineProps({
 defineEmits(['back'])
 
 const { caption } = useNavCaption()
+
+// Строка контекста — чип бизнеса и капсула обновления. Она же добирает
+// безопасную зону сверху; там, где её нет, зону добирает сам заголовок.
+const hasContextRow = computed(() => !props.showBack
+  && (!!props.eyebrow || props.leadingAction === 'hardReload'))
 
 // Обновление спрашивает. Кнопка чистила кэш и перезагружала страницу молча,
 // и человек, задевший её пальцем, видел мигание без объяснения.
@@ -109,7 +114,7 @@ const updateOpen = ref(false)
       v-if="leadingAction === 'hardReload'"
       type="button"
       data-test="nav-hard-reload"
-      class="font-label flex h-[26px] shrink-0 items-center rounded-full border px-3 text-[0.75rem] uppercase tracking-[0.12em]
+      class="font-label flex h-[26px] shrink-0 items-center justify-center rounded-full border px-3 indent-[0.12em] text-[0.75rem] uppercase tracking-[0.12em]
              text-[var(--text-secondary)] active:bg-[var(--surface-2)]"
       :style="{ borderColor: 'var(--line)' }"
       aria-label="Обновить Трек до последней версии"
@@ -118,8 +123,18 @@ const updateOpen = ref(false)
   </div>
 
   <!-- Крупный заголовок в потоке. Подпись — absolute НАД ним, чтобы h1
-       не сдвигался и стоял на одном месте во всех разделах. -->
-  <div v-if="bigTitle && (title || caption || clockTitle)" class="relative px-4 pb-3 pt-2 text-center">
+       не сдвигался и стоял на одном месте во всех разделах.
+
+       Безопасную зону сверху добирает строка контекста — чип бизнеса
+       и капсула обновления. Там, где её нет (раздел без своего юнита),
+       заголовок оказывался под статус-баром: зону приходится добирать
+       здесь. Отступ тот же, поэтому заголовок стоит на одной высоте
+       во всех разделах. -->
+  <div
+    v-if="bigTitle && (title || caption || clockTitle)"
+    class="relative px-4 pb-3 text-center"
+    :class="hasContextRow ? 'pt-2' : 'pt-[calc(env(safe-area-inset-top)+1.125rem)]'"
+  >
     <p
       v-if="caption"
       class="pointer-events-none absolute inset-x-0 -top-2 text-[0.75rem] leading-none text-[var(--text-muted)]"

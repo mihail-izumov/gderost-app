@@ -44,10 +44,14 @@ const connectOpen = ref(false)
 
 <template>
   <div class="px-4 pb-2">
-    <p class="text-[1.375rem] font-bold leading-tight tracking-tight text-[var(--text)]">
+    <!-- Обещание и абзац под ним стоят по центру, под заголовком: это одна
+         речь на три строки, и левый край разложил бы её на три отдельных
+         сообщения. Ниже, с плашки, выключка возвращается к левой — там
+         начинается интерфейс, а не речь. -->
+    <p class="text-center text-[1.375rem] font-bold leading-tight tracking-tight text-[var(--text)]">
       {{ ULTRA.promise }}
     </p>
-    <p class="mt-2.5 text-[0.9375rem] leading-relaxed text-[var(--text-secondary)]">
+    <p class="mt-2.5 text-center text-[0.9375rem] leading-relaxed text-[var(--text-secondary)]">
       {{ ULTRA.body }}
     </p>
 

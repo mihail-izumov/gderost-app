@@ -83,7 +83,7 @@ onBeforeUnmount(() => {
     >
       <span
         data-test="business-chip-pill"
-        class="flex h-[26px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-[var(--graphite)] pl-3.5 pr-2 text-[0.6875rem] font-medium uppercase tracking-[0.28em] text-[var(--ink-on-color)]"
+        class="font-brand flex h-[26px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-[var(--graphite)] pl-3.5 pr-2 text-[0.8125rem] uppercase tracking-[0.18em] text-[var(--ink-on-color)]"
         :class="fullWidth ? '' : 'max-w-[13rem]'"
       >
         <span class="min-w-0 truncate text-left">{{ label }}</span>
