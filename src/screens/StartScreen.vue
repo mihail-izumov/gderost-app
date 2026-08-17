@@ -1,8 +1,8 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { ChevronDown } from 'lucide-vue-next'
 import WeekWidget from '../components/WeekWidget.vue'
 import BrandLockup from '../components/BrandLockup.vue'
+import DotMark from '../components/icons/DotMark.vue'
 import BottomSheet from '../components/BottomSheet.vue'
 import WhereGrowthSheet from '../components/WhereGrowthSheet.vue'
 import { BRAND } from '../i18n/brand.js'
@@ -47,14 +47,15 @@ const countNumber = computed(() => formatInt(TRACK.businesses))
 // Шторка «Где Рост»: кто считает, чем считает и откуда число на кнопке.
 const whereOpen = ref(false)
 
-// ── Строки, которые обязаны быть в одну строку ──────────────────────────────
+// ── Строки, которые набираются во всю ширину ────────────────────────────────
 //
-// Высказывание набирается во всю ширину экрана, дескриптор под ним — во всю
+// Высказывание занимает ширину экрана целиком, дескриптор под ним — всю
 // доступную, но не крупнее своего кегля. Ни то, ни другое нельзя задать
 // в css: ширина зависит от экрана, а начертание грузится отдельно и до его
 // появления фолбэк меряется по-своему. Поэтому строка меряется по факту
 // и подгоняется — после монтирования, после загрузки начертаний и при
-// каждом изменении ширины.
+// каждом изменении ширины. Переносов нет: каждая строка живёт `nowrap`,
+// перелом высказывания задан разметкой, а не шириной окна.
 //
 // Замер идёт на пробном кегле, а не на текущем: масштабировать от уже
 // подогнанного значит копить ошибку с каждым пересчётом.
@@ -65,6 +66,15 @@ const heroText = ref(null)
 const tagBox = ref(null)
 const tagText = ref(null)
 
+// Кегль подбирается по самой широкой строке блока и ставится всему блоку:
+// у высказывания двух размеров не бывает. Мерить каждую строку по отдельности
+// значит получить крупное «ДЕНЬ» и мелкое «ДЕЛАЕТ МЕСЯЦ» — слово с подписью
+// вместо столкновения.
+function widest(el) {
+  const lines = el.children.length ? [...el.children] : [el]
+  return lines.reduce((max, node) => Math.max(max, node.scrollWidth), 0)
+}
+
 function fit(boxRef, elRef, minPx, maxPx) {
   const box = boxRef.value
   const el = elRef.value
@@ -72,7 +82,7 @@ function fit(boxRef, elRef, minPx, maxPx) {
   const avail = box.clientWidth
   if (!avail) return
   el.style.fontSize = `${PROBE}px`
-  const w = el.scrollWidth
+  const w = widest(el)
   if (!w) return
   const size = Math.min(maxPx, Math.max(minPx, Math.floor((PROBE * avail) / w)))
   el.style.fontSize = `${size}px`
@@ -80,7 +90,7 @@ function fit(boxRef, elRef, minPx, maxPx) {
 
 function fitAll() {
   fit(heroBox, heroText, 28, 96)
-  fit(tagBox, tagText, 13, 18)
+  fit(tagBox, tagText, 13, 19)
 }
 
 // ── Заставка ────────────────────────────────────────────────────────────────
@@ -147,25 +157,34 @@ onBeforeUnmount(() => {
            при этом остаётся в нижней половине экрана — в зоне большого
            пальца. Всё на одной оси: три разных выключки на первом экране
            читались бы как три разных голоса. -->
-      <main class="flex flex-1 flex-col justify-center gap-5 py-6">
-        <div class="flex flex-col items-center gap-3 text-center">
-          <!-- Прописными и без точки: строка работает вывеской, а вывеска
-               предложением не заканчивается. Начертание на ступень легче
-               брендового, зато с разгонкой — плотный жирный прописной набор
-               во всю ширину читается криком, а высказывание не кричит. -->
+      <main class="flex flex-1 flex-col justify-center gap-5 py-3">
+        <div class="flex flex-col items-center gap-2.5 text-center">
+          <!-- Прописными, без точки, в две строки одним кеглем: вывеска
+               предложением не заканчивается, а перелом между подлежащим
+               и сказуемым ставит паузу перед ударом. Начертание брендовое —
+               ровно та роль, которую `tailwind.config.js` отводит голосу
+               бренда. Вес 700 нарисован художником; ставить 600 нельзя,
+               файла такого нет и браузер размажет контуры сам. -->
           <div ref="heroBox" class="w-full">
             <h1
               ref="heroText"
-              class="inline-block whitespace-nowrap font-label leading-[0.95] tracking-[0.06em] text-[var(--text)]"
-            >{{ BRAND.hero }}</h1>
+              class="block font-brand leading-[0.95] tracking-[0.02em] text-[var(--text)]"
+            >
+              <span
+                v-for="line in BRAND.hero"
+                :key="line"
+                class="block whitespace-nowrap"
+              >{{ line }}</span>
+            </h1>
           </div>
 
-          <!-- Дескриптор машинным начертанием: он называет предмет, а не
-               произносит его голосом бренда. -->
+          <!-- Дескриптор — ярлык прибора: подпись категории. Машинное
+               начертание отдано служебной строке внизу, и держать в нём
+               категорию продукта значит склеивать их в один регистр. -->
           <div ref="tagBox" class="w-full">
             <p
               ref="tagText"
-              class="inline-block whitespace-nowrap font-mono font-semibold leading-snug text-[var(--text-secondary)]"
+              class="inline-block whitespace-nowrap font-label leading-snug text-[var(--text-secondary)]"
             >{{ BRAND.tagline }}</p>
           </div>
         </div>
@@ -189,35 +208,33 @@ onBeforeUnmount(() => {
       <!-- Кто считает — последней строкой, внизу. Вопрос «а вы кто» возникает
            после того, как человек посмотрел на предложение, а не до.
            Обводки нет, отделяет тень: плашка лежит поверх холста, а не
-           врезана в него. Шеврон вниз — туда, откуда выедет шторка. -->
-      <footer class="pt-5">
+           врезана в него. Стрелка углом вниз — туда, откуда выедет шторка. -->
+      <footer class="pt-2">
         <button
           type="button"
           class="flex min-h-[68px] w-full items-center gap-3 rounded-2xl bg-[var(--surface)]
                  px-4 py-4 text-left shadow-lg active:opacity-70"
           @click="whereOpen = true"
         >
-          <!-- Число в квадратном знаке: цифра держит собственный вес
-               и не тонет в строке, а строка обходится без карточки. -->
+          <!-- Число в точечных скобках: скобки держат цифру, не заливая её
+               плашкой, и красятся серым — считает прибор, а объявляет
+               человек. Слева число, справа имя витрины: сперва показание,
+               потом название прибора. -->
           <span class="flex items-center gap-2">
-            <span
-              class="flex h-[1.7em] min-w-[1.7em] items-center justify-center rounded-[0.45em]
-                     px-[0.3em] text-[0.9375rem] font-bold leading-none tabular-nums"
-              :style="{ background: 'var(--text)', color: 'var(--ink-on-color)' }"
-            >{{ countNumber }}</span>
-            <span class="text-[0.875rem] leading-none text-[var(--text-secondary)]">
+            <span class="flex items-center gap-[0.15em] text-[1.0625rem] leading-none">
+              <DotMark kind="bracket-left" size="1.15em" class="text-[var(--text-muted)]" />
+              <span class="font-brand tabular-nums text-[var(--text)]">{{ countNumber }}</span>
+              <DotMark kind="bracket-right" size="1.15em" class="text-[var(--text-muted)]" />
+            </span>
+            <span class="font-label text-[0.8125rem] uppercase leading-none tracking-[0.06em] text-[var(--text-secondary)]">
               {{ countWord }}
             </span>
           </span>
-          <span class="ml-auto flex shrink-0 items-center gap-1">
-            <span class="text-[1.0625rem] font-bold leading-none text-[var(--text)]">
+          <span class="ml-auto flex shrink-0 items-center gap-2">
+            <span class="font-brand text-[1.0625rem] uppercase leading-none tracking-[0.02em] text-[var(--text)]">
               {{ BRAND.question }}
             </span>
-            <ChevronDown
-              class="h-5 w-5 shrink-0 text-[var(--text-muted)]"
-              :stroke-width="2.5"
-              aria-hidden="true"
-            />
+            <DotMark kind="arrow-down" size="0.5rem" class="text-[var(--text-muted)]" />
           </span>
         </button>
       </footer>
