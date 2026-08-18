@@ -9,6 +9,7 @@ import { INTRO_STORY } from '../src/i18n/stories.js'
 import { HEAD, LEVEL_ROWS } from '../src/i18n/growth247.js'
 import { TELEMETRY, COUNTERS, scoreNow } from '../src/data/runscaleCounters.js'
 import { computeTodaySignal } from '../src/composables/signalModel.js'
+import { honestLoop } from '../src/composables/honestLoop.js'
 
 let fails = 0
 const ok = (cond, name) => {
@@ -587,6 +588,40 @@ for (const [ym, dim] of [['2026-02', 28], ['2026-08', 31], ['2026-11', 30], ['20
   ok(mm.weeks.length >= 4 && mm.weeks.length <= 6, `${ym}: недель месяца ${mm.weeks.length} — от четырёх до шести`)
   ok(mm.weeks.reduce((a, w) => a + w.days.length, 0) === dim, `${ym}: дни недель складываются в месяц`)
   ok(mm.weeks.every((w) => w.days.length <= 7), `${ym}: в неделе не больше семи дней`)
+}
+
+// 18. Петля «Честной цифры»: каждый сегмент — проверяемый факт, петля цепная.
+//     Условия — composables/honestLoop.js; кольцо на плашке обязано говорить
+//     то же, что модель, поэтому проверяются сами условия, а не картинка.
+{
+  const base = { month: '2026-08', month_target: 3_100_000, dow_coef: [1,1,1,1,1,1,1] }
+  // Пустой месяц: ни одной дуги.
+  const l0 = honestLoop({ ...base, carry: null, days: [] },
+    computeMini({ ...base, carry: null, days: [] }, NOW))
+  ok(l0.lit === 0, 'петля: пустой месяц — ни одной дуги')
+  // Стартовая сумма без дней: данные и сигнал есть, действие и замер — нет.
+  const s1 = { ...base, carry: { upTo: '2026-08-14', amount: 1_400_000 }, days: [] }
+  const l1 = honestLoop(s1, computeMini(s1, NOW))
+  ok(l1.segs[0].on && l1.segs[1].on && !l1.segs[2].on && !l1.segs[3].on,
+    'петля: сумма без дней — данные и сигнал, действия нет')
+  // Дни при живом плане, прошедшие закрыты целиком: петля замкнута.
+  const days2 = []
+  for (let d = 1; d <= 14; d++) days2.push({ date: `2026-08-${String(d).padStart(2, '0')}`, rev: 100_000, planRef: 100_000 })
+  const s2 = { ...base, carry: null, days: days2 }
+  const l2 = honestLoop(s2, computeMini(s2, NOW))
+  ok(l2.lit === 4 && /замкнута/.test(l2.note), 'петля: все прошедшие дни с фактом — замкнута')
+  // Пропущенный день размыкает только замер.
+  const s3 = { ...base, carry: null, days: days2.filter((x) => x.date !== '2026-08-10') }
+  const l3 = honestLoop(s3, computeMini(s3, NOW))
+  ok(l3.segs[2].on && !l3.segs[3].on && /Замер/.test(l3.note),
+    'петля: день без факта гасит замер и называет его в подписи')
+  // Дни, внесённые без плана на день, действия не зажигают.
+  const s4 = { ...base, carry: null, days: days2.map(({ planRef, ...x }) => x) }
+  const l4 = honestLoop(s4, computeMini(s4, NOW))
+  ok(l4.segs[1].on && !l4.segs[2].on, 'петля: факт без плана дня — действие не горит')
+  // Цепность: на всех фикстурах сегмент не горит раньше предыдущего.
+  ok([l0, l1, l2, l3, l4].every((l) => l.segs.every((s, i, a) => !s.on || i === 0 || a[i - 1].on)),
+    'петля цепная: сегмент не горит без предыдущего')
 }
 
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')
