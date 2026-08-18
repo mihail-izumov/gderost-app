@@ -7,7 +7,7 @@ import { MODULES, ORDER_STEPS, RUNSCALE_MONTHS } from '../../i18n/energy.js'
 import { useMiniStore } from '../../composables/useMiniStore.js'
 import { monthCap } from '../../i18n/home.js'
 import ShareMonthButton from '../ShareMonthButton.vue'
-import HonestBadge from '../HonestBadge.vue'
+import StatusChip from '../StatusChip.vue'
 
 // Паспорт модуля: услуга описана как устройство.
 //
@@ -120,10 +120,17 @@ const tiles = computed(() => (!mod.value ? [] : [
     </ol>
 
     <!-- Буткемп — единственная ступень, которая ставит числам последний
-         статус. Шильд с тремя заполненными делениями показывает это ровно
-         там, где человек читает состав продукта. -->
-    <div v-if="moduleId === 'bootcamp'" class="mt-3">
-      <HonestBadge :filled="3" large />
+         статус. Здесь он показан чипом «✓ проверено» — тем же, что стоит
+         у чисел в шторке происхождения: обещание продукта тем же языком,
+         каким приложение подписывает числа. Плашка петли сюда не годится:
+         петля — состояние месяца владельца, а не свойство продукта. -->
+    <div
+      v-if="moduleId === 'bootcamp'"
+      class="mt-3 flex items-center justify-between gap-3 rounded-xl px-3 py-2.5"
+      :style="{ background: 'var(--surface-2)' }"
+    >
+      <span class="text-[0.8125rem] leading-snug text-[var(--text-secondary)]">Числа после сверки с кассой</span>
+      <StatusChip kind="verified" />
     </div>
 
     <!-- Заказ. Первый шаг — отправка данных: без них встречу назначать не на чем. -->

@@ -7,6 +7,7 @@ import StoryOnboarding from '../components/StoryOnboarding.vue'
 import { HONEST_STORY } from '../i18n/stories.js'
 import SiteFooter from '../components/SiteFooter.vue'
 import { computeMini } from '../composables/miniModel.js'
+import { honestLoop } from '../composables/honestLoop.js'
 import { computeEnergy, computeGaps } from '../composables/energyModel.js'
 import { buildExportText, exportFileName } from '../composables/exportText.js'
 import { saveText } from '../composables/saveFile.js'
@@ -28,6 +29,9 @@ defineEmits(['exit'])
 
 const m = computed(() => computeMini(props.state, new Date()))
 const energy = computed(() => computeEnergy(props.state, m.value))
+// Петля автора: получатель видит не только числа, но и то, крутится ли
+// у отправителя цикл, которым они получены.
+const loop = computed(() => honestLoop(props.state, m.value))
 // Ноль не показываем: расстояния нет, и строка о нём была бы шумом.
 const visibleGaps = computed(() => computeGaps(m.value).filter((g) => g.value > 0))
 function gapColor(tone) {
@@ -127,7 +131,7 @@ const honestOpen = ref(false)
       <!-- Статус чисел получателю нужнее, чем автору: он видит чужой месяц
            и обязан знать, на чём тот стоит, до того как поверит цифрам. -->
       <div class="mt-3">
-        <HonestBadge @open="honestOpen = true" />
+        <HonestBadge :loop="loop" @open="honestOpen = true" />
       </div>
 
       <section class="mt-3 rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-4">

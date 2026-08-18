@@ -17,6 +17,7 @@ import FirstStepsCard from '../components/FirstStepsCard.vue'
 import CarrySheet from '../components/CarrySheet.vue'
 import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
 import { sigClass, todayISO } from '../composables/miniModel.js'
+import { honestLoop } from '../composables/honestLoop.js'
 import { mlnRub, mlnSigned, pct1, pctDelta, monthCap } from '../i18n/home.js'
 import { widgetStory, HONEST_STORY } from '../i18n/stories.js'
 
@@ -37,6 +38,7 @@ const emit = defineEmits(['go'])
 const store = useMiniStore()
 const m = store.model
 const monthOver = store.monthOver
+const loop = computed(() => honestLoop(store.state, m.value))
 
 const storyOpen = ref(false)
 const nextOpen = ref(false)
@@ -195,7 +197,7 @@ function storyDone() {
     <!-- Статус чисел стоит там же, где числа: под декой месяца. Устройство
          объясняет сторис, экран сообщает состояние. -->
     <div class="mb-3">
-      <HonestBadge large @open="openHonest" />
+      <HonestBadge large :loop="loop" @open="openHonest" />
     </div>
 
     <div class="flex gap-3">
