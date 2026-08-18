@@ -1,9 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Check } from 'lucide-vue-next'
 import BottomSheet from '../components/BottomSheet.vue'
-import ConnectProgress from '../components/energy/ConnectProgress.vue'
-import EnergyBreakdown from '../components/energy/EnergyBreakdown.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
 import AddReportForm from '../components/AddReportForm.vue'
 import WeekRows from '../components/growth/WeekRows.vue'
@@ -13,7 +10,7 @@ import { useMiniStore } from '../composables/useMiniStore.js'
 import { computeEnergy } from '../composables/energyModel.js'
 import { todayISO } from '../composables/miniModel.js'
 import { isLocked } from '../i18n/energy.js'
-import { HEAD, LEVEL_ROWS } from '../i18n/growth247.js'
+import { HEAD } from '../i18n/growth247.js'
 import { plural } from '../i18n/format.js'
 import { monthOf } from '../i18n/format.js'
 
@@ -24,10 +21,14 @@ import { monthOf } from '../i18n/format.js'
 // каждый день, не видит своих пропусков и не понимает, почему следующая
 // неделя закрыта.
 //
-// Сверху вниз: идущая неделя · статус с полосой пути · «Важно» (когда есть
-// повод) · недели месяца · что доступно сейчас. Порядок правился 18.08:
-// повод стоял первым и перебивал собой главное — сколько дней у человека
-// есть и что внести сегодня. Числа системы («Растём вместе») уехали
+// Сверху вниз: идущая неделя · «Важно» (когда есть повод) · недели месяца.
+// Порядок правился 18.08: повод стоял первым и перебивал собой главное —
+// сколько дней у человека есть и что внести сегодня.
+//
+// ⚠ Разговора о ступенях здесь больше нет. Статус с дорогой и таблица «что
+// уже работает» уехали на «Сигналы», где идёт разговор о том, чем усилить
+// завтрашний день; страница состояния осталась целиком про свои цифры.
+// Числа системы («Растём вместе») уехали
 // на «Ультру»: они отвечают на вопрос «кто вы такие», а он возникает там,
 // где идёт разговор о работе команды. Здесь человек смотрит свои дни, а не
 // наши, и страница целиком принадлежит ему.
@@ -35,7 +36,7 @@ import { monthOf } from '../i18n/format.js'
 // ⚠ Замок недели снимается вводом данных и никогда оплатой. Продавать снятие
 // собственного замка нельзя: сначала создать препятствие, потом взять за него
 // деньги — ровно то, за что метод ругает чужие калькуляторы. Разбор открывает
-// не неделю, а глубину, и это стоит строкой в таблице уровня.
+// не неделю, а глубину, и это стоит строкой в таблице «что уже работает».
 
 const emit = defineEmits(['go'])
 
@@ -43,7 +44,6 @@ const store = useMiniStore()
 const state = store.state
 const m = store.model
 
-const breakdownOpen = ref(false)
 const moduleOpen = ref('')
 // Ввод дня открывается прямо здесь: человек смотрит на свои недели, и уводить
 // его на другой экран ради одной цифры значит терять место, куда он смотрел.
@@ -100,19 +100,7 @@ const reason = computed(() => {
          сегодня», и ответ обязан быть раньше всего остального. -->
     <CurrentWeekCard :m="m" :today="today" @enter="openDay" />
 
-    <!-- 2 · Статус и полоса пути -->
-    <h2 class="mb-2 mt-5 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-      {{ HEAD.level }}
-    </h2>
-    <ConnectProgress
-      :unit="state.unit || state.company"
-      :pct="energy.pct"
-      :level-id="energy.level.id"
-      @info="breakdownOpen = true"
-      @stage="moduleOpen = $event"
-    />
-
-    <!-- 3 · Важно. Повод стоит под статусом и подписан как раздел: сверху
+    <!-- 2 · Важно. Повод стоит под статусом и подписан как раздел: сверху
          он перебивал главный блок и читался ошибкой приложения, а не
          состоянием данных. Заголовка без повода не бывает — пустой раздел
          «Важно» приучает не читать это место вовсе. -->
@@ -142,56 +130,10 @@ const reason = computed(() => {
       <WeekRows :m="m" :today="today" :month-title="weeksTitle" @enter="openDay" />
     </div>
 
-    <!-- 5 · Доступно сейчас. Пустой круг вместо прочерка: место под то, чего
-         ещё нет, а не знак отсутствия. Чем открывается — бейджем. -->
-    <section class="mt-5">
-      <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-        {{ HEAD.access }}
-      </h2>
-      <ul class="mt-2 overflow-hidden rounded-2xl bg-[var(--surface)]">
-        <li v-for="r in LEVEL_ROWS" :key="r.id" class="border-b border-[var(--line)] last:border-b-0">
-          <!-- Строка того, чего ещё нет, открывает паспорт своей ступени прямо
-               отсюда: имя модуля названо, и переход на другую вкладку ради
-               него был лишним шагом. -->
-          <component
-            :is="r.module ? 'button' : 'div'"
-            :type="r.module ? 'button' : null"
-            class="flex min-h-[48px] w-full items-center gap-3 px-4 py-2.5 text-left"
-            @click="r.module ? moduleOpen = r.module : null"
-          >
-            <span
-              v-if="r.has"
-              class="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full"
-              :style="{ background: 'var(--positive)' }"
-              aria-hidden="true"
-            >
-              <Check class="h-[13px] w-[13px]" :style="{ color: 'var(--ink-on-color)' }" :stroke-width="3" />
-            </span>
-            <span
-              v-else
-              class="h-[20px] w-[20px] shrink-0 rounded-full border-2"
-              :style="{ borderColor: 'var(--line)' }"
-              aria-hidden="true"
-            ></span>
-            <span class="min-w-0 flex-1 text-[0.9375rem] leading-snug text-[var(--text)]">{{ r.what }}</span>
-            <span
-              v-if="!r.has"
-              class="inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide"
-              :style="{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }"
-            >{{ r.by }}</span>
-          </component>
-        </li>
-      </ul>
-    </section>
-
     <SiteFooter />
 
     <BottomSheet :open="dayOpen" @close="dayOpen = false">
       <AddReportForm :preset="dayPick" @done="dayOpen = false" />
-    </BottomSheet>
-
-    <BottomSheet :open="breakdownOpen" @close="breakdownOpen = false">
-      <EnergyBreakdown :energy="energy" @close="breakdownOpen = false" />
     </BottomSheet>
 
     <BottomSheet :open="!!moduleOpen" @close="moduleOpen = ''">

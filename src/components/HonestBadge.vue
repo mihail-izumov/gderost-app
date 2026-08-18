@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { ChevronRight } from 'lucide-vue-next'
 import HonestDigitIcon from './icons/HonestDigitIcon.vue'
 
 // Плашка «Честная цифра» — петля роста, показанная знаком.
@@ -41,6 +42,17 @@ defineEmits(['open'])
 // разных состояния» там, где состояние одно — сколько петли набрано.
 const full = computed(() => props.loop.lit >= props.loop.segs.length)
 const tone = computed(() => (full.value ? 'var(--positive)' : 'var(--warning)'))
+
+// Крупная плашка красится состоянием целиком, а не держит его одним знаком
+// в углу. Раньше она была графитовой при любой петле: состояние читалось
+// только после того, как человек рассмотрел четыре дуги размером с ноготь.
+// Цвет заливки виден с расстояния вытянутой руки, и это ровно та величина,
+// ради которой экран открывают каждый день.
+//
+// Чернила на заливке — один цвет, приглушение делает прозрачность. Жёлтый
+// держит тёмный текст, зелёный — белый; это правило системы, а не выбор
+// на глаз.
+const ink = computed(() => (full.value ? 'var(--ink-on-color)' : 'var(--accent-ink)'))
 </script>
 
 <template>
@@ -48,21 +60,25 @@ const tone = computed(() => (full.value ? 'var(--positive)' : 'var(--warning)'))
     v-if="large"
     type="button"
     class="flex min-h-[72px] w-full items-center gap-3.5 rounded-2xl px-4 py-3 text-left"
-    :style="{ background: 'var(--graphite)' }"
+    :style="{ background: tone }"
     :aria-label="`Петля роста: ${loop.lit} из ${loop.segs.length}`"
     @click="$emit('open')"
   >
     <HonestDigitIcon
       class="h-12 w-12 shrink-0"
       :segs="loop.segs"
-      :tone="tone"
-      idle="var(--line-on-color)"
-      ink="var(--ink-on-color)"
+      :tone="ink"
+      :idle="ink"
+      :idle-opacity="0.3"
+      :ink="ink"
     />
     <span class="min-w-0 flex-1">
-      <span class="block text-[0.9375rem] font-bold leading-tight" :style="{ color: 'var(--ink-on-color)' }">Честная цифра</span>
-      <span class="mt-0.5 block text-[0.75rem] leading-snug" :style="{ color: 'var(--ink-on-color-muted)' }">{{ loop.note }}</span>
+      <span class="block text-[0.9375rem] font-bold leading-tight" :style="{ color: ink }">Честная цифра</span>
+      <span class="mt-0.5 block text-[0.75rem] leading-snug" :style="{ color: ink, opacity: 0.8 }">{{ loop.note }}</span>
     </span>
+    <!-- Стрелка называет плашку нажимаемой. Без неё она читалась сообщением,
+         и то, что за ней стоит объяснение петли, человек не находил. -->
+    <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: ink, opacity: 0.8 }" :stroke-width="2.5" aria-hidden="true" />
   </button>
 
   <button

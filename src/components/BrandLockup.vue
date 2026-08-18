@@ -39,6 +39,12 @@ const props = defineProps({
   // Движется только шеврон — слово и плашка стоят. Марка при этом остаётся
   // маркой: анимируется связка имени целиком, а не выдернутый из неё знак.
   running: { type: Boolean, default: false },
+  // Что написано в плашке. По умолчанию — комплектация, в которой человек
+  // сидит; на странице верхней ступени стоит её имя. Без этого пришлось бы
+  // выбирать между «шеврон отдельной картинкой» (знак марки перестаёт быть
+  // знаком марки) и «связка со словом ТРЕК на странице Ультры» (названа
+  // не та комплектация). Плашка меняется — и обе беды исчезают разом.
+  edition: { type: String, default: '' },
 })
 
 // Высота прописной буквы Univers ≈ 0.73 кегля.
@@ -57,7 +63,7 @@ const row = computed(() => ({
     class="inline-flex items-center font-brand"
     :style="row"
     role="img"
-    :aria-label="BRAND.header"
+    :aria-label="edition ? `${BRAND.brandName} ${edition}` : BRAND.header"
   >
     <span
       class="block shrink-0 bg-[var(--text)]"
@@ -66,7 +72,7 @@ const row = computed(() => ({
       aria-hidden="true"
     />
     <span class="gr-cap block text-[var(--text)]" aria-hidden="true">{{ BRAND.wordmark }}</span>
-    <span class="gr-cap gr-plate block" aria-hidden="true">{{ BRAND.editionMark }}</span>
+    <span class="gr-cap gr-plate block" aria-hidden="true">{{ edition || BRAND.editionMark }}</span>
   </div>
 </template>
 

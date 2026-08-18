@@ -21,6 +21,10 @@ const props = defineProps({
   tone: { type: String, default: 'var(--warning)' },
   // Цвет погасшей дуги.
   idle: { type: String, default: 'var(--line)' },
+  // Прозрачность погасшей дуги. Нужна там, где знак стоит на цветной
+  // заливке: своего цвета для «погасло» на ней нет, а производные оттенки
+  // в системе запрещены — приглушение делает прозрачность.
+  idleOpacity: { type: Number, default: 1 },
   // Цвет сердца.
   ink: { type: String, default: 'var(--text)' },
   // Указка для сторис: номер дуги, о которой идёт речь. Когда задана,
@@ -50,6 +54,11 @@ const ARCS = [0, 90, 180, 270].map((base) => {
   return `M${pt(a1)}A${R},${R} 0 0 1 ${pt(a2)}`
 })
 
+const arcOpacity = computed(() => (i) => {
+  const on = props.highlight != null ? i === props.highlight : props.segs[i] && props.segs[i].on
+  return on ? 1 : props.idleOpacity
+})
+
 const arcColor = computed(() => (i) => {
   if (props.highlight != null) return i === props.highlight ? props.tone : props.idle
   return props.segs[i] && props.segs[i].on ? props.tone : props.idle
@@ -65,6 +74,7 @@ const arcColor = computed(() => (i) => {
       :d="d"
       fill="none"
       :stroke="arcColor(i)"
+      :stroke-opacity="arcOpacity(i)"
       :stroke-width="W"
     />
     <g transform="matrix(1,0,0,1,-6503.04,0)">

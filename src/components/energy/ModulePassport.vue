@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Lock } from 'lucide-vue-next'
+import HandIcon from '../icons/HandIcon.vue'
 import { formatRub, dayLabel } from '../../i18n/format.js'
 import { moduleGain } from '../../composables/energyModel.js'
 import { MODULES, ORDER_STEPS, RUNSCALE_MONTHS } from '../../i18n/energy.js'
@@ -182,7 +182,13 @@ const tiles = computed(() => (!mod.value ? [] : [
     <!-- Заперто: читается целиком, заказывается после первой сессии. -->
     <template v-else>
       <div class="mt-4 flex items-center gap-2.5 rounded-xl px-3 py-2.5" :style="{ background: 'var(--surface-2)' }">
-        <Lock class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" :stroke-width="2" aria-hidden="true" />
+        <span
+          class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full"
+          :style="{ background: 'var(--warning)' }"
+          aria-hidden="true"
+        >
+          <HandIcon class="h-[15px] w-[15px]" :style="{ color: 'var(--accent-ink)' }" />
+        </span>
         <span class="text-[0.8125rem] leading-snug text-[var(--text-secondary)]">
           {{ mod.lockNote || 'Будет доступно после разбора' }}
         </span>

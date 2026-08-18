@@ -145,6 +145,13 @@ function onTouchEnd() {
   if (fire) refresh()
 }
 
+// ⚠ Сдвиг содержимого задаётся ТОЛЬКО когда панель действительно выехала.
+// `transform` на прокручиваемом слое делает его точкой отсчёта для всего,
+// что внутри стоит `fixed`, — и плавающие кнопки экранов начинают ехать
+// вместе со страницей вместо того, чтобы висеть над ней. Постоянный
+// `translateY(0)` выглядит безобидно и ломает это ровно так же, как любой
+// другой сдвиг: важен факт свойства, а не его значение.
+//
 // Высота панели сверху: пока тянут — за пальцем, пока идёт обновление —
 // своя, чтобы содержимое не прыгало в момент отпускания.
 const PANEL_H = 92
@@ -226,7 +233,7 @@ watch(() => [props.active, props.subView], async () => {
       class="relative flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain pb-28"
       :style="panelLive
         ? { transform: `translateY(${panel}px)`, transition: 'none' }
-        : { transform: `translateY(${panel}px)`, transition: 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)' }"
+        : { transform: panel > 0 ? `translateY(${panel}px)` : '', transition: 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)' }"
       @scroll="onScroll"
       @touchstart.passive="onTouchStart"
       @touchmove="onTouchMove"
@@ -255,17 +262,26 @@ watch(() => [props.active, props.subView], async () => {
       style="padding-bottom: calc(env(safe-area-inset-bottom) + 0.75rem)"
     >
       <div class="relative">
+        <!-- Уход и возврат панели идут по одной кривой и с одной длительностью.
+             Раньше `ease-out` разгонял уезжающую капсулу с места и она пропадала
+             рывком, а возвращалась мягко: одно и то же движение в две стороны
+             ощущалось разными механизмами. Кривая та же, что у шторок. -->
         <div
-          class="pointer-events-auto transition-all duration-300 ease-out"
+          class="pointer-events-auto"
           :class="navHidden ? '-translate-x-[120%] opacity-0' : 'translate-x-0 opacity-100'"
+          style="transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.32s cubic-bezier(0.32, 0.72, 0, 1)"
         >
           <TabBar :tabs="tabs" :active="active" @select="(id) => emit('update:active', id)" />
         </div>
 
+        <!-- Круглая кнопка на месте капсулы появляется прозрачностью, а не
+             возникает кадром: два движения в одной точке экрана обязаны
+             происходить с одной скоростью. -->
         <button
-          v-show="navHidden"
           type="button"
           class="pointer-events-auto absolute bottom-0 left-0 flex h-14 w-14 items-center justify-center rounded-full shadow-lg active:opacity-90"
+          :class="navHidden ? 'opacity-100' : 'pointer-events-none opacity-0'"
+          style="transition: opacity 0.32s cubic-bezier(0.32, 0.72, 0, 1)"
           :style="{ background: 'var(--action)' }"
           aria-label="Показать навигацию"
           @click="openNav"

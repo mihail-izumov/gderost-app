@@ -1,7 +1,9 @@
 <script setup>
 import { computed } from 'vue'
-import { ChevronRight, Lock } from 'lucide-vue-next'
-import { plural, weekRangeLabel } from '../../i18n/format.js'
+import { ChevronRight } from 'lucide-vue-next'
+import HandIcon from '../icons/HandIcon.vue'
+import { weekRangeLabel } from '../../i18n/format.js'
+import { sigClass } from '../../composables/miniModel.js'
 
 // Недели месяца на странице состояния. Тот же расчёт, что в «Контроле Дня»:
 // недели приходят из модели, второго правила недельного замка в проекте нет.
@@ -72,10 +74,39 @@ const rows = computed(() => props.m.weeks.map((w) => {
           : ''
 
   const INK = {
-    past: { bar: 'var(--text)', chip: 'var(--text)', chipInk: 'var(--ink-on-color)' },
-    now: { bar: 'var(--action)', chip: 'var(--action)', chipInk: 'var(--action-ink)' },
-    ahead: { bar: 'var(--line)', chip: 'var(--surface-2)', chipInk: 'var(--text-muted)' },
+    past: { bar: 'var(--text)' },
+    now: { bar: 'var(--action)' },
+    ahead: { bar: 'var(--line)' },
   }[time]
+
+  // Метка справа. У прошедшей недели она говорит про план, и это законно
+  // только тогда, когда неделя внесена целиком: процент по половине данных —
+  // не результат, а половина результата, выданная за целое. Неполная прошлая
+  // неделя вместо процента называет долг числами.
+  //
+  // У идущей и будущей недели процента нет по той же причине: неделя ещё
+  // не кончилась, и мерить её планом рано.
+  const full = closed === total && total > 0
+  const ratio = w.ratio
+  const donePct = full && ratio !== null ? Math.round(ratio * 100) : null
+  const SIG = {
+    good: { bg: 'var(--positive)', ink: 'var(--ink-on-color)' },
+    warn: { bg: 'var(--warning)', ink: 'var(--accent-ink)' },
+    bad: { bg: 'var(--negative)', ink: 'var(--ink-on-color)' },
+    idle: { bg: 'var(--surface-2)', ink: 'var(--text-muted)' },
+  }
+  let chip
+  if (time === 'past' && donePct !== null) {
+    chip = { text: `${donePct} %`, ...SIG[sigClass(ratio)] }
+  } else if (time === 'past') {
+    chip = { text: `нет ${total - closed} дн`, bg: 'var(--warning)', ink: 'var(--accent-ink)' }
+  } else if (time === 'now') {
+    chip = { text: 'идёт', bg: 'var(--action)', ink: 'var(--action-ink)' }
+  } else {
+    // «Впереди» звучало как строка расписания. «Скоро» говорит про близость,
+    // а не про очередь, и не обещает срока.
+    chip = { text: 'скоро', bg: 'var(--surface-2)', ink: 'var(--text-muted)' }
+  }
 
   return {
     idx: w.idx,
@@ -87,10 +118,10 @@ const rows = computed(() => props.m.weeks.map((w) => {
     time,
     now: time === 'now',
     locked,
-    // Метка называет время, а не данные: про данные говорят полоса и счёт.
-    label: { past: 'прошла', now: 'идёт', ahead: 'впереди' }[time],
+    chip,
     ink: INK,
-    missing,
+    // Долг показывается только там, где метка о нём не сказала сама.
+    missing: time === 'past' ? 0 : missing,
     blockedBy: locked ? w.blockedBy : null,
     goTo,
   }
@@ -129,9 +160,9 @@ const rows = computed(() => props.m.weeks.map((w) => {
               >{{ r.name }}</span>
               <span class="text-[0.8125rem] text-[var(--text-muted)]">{{ r.range }}</span>
               <span
-                class="ml-auto inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide"
-                :style="{ background: r.ink.chip, color: r.ink.chipInk }"
-              >{{ r.label }}</span>
+                class="ml-auto inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide tabular-nums"
+                :style="{ background: r.chip.bg, color: r.chip.ink }"
+              >{{ r.chip.text }}</span>
             </span>
 
             <span class="mt-1.5 block h-[6px] w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
@@ -146,13 +177,13 @@ const rows = computed(() => props.m.weeks.map((w) => {
                  «не хватает 5» как продолжение счёта дней. -->
             <span class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
               <span class="text-[0.75rem] tabular-nums text-[var(--text-muted)]">
-                {{ r.closed }} / {{ r.total }} {{ plural(r.total, 'день', 'дня', 'дней') }}
+                {{ r.closed }} / {{ r.total }} дн
               </span>
               <span
                 v-if="r.missing > 0"
-                class="inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide"
+                class="inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide tabular-nums"
                 :style="{ background: 'var(--warning)', color: 'var(--accent-ink)' }"
-              >нет {{ r.missing }} {{ plural(r.missing, 'дня', 'дней', 'дней') }}</span>
+              >нет {{ r.missing }} дн</span>
             </span>
 
             <!-- Причина замка — своей строкой. В общей строке счёта она
@@ -164,12 +195,19 @@ const rows = computed(() => props.m.weeks.map((w) => {
             >Держит неделя {{ r.blockedBy.idx }} — нет {{ r.blockedBy.days.join(', ') }}</span>
           </span>
 
-          <Lock
+          <!-- Рука вместо замка: закрыто здесь не приложением и не за деньги,
+               а отсутствием фактов. Знак стоит в жёлтом круге — жёлтый
+               в системе означает незавершённость, и это ровно тот случай;
+               сам знак тёмный, потому что жёлтая фигура на белом не читается,
+               а производных оттенков в системе нет. -->
+          <span
             v-if="r.locked"
-            class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]"
-            :stroke-width="2"
-            aria-hidden="true"
-          />
+            class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full"
+            :style="{ background: 'var(--warning)' }"
+            aria-label="Ждём данные"
+          >
+            <HandIcon class="h-[15px] w-[15px]" :style="{ color: 'var(--accent-ink)' }" />
+          </span>
           <ChevronRight
             v-else-if="r.goTo"
             class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]"

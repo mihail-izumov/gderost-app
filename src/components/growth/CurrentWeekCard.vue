@@ -72,15 +72,14 @@ const view = computed(() => {
       >{{ view.label }}</span>
     </div>
 
-    <!-- Счёт слэшем и крупно: это главное число блока. Подпись рядом
-         с ним, а не под полосой — число без предмета читается кодом. -->
-    <div class="mt-3 flex items-baseline gap-2">
+    <!-- Счёт слэшем и крупно: это главное число блока. Единица набрана
+         сокращением прямо в счёте — подпись «дней внесено» повторяла то,
+         что строкой ниже сказано словами, и место занимала дважды. -->
+    <div class="mt-3 flex items-baseline gap-1.5">
       <span class="text-[2rem] font-bold leading-none tabular-nums text-[var(--text)]">
         {{ view.closed }} / {{ view.total }}
       </span>
-      <span class="text-[0.8125rem] text-[var(--text-muted)]">
-        {{ plural(view.total, 'день внесён', 'дня внесено', 'дней внесено') }}
-      </span>
+      <span class="text-[1rem] font-semibold text-[var(--text-muted)]">дн</span>
     </div>
 
     <span class="mt-3 block h-[10px] w-full overflow-hidden rounded-full bg-[var(--surface-2)]">

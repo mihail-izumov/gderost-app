@@ -1,10 +1,11 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { BookOpen, ChevronRight } from 'lucide-vue-next'
+import { ChevronRight } from 'lucide-vue-next'
 import DayControlIcon from '../components/icons/DayControlIcon.vue'
 import PlansIcon from '../components/icons/PlansIcon.vue'
 import MonthProgressCard from '../components/home/MonthProgressCard.vue'
 import HomeWidget from '../components/home/HomeWidget.vue'
+import QuestionIcon from '../components/icons/QuestionIcon.vue'
 import InstallBanner from '../components/InstallBanner.vue'
 import TryWeekCard from '../components/TryWeekCard.vue'
 import SiteFooter from '../components/SiteFooter.vue'
@@ -240,31 +241,20 @@ function storyDone() {
       />
     </div>
 
-    <!-- Как читать виджеты — своя плашка, а не мелкая ссылка под деком.
-         Это первое, что стоит открыть на экране, и выглядеть оно обязано
-         как дело, а не как сноска. Значка «инфо» нет: он читается служебным
-         и гасит то, что должно звать. -->
+    <!-- Как читать виджеты — подпись к деке, а не карточка рядом с ней.
+         Плашкой она спорила с «Честной цифрой» и «Попробовать неделю»: три
+         блока одного вида подряд, и глаз выбирал между ними вместо того,
+         чтобы читать. Теперь это строка без фона, прижатая к сетке виджетов:
+         принадлежность видна расстоянием, а не рамкой. Иконка и подзаголовок
+         сняты — знак вопроса говорит то же самое одним символом. -->
     <button
       type="button"
-      class="mt-3 flex min-h-[60px] w-full items-center gap-3 rounded-2xl bg-[var(--surface)] px-4 py-3 text-left shadow-sm transition-colors active:bg-[var(--surface-2)]"
+      class="mt-1.5 flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl text-[var(--text-muted)] active:bg-[var(--surface-2)]"
       @click="openWidgetStory"
     >
-      <span
-        class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-        :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
-        aria-hidden="true"
-      >
-        <BookOpen class="h-[18px] w-[18px]" :stroke-width="2.2" />
-      </span>
-      <span class="min-w-0 flex-1">
-        <span class="block text-[0.9375rem] font-bold leading-tight text-[var(--text)]">Как читать виджеты</span>
-        <span class="mt-0.5 block text-[0.75rem] leading-snug text-[var(--text-muted)]">
-          Две минуты на ваших числах
-        </span>
-      </span>
-      <ChevronRight class="h-5 w-5 shrink-0 text-[var(--text-muted)]" :stroke-width="2.5" aria-hidden="true" />
+      <QuestionIcon class="h-[15px] w-[15px] shrink-0" />
+      <span class="text-[0.8125rem]">Как читать виджеты</span>
     </button>
-
 
     <div class="mt-3">
       <TryWeekCard />

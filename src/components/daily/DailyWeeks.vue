@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
-import { ChevronDown, Lock } from 'lucide-vue-next'
+import { ChevronDown } from 'lucide-vue-next'
+import HandIcon from '../icons/HandIcon.vue'
 import { mln, ths, thsSigned, dayGen, L, SIG_VAR } from '../../i18n/daily.js'
 import { plural } from '../../i18n/format.js'
 import { useMiniStore } from '../../composables/useMiniStore.js'
@@ -95,7 +96,16 @@ function progFill(r) {
         <div class="flex items-center gap-2">
           <span class="font-semibold text-[var(--text)]">Неделя {{ w.idx }}</span>
           <span class="text-[0.75rem] text-[var(--text-muted)]">{{ w.from }}–{{ w.to }} {{ monthGen(w.to).split(' ')[1] }}</span>
-          <Lock v-if="!w.open" class="ml-auto h-4 w-4 text-[var(--text-muted)]" :stroke-width="2" />
+          <!-- Рука вместо замка: неделю держат недостающие данные,
+               а не запрет приложения. -->
+          <span
+            v-if="!w.open"
+            class="ml-auto flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full"
+            :style="{ background: 'var(--warning)' }"
+            aria-label="Ждём данные"
+          >
+            <HandIcon class="h-[14px] w-[14px]" :style="{ color: 'var(--accent-ink)' }" />
+          </span>
           <ChevronDown v-else class="ml-auto h-4 w-4 text-[var(--text-muted)]" :stroke-width="2" />
         </div>
         <!-- Свёрнутая неделя показывает план и то, что по ней известно.

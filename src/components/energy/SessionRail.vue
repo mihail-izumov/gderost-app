@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
-import { ChevronRight, Lock } from 'lucide-vue-next'
+import { ChevronRight } from 'lucide-vue-next'
+import HandIcon from '../icons/HandIcon.vue'
 import TopoLayer from '../TopoLayer.vue'
 import { formatRub } from '../../i18n/format.js'
 import { moduleGain } from '../../composables/energyModel.js'
@@ -92,13 +93,16 @@ const cards = computed(() => RAIL.map((id) => {
             <!-- Замок вместо стрелки у запертой ступени: стрелка обещает шаг
                  вперёд, а шага вперёд отсюда пока нет. Паспорт всё равно
                  открывается — заперт заказ, а не чтение. -->
-            <Lock
+            <!-- Рука вместо замка. Ступень не заперта деньгами: её открывает
+                 состоявшийся разбор, то есть работа, а не покупка. -->
+            <span
               v-if="c.locked"
-              class="h-[18px] w-[18px] shrink-0"
-              :style="{ color: c.inkFaint }"
-              :stroke-width="2"
+              class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full"
+              :style="{ background: 'var(--warning)' }"
               aria-hidden="true"
-            />
+            >
+              <HandIcon class="h-[15px] w-[15px]" :style="{ color: 'var(--accent-ink)' }" />
+            </span>
             <ChevronRight
               v-else
               class="h-[18px] w-[18px] shrink-0"
@@ -135,6 +139,12 @@ const cards = computed(() => RAIL.map((id) => {
           </span>
         </button>
       </li>
+      <!-- Распорка в конце ленты. Правый отступ контейнера в горизонтальной
+           прокрутке не работает: браузер отдаёт его до содержимого и в конце
+           прокрутки схлопывает, поэтому последняя карточка упиралась в край
+           экрана. Пустой элемент той же ширины — единственный способ дать
+           ленте дышать справа. -->
+      <li class="w-1 shrink-0" aria-hidden="true"></li>
     </ul>
   </div>
 </template>

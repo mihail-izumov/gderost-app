@@ -230,6 +230,6 @@ export function computeGaps(m) {
   // не поставлена — числа нет, и вместо него сказано, чего не хватает.
   out.push(m.goal
     ? { key: 'plan-goal', label: 'до цели', value: Math.max(0, m.goal - (m.T || 0)), tone: 'neutral' }
-    : { key: 'plan-goal', label: 'цель не поставлена', value: null, tone: 'neutral' })
+    : { key: 'plan-goal', label: 'рост без цели', value: null, tone: 'neutral' })
   return out
 }

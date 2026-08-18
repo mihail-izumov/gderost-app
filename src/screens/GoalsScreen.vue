@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { ArrowDown, ChevronRight } from 'lucide-vue-next'
+import { ChevronRight } from 'lucide-vue-next'
 import WeekWidget from '../components/WeekWidget.vue'
 import ValueSheet from '../components/ValueSheet.vue'
 import BottomSheet from '../components/BottomSheet.vue'
@@ -94,7 +94,10 @@ const rows = computed(() => {
       empty: '—',
     },
     { key: 'plan', label: 'План', value: m.value.T, extra: '', empty: '—' },
-    { key: 'goal', label: 'Цель', value: m.value.goal, extra: '', empty: 'не поставлена' },
+    // «Не поставлена» звучало отчётом о невыполненном действии. «Рост без
+    // цели» называет то же самое состоянием: человек растёт, просто планка
+    // сверху пока не названа. Упрёка в этом нет, и ставить цель он решает сам.
+    { key: 'goal', label: 'Цель', value: m.value.goal, extra: '', empty: 'Рост без цели' },
   ]
 })
 
@@ -204,9 +207,10 @@ function saveCarry(v) {
           <span class="min-w-0 flex-1">
             <span class="block text-[0.8125rem] text-[var(--text-muted)]">{{ r.label }}</span>
             <span class="mt-0.5 flex items-baseline gap-2">
-              <span class="text-[1.5rem] font-bold leading-none tabular-nums text-[var(--text)]">
-                {{ r.value ? formatRub(r.value) : r.empty }}
-              </span>
+              <span
+                class="font-bold leading-none tabular-nums text-[var(--text)]"
+                :class="r.value ? 'text-[1.5rem]' : 'text-[1.125rem] text-[var(--text-muted)]'"
+              >{{ r.value ? formatRub(r.value) : r.empty }}</span>
               <span v-if="r.extra" class="text-[0.875rem] font-semibold text-[var(--text-muted)]">
                 {{ r.extra }}
               </span>
@@ -219,26 +223,43 @@ function saveCarry(v) {
              нет. Где его двигает сессия — строка становится кнопкой. -->
         <!-- Разрывы выровнены по левому краю: по центру они читались подписями
              к плашкам, а не самостоятельным рядом чисел. -->
+        <!-- Расстояние между величинами. Соединитель — вертикальная полоска
+             цвета состояния: раньше здесь стояла третья по счёту стрелка
+             экрана, и три разных стрелки в одном столбце читались тремя
+             разными обещаниями. Полоска не обещает ничего, она соединяет.
+
+             Действие вынесено в круглую кнопку справа — залитый круг
+             по стандарту iOS: было понятно, что строка нажимаемая, только
+             после того, как человек в неё попадал. Строка целиком остаётся
+             тач-целью высотой 44. -->
         <component
           :is="gapFor(r.key) && gapFor(r.key).module ? 'button' : 'div'"
           v-if="gapFor(r.key)"
           :type="gapFor(r.key).module ? 'button' : null"
-          class="flex w-full items-center gap-2 px-4 py-0.5 text-left"
+          class="flex min-h-[44px] w-full items-center gap-2.5 px-4 text-left"
           @click="gapFor(r.key).module ? moduleOpen = gapFor(r.key).module : null"
         >
-          <ArrowDown class="h-3.5 w-3.5 shrink-0" :style="{ color: gapColor(gapFor(r.key).tone) }" :stroke-width="2.5" aria-hidden="true" />
-          <span class="text-[0.75rem] text-[var(--text-muted)]">{{ gapFor(r.key).label }}</span>
           <span
-            v-if="gapFor(r.key).value !== null"
-            class="text-[0.8125rem] font-bold tabular-nums"
-            :style="{ color: gapColor(gapFor(r.key).tone) }"
-          >{{ formatRub(gapFor(r.key).value) }}</span>
-          <ChevronRight
-            v-if="gapFor(r.key).module"
-            class="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]"
-            :stroke-width="2.5"
+            class="h-[22px] w-[3px] shrink-0 rounded-full"
+            :style="{ background: gapColor(gapFor(r.key).tone) }"
             aria-hidden="true"
-          />
+          ></span>
+          <span class="min-w-0 flex-1">
+            <span class="text-[0.8125rem] text-[var(--text-muted)]">{{ gapFor(r.key).label }}</span>
+            <span
+              v-if="gapFor(r.key).value !== null"
+              class="ml-1.5 text-[0.9375rem] font-bold tabular-nums"
+              :style="{ color: gapColor(gapFor(r.key).tone) }"
+            >{{ formatRub(gapFor(r.key).value) }}</span>
+          </span>
+          <span
+            v-if="gapFor(r.key).module"
+            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+            :style="{ background: 'var(--action)' }"
+            aria-hidden="true"
+          >
+            <ChevronRight class="h-[18px] w-[18px]" :style="{ color: 'var(--action-ink)' }" :stroke-width="2.75" />
+          </span>
         </component>
       </template>
     </div>

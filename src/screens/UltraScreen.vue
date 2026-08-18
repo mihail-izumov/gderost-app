@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-vue-next'
 import BottomSheet from '../components/BottomSheet.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
 import ConnectBusinessModal from '../components/business/ConnectBusinessModal.vue'
+import BrandLockup from '../components/BrandLockup.vue'
 import Telemetry from '../components/growth/Telemetry.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
@@ -43,7 +44,14 @@ const connectOpen = ref(false)
 </script>
 
 <template>
-  <div class="px-4 pb-2 pt-3">
+  <div class="px-4 pb-2 pt-6">
+    <!-- Знак марки страницы. Плашка называет комплектацию, о которой идёт
+         речь: связка со словом «ТРЕК» назвала бы здесь не тот продукт,
+         а шеврон отдельной картинкой перестал бы быть знаком марки. -->
+    <div class="flex justify-center">
+      <BrandLockup size="1.25rem" edition="УЛЬТРА" />
+    </div>
+
     <!-- Обещание и абзац под ним стоят по центру, под заголовком: это одна
          речь на три строки, и левый край разложил бы её на три отдельных
          сообщения. Ниже, с плашки, выключка возвращается к левой — там
@@ -52,7 +60,7 @@ const connectOpen = ref(false)
          Воздуха здесь больше, чем на рабочих разделах, и это не украшение:
          страница не про работу с цифрами, а про обещание, и обещание, зажатое
          между заголовком и синей плашкой, читается пунктом списка. -->
-    <p class="text-center text-[1.375rem] font-bold leading-tight tracking-tight text-[var(--text)]">
+    <p class="mt-6 text-center text-[1.375rem] font-bold leading-tight tracking-tight text-[var(--text)]">
       {{ ULTRA.promiseLine1 }}<br>{{ ULTRA.promiseLine2 }}
     </p>
     <p class="mx-auto mt-4 max-w-[22rem] text-center text-[0.9375rem] leading-relaxed text-[var(--text-secondary)]">
