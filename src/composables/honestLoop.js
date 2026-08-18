@@ -39,7 +39,7 @@ export function honestLoop(set, m) {
   const segs = [
     { id: 'data', label: 'данные', on: data, check: 'Выручка внесена — хотя бы один день' },
     { id: 'signal', label: 'сигнал', on: signal, check: 'План задан — считается прогноз' },
-    { id: 'action', label: 'действие', on: action, check: 'День прожит со своей цифрой' },
+    { id: 'action', label: 'действие', on: action, check: 'Выручка вносилась при заданном плане' },
     { id: 'measure', label: 'дни закрыты', on: measure, check: 'Все прошедшие дни закрыты' },
   ]
   const lit = segs.filter((s) => s.on).length

@@ -18,7 +18,7 @@ import CarrySheet from '../components/CarrySheet.vue'
 import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
 import { sigClass, todayISO } from '../composables/miniModel.js'
 import { honestLoop } from '../composables/honestLoop.js'
-import { mlnRub, mlnSigned, pct1, pctDelta, monthCap } from '../i18n/home.js'
+import { mlnRub, pct1, pctDelta, monthCap } from '../i18n/home.js'
 import { widgetStory, honestStory } from '../i18n/stories.js'
 
 // Главная — дека виджетов. Устройство взято у рабочего Ранскеила:
@@ -64,7 +64,16 @@ const fcTrend = computed(() => {
   return j[j.length - 1].arrow
 })
 
-const gapValue = computed(() => (m.value ? mlnSigned(m.value.T - m.value.landing) : '—'))
+// Расстояние прогноза до плана. Подпись несёт направление, число — размер:
+// «Недобор + ₽0,3 млн» со знаком читалось как «идёте в плюсе», хотя число
+// было недостачей. На «Сигналах» та же величина зовётся «Недобор к плану» —
+// здесь тот же язык, короче на ширину виджета.
+const gapAmt = computed(() => (m.value && m.value.landing != null ? m.value.T - m.value.landing : null))
+const gapLabel = computed(() => {
+  if (gapAmt.value == null || gapAmt.value === 0) return 'Разрыв'
+  return gapAmt.value > 0 ? 'Недобор' : 'Опережение'
+})
+const gapValue = computed(() => (gapAmt.value == null ? '—' : mlnRub(Math.abs(gapAmt.value))))
 
 // Статус виджетов цветом. «Контроль Дня» — тот же светофор, которым красятся
 // дни внутри него: отношение факта к плану на прошедшие дни. «Цели и планы» —
@@ -207,7 +216,7 @@ function storyDone() {
         name="Контроль&#10;Дня"
         metric-label="План/Факт"
         :value-main="m.onPlan == null ? '—' : pct1(m.onPlan)"
-        sub-label="Разрыв"
+        :sub-label="gapLabel"
         :sub-value="gapValue"
         :tone="dayTone"
         @select="emit('go', 'day')"

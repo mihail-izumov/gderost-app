@@ -23,6 +23,10 @@ const props = defineProps({
   idle: { type: String, default: 'var(--line)' },
   // Цвет сердца.
   ink: { type: String, default: 'var(--text)' },
+  // Указка для сторис: номер дуги, о которой идёт речь. Когда задана,
+  // состояние человека не показывается — горит только названная дуга
+  // цветом `tone`, остальные гаснут. Это режим объяснения, не состояния.
+  highlight: { type: Number, default: null },
 })
 
 const HEART = [
@@ -46,7 +50,10 @@ const ARCS = [0, 90, 180, 270].map((base) => {
   return `M${pt(a1)}A${R},${R} 0 0 1 ${pt(a2)}`
 })
 
-const arcColor = computed(() => (i) => (props.segs[i] && props.segs[i].on ? props.tone : props.idle))
+const arcColor = computed(() => (i) => {
+  if (props.highlight != null) return i === props.highlight ? props.tone : props.idle
+  return props.segs[i] && props.segs[i].on ? props.tone : props.idle
+})
 </script>
 
 <template>

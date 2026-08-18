@@ -177,14 +177,29 @@ export function widgetStory({ planFact, planFactLine, pace, paceLine }) {
  *
  * Тексты — голос витрины (`docs/контент/ГОЛОС.md`): слова за ужином,
  * показ вместо утверждения, «замер» существительным не печатается.
+ *
+ * Кольцо стоит на самих слайдах, а не остаётся на плашке за спиной:
+ * первый слайд показывает его в состоянии человека, слайды шагов —
+ * с указкой на свою дугу (`ring.highlight`, синий цвет активного)
+ * и живой строкой ответа под текстом. Связь «дуга — проверка» человек
+ * видит, а не вычисляет.
  */
 export function honestStory(loop) {
+  const full = loop.lit >= loop.segs.length
+  const stateRing = {
+    segs: loop.segs,
+    tone: full ? 'var(--positive)' : 'var(--warning)',
+    highlight: null,
+  }
+  const pointerRing = (i) => ({ segs: loop.segs, tone: 'var(--action)', highlight: i })
+  const answer = (i) => [{ label: loop.segs[i].check, on: loop.segs[i].on }]
   return [
     {
       id: 'loop',
       kicker: 'Честная цифра',
       title: 'Кольцо — четыре проверки',
       text: 'Каждая дуга — проверка на ваших числах. Вот они, с ответами прямо сейчас:',
+      ring: stateRing,
       checks: loop.segs.map((s) => ({ label: s.check, on: s.on })),
     },
     {
@@ -192,24 +207,32 @@ export function honestStory(loop) {
       kicker: 'Честная цифра',
       title: 'Данные',
       text: 'Вы вносите выручку дня — минута вечером. Рядом с каждым числом видно, откуда оно: ввели вы — подписано «со слов».',
+      ring: pointerRing(0),
+      checks: answer(0),
     },
     {
       id: 'signal',
       kicker: 'Честная цифра',
       title: 'Сигнал',
       text: 'Из ваших дней считается прогноз месяца и сколько надо сегодня. Подписано «посчитано»: тап по числу показывает, из чего.',
+      ring: pointerRing(1),
+      checks: answer(1),
     },
     {
       id: 'action',
       kicker: 'Честная цифра',
       title: 'Действие',
       text: 'День вы работаете, зная свою цифру. Внутрь бизнеса приложение не заглядывает: ваш день оно увидит в завтрашней выручке.',
+      ring: pointerRing(2),
+      checks: answer(2),
     },
     {
       id: 'measure',
       kicker: 'Честная цифра',
       title: 'День закрыт',
       text: 'Вечером выручка внесена — день закрыт, кольцо замкнулось. День без выручки размыкает кольцо, пока вы его не внесёте.',
+      ring: pointerRing(3),
+      checks: answer(3),
     },
     {
       id: 'why',

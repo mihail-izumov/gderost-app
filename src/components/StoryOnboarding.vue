@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { ChevronLeft, X } from 'lucide-vue-next'
 import TopoLayer from './TopoLayer.vue'
+import HonestDigitIcon from './icons/HonestDigitIcon.vue'
 
 // Сторис-онбординг — формат Whoosh: полноэкранные карточки,
 // сегментный прогресс сверху с таймером, кнопка закрытия в конце полосы
@@ -164,6 +165,18 @@ const fill = (n) => (n < i.value ? 1 : n > i.value ? 0 : progress.value)
         @pointerup="release"
         @pointercancel="release"
       >
+        <!-- Кольцо стоит на слайде, о котором речь: первый слайд — состояние
+             человека, слайды шагов — указка на свою дугу. Что показывать,
+             решает слайд; сторис только рендерит. -->
+        <HonestDigitIcon
+          v-if="slide.ring"
+          class="mb-5 h-24 w-24"
+          :segs="slide.ring.segs"
+          :tone="slide.ring.tone"
+          :highlight="slide.ring.highlight"
+          idle="var(--line-on-color)"
+          ink="var(--ink-on-color)"
+        />
         <p
           v-if="slide.kicker"
           class="text-[0.8125rem] font-bold uppercase tracking-wide"
