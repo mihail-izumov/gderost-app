@@ -5,7 +5,7 @@ import BusinessChip from './business/BusinessChip.vue'
 import BottomSheet from './BottomSheet.vue'
 import LiveClock from './LiveClock.vue'
 import { useNavCaption } from '../composables/useNavCaption.js'
-import { hardReload } from '../composables/useAppRefresh.js'
+import { useAppRefresh } from '../composables/useAppRefresh.js'
 
 // Шапка навигации. Перенесена из рабочего Ранскеила вместе с правилами,
 // которые там выстрадывались по одному.
@@ -33,7 +33,7 @@ const props = defineProps({
   collapsed: { type: Boolean, default: false },
   showBack: { type: Boolean, default: false },
   backLabel: { type: String, default: '' },
-  leadingAction: { type: String, default: null }, // null | 'hardReload'
+  leadingAction: { type: String, default: null }, // null | 'update'
   // Подпись чипа бизнеса; пусто — чипа нет
   eyebrow: { type: String, default: null },
   eyebrowName: { type: String, default: '' },
@@ -52,11 +52,23 @@ const { caption } = useNavCaption()
 // Строка контекста — чип бизнеса и капсула обновления. Она же добирает
 // безопасную зону сверху; там, где её нет, зону добирает сам заголовок.
 const hasContextRow = computed(() => !props.showBack
-  && (!!props.eyebrow || props.leadingAction === 'hardReload'))
+  && (!!props.eyebrow || props.leadingAction === 'update'))
 
 // Обновление спрашивает. Кнопка чистила кэш и перезагружала страницу молча,
 // и человек, задевший её пальцем, видел мигание без объяснения.
+//
+// В шторке два разных действия, и порядок в ней — по частоте, а не по силе.
+// Сверху обычное обновление: оно проверяет версию и обычно занимает секунду.
+// Снизу отдельной строкой аварийный сброс — на случай, когда обновление
+// не помогло и приложение держит старую оболочку. Ход работы показывает
+// панель оболочки, поэтому шторка закрывается сразу.
 const updateOpen = ref(false)
+const { refresh, hardReload } = useAppRefresh()
+
+function startRefresh() {
+  updateOpen.value = false
+  refresh()
+}
 </script>
 
 <template>
@@ -103,7 +115,7 @@ const updateOpen = ref(false)
   <!-- Контекст экрана в потоке: чип бизнеса во всю доступную ширину
        и капсула обновления. -->
   <div
-    v-if="!showBack && (eyebrow || leadingAction === 'hardReload')"
+    v-if="!showBack && (eyebrow || leadingAction === 'update')"
     class="flex items-center gap-2 px-3 pt-[env(safe-area-inset-top)]"
   >
     <div v-if="eyebrow" class="min-w-0 flex-1">
@@ -111,9 +123,9 @@ const updateOpen = ref(false)
     </div>
     <div v-else class="flex-1" aria-hidden="true"></div>
     <button
-      v-if="leadingAction === 'hardReload'"
+      v-if="leadingAction === 'update'"
       type="button"
-      data-test="nav-hard-reload"
+      data-test="nav-update"
       class="font-label flex h-[26px] shrink-0 items-center justify-center rounded-full border px-3 indent-[0.12em] text-[0.75rem] uppercase tracking-[0.12em]
              text-[var(--text-secondary)] active:bg-[var(--surface-2)]"
       :style="{ borderColor: 'var(--line)' }"
@@ -153,9 +165,10 @@ const updateOpen = ref(false)
       </p>
       <button
         type="button"
+        data-test="update-soft"
         class="mt-4 min-h-[52px] w-full rounded-2xl text-[1.0625rem] font-bold"
         :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
-        @click="hardReload"
+        @click="startRefresh"
       >Обновить Трек</button>
       <!-- Отказ — тоже кнопка: голый текст рядом с залитой кнопкой читается
            подписью, а не вторым выходом. -->
@@ -165,6 +178,15 @@ const updateOpen = ref(false)
         :style="{ borderColor: 'var(--rim)', background: 'var(--surface)' }"
         @click="updateOpen = false"
       >Оставить</button>
+      <!-- Аварийный выход. Стоит ниже отказа и набран мельче: он дороже
+           обычного обновления — приложение грузится заново целиком, — и нужен
+           один раз из ста. Название говорит, когда его брать. -->
+      <button
+        type="button"
+        data-test="update-hard"
+        class="mt-3 min-h-[44px] w-full text-[0.8125rem] text-[var(--text-muted)] underline underline-offset-4"
+        @click="hardReload"
+      >Не помогло — загрузить заново</button>
     </div>
   </BottomSheet>
 </template>

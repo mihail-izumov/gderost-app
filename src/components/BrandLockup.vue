@@ -35,6 +35,10 @@ import { BRAND } from '../i18n/brand.js'
 const props = defineProps({
   // Кегль связки. Всё остальное считается от него.
   size: { type: String, default: '2.25rem' },
+  // Знак шагает, пока приложение занято собой: заставка запуска, обновление.
+  // Движется только шеврон — слово и плашка стоят. Марка при этом остаётся
+  // маркой: анимируется связка имени целиком, а не выдернутый из неё знак.
+  running: { type: Boolean, default: false },
 })
 
 // Высота прописной буквы Univers ≈ 0.73 кегля.
@@ -57,6 +61,7 @@ const row = computed(() => ({
   >
     <span
       class="block shrink-0 bg-[var(--text)]"
+      :class="running ? 'gr-run' : ''"
       :style="chevron"
       aria-hidden="true"
     />
@@ -80,6 +85,33 @@ const row = computed(() => ({
   border-radius: 0.18em;
   background: var(--action);
   color: var(--action-ink);
+}
+
+/* Шаг знака, пока приложение занято собой. Шеврон уходит вниз и возвращается
+   сверху — то же направление, которым его тянут пальцем. Кольца и вращения
+   здесь быть не может: у знака есть верх и низ, и крутящаяся марка читается
+   значком загрузки. Всё в долях кегля, поэтому шаг одинаков на любом размере. */
+.gr-run {
+  animation: gr-chevron-run 1.15s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+}
+
+@keyframes gr-chevron-run {
+  0%   { transform: translateY(0); opacity: 1; }
+  45%  { transform: translateY(0.34em); opacity: 0; }
+  55%  { transform: translateY(-0.34em); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+/* Движение в интерфейсе отключено системой — знак остаётся на месте
+   и дышит прозрачностью. Совсем без признака жизни панель читается зависшей. */
+@media (prefers-reduced-motion: reduce) {
+  .gr-run {
+    animation: gr-chevron-breathe 1.6s ease-in-out infinite;
+  }
+  @keyframes gr-chevron-breathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
 }
 
 @supports (text-box: trim-both cap alphabetic) {

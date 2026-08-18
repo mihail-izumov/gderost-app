@@ -3,8 +3,10 @@ import { computed, nextTick, ref, watch } from 'vue'
 import NavigationBar from './NavigationBar.vue'
 import TabBar from './TabBar.vue'
 import CalDateIcon from './icons/CalDateIcon.vue'
+import BrandLockup from './BrandLockup.vue'
 import { ArrowDown } from 'lucide-vue-next'
-import { hardReload } from '../composables/useAppRefresh.js'
+import { useAppRefresh } from '../composables/useAppRefresh.js'
+import { PULL, pullOffset, canStartPull, shouldFirePull } from '../composables/pullGesture.js'
 
 // Оболочка приложения. Перенесена из рабочего Ранскеила.
 //
@@ -21,10 +23,10 @@ import { hardReload } from '../composables/useAppRefresh.js'
 // человек читает длинную страницу, и три подписи поверх неё отбирают полосу
 // содержимого. Тап по кругу возвращает панель, возврат к верху — тоже.
 //
-// Потянули страницу вниз от самого верха — приложение перезагружается свежей
-// версией, как в мобильном браузере. Жест привычный, и искать кнопку
-// обновления ради этого не нужно. Устройство жеста и авария, которая на нём
-// случилась, разобраны ниже, у самих обработчиков.
+// Потянули страницу вниз от самого верха — приложение проверяет, вышла ли
+// новая версия, и ставит её. Жест привычный по мобильному браузеру, и искать
+// кнопку ради этого не нужно. Устройство жеста и две аварии, которые на нём
+// случились, разобраны ниже, у самих обработчиков.
 
 const props = defineProps({
   tabs: { type: Array, required: true },
@@ -57,6 +59,7 @@ const today = computed(() => new Date().getDate())
 
 function onScroll(e) {
   const top = e.target.scrollTop
+  lastScrollAt = Date.now()
   collapsed.value = top > COLLAPSE_AT
   if (top <= NAV_HIDE_AT) {
     navHidden.value = false
@@ -74,63 +77,85 @@ function openNav() {
 // ── Потяни-обнови ───────────────────────────────────────────────────────────
 //
 // Механика повторяет мобильный Chrome, и это не вкусовщина: жест человек уже
-// знает оттуда, и любое отличие он читает как поломку.
+// знает оттуда, и любое отличие он читает как поломку. Сами правила —
+// в `composables/pullGesture.js` чистыми функциями, под самопроверкой;
+// здесь только касания и то, что видно на экране.
 //
-// ⚠ Здесь была авария. Панель ехала за пальцем по формуле `sqrt(dy) * 9`,
-// то есть маленькое движение УСИЛИВАЛОСЬ: шестьдесят четыре пикселя пальца
-// давали ровно порог срабатывания, и приложение перезагружалось от обычной
-// попытки проскроллить страницу вверх. Правило простое и нарушать его нельзя:
-// **панель обязана ехать медленнее пальца, а не быстрее.** Отсюда `DAMP < 1`.
-//
-// Три вещи, которые делают жест жестом, а не случайностью:
-//   1. Порог по пальцу. Сработать можно на ста тридцати пикселях движения —
-//      это осознанное протягивание, а не рывок при чтении.
-//   2. Люфт. Пока палец не прошёл десять пикселей вниз, прокрутка остаётся
-//      прокруткой и `preventDefault` не зовётся. Иначе жест отбирает скролл
-//      у страницы с первого же касания.
-//   3. Возврат пружиной. Отпустили, не дотянув, — панель уезжает обратно
-//      за 0,25 с. Мгновенное исчезновение читается сбоем.
+// Отпускание зовёт обновление, а не сброс кэша: сброс — аварийный инструмент,
+// он живёт строкой в шторке у кнопки. Почему это важно — в комментарии
+// `useAppRefresh.js`.
 //
 // Подтверждения у жеста нет намеренно. Данные лежат на устройстве
-// и перезагрузкой не трогаются, а модалка на жесте превращает односекундное
-// действие в два шага. Беспокойство снимается строкой под стрелкой, а не
-// вопросом.
-const PULL_MAX = 96
-const PULL_SLOP = 10
-const PULL_DAMP = 0.5
-const PULL_TRIGGER = 64 // ≈ 138 px пальца вместе с люфтом
+// и обновлением не трогаются, а модалка на жесте превращает односекундное
+// действие в два шага. Беспокойство снимается строкой под стрелкой, а с ним
+// работает и панель обновления: она сообщает, чем всё кончилось.
+const { status: refreshStatus, busy: refreshBusy, refresh } = useAppRefresh()
 
 const pull = ref(0)
-const pullReady = computed(() => pull.value >= PULL_TRIGGER)
+const pullReady = computed(() => pull.value >= PULL.TRIGGER)
 let pullStart = null
+let pullStartX = 0
+let pullStartAt = 0
 let pullActive = false
+let pullDrift = 0
+let lastScrollAt = 0
 
 function onTouchStart(e) {
-  pullStart = scrollEl.value && scrollEl.value.scrollTop <= 0 ? e.touches[0].clientY : null
+  const t = e.touches[0]
+  const can = canStartPull({
+    scrollTop: scrollEl.value ? scrollEl.value.scrollTop : 0,
+    sinceScrollMs: Date.now() - lastScrollAt,
+    busy: refreshBusy.value,
+  })
+  pullStart = can ? t.clientY : null
+  pullStartX = t.clientX
+  pullStartAt = Date.now()
   pullActive = false
+  pullDrift = 0
   pull.value = 0
 }
 
 function onTouchMove(e) {
   if (pullStart === null) return
-  const dy = e.touches[0].clientY - pullStart
-  if (dy <= PULL_SLOP) {
+  const t = e.touches[0]
+  const dy = t.clientY - pullStart
+  // Самый большой увод вбок за весь жест, а не текущий: диагональ, которую
+  // палец успел выправить, всё равно была диагональю.
+  pullDrift = Math.max(pullDrift, Math.abs(t.clientX - pullStartX))
+  if (dy <= PULL.SLOP) {
     if (pullActive) pull.value = 0
     return
   }
   pullActive = true
-  pull.value = Math.min(PULL_MAX, Math.round((dy - PULL_SLOP) * PULL_DAMP))
+  pull.value = pullOffset(dy)
   // Прокрутку отбираем только когда жест уже начался: до люфта страница
   // обязана листаться как обычно.
   if (e.cancelable) e.preventDefault()
 }
 
 function onTouchEnd() {
-  const fire = pullActive && pullReady.value
+  const fire = pullActive && shouldFirePull({
+    offset: pull.value,
+    heldMs: Date.now() - pullStartAt,
+    drift: pullDrift,
+  })
   pullStart = null
   pullActive = false
   pull.value = 0
-  if (fire) hardReload()
+  if (fire) refresh()
+}
+
+// Высота панели сверху: пока тянут — за пальцем, пока идёт обновление —
+// своя, чтобы содержимое не прыгало в момент отпускания.
+const PANEL_H = 92
+const panel = computed(() => (refreshBusy.value ? PANEL_H : pull.value))
+// Движение за пальцем идёт без перехода, всё остальное — пружиной.
+const panelLive = computed(() => !refreshBusy.value && pull.value > 0)
+
+const REFRESH_TEXT = {
+  working: 'Трек обновляется…',
+  fresh: 'Трек уже последней версии',
+  offline: 'Нет сети — Трек остался прежним',
 }
 
 watch(() => [props.active, props.subView], async () => {
@@ -149,42 +174,59 @@ watch(() => [props.active, props.subView], async () => {
            pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
            md:border-x md:border-[var(--line)]"
   >
-    <!-- Индикатор жеста приезжает сверху вместе с пальцем. Строки появляются
-         по мере того, как под них освобождается место: на первых пикселях
-         подпись обрезалась бы по половине строки. -->
+    <!-- Панель сверху. Пока тянут — индикатор жеста, дальше она же держит
+         состояние обновления: без неё человек отпускает палец и смотрит
+         в замерший экран, не зная, случилось что-нибудь или нет.
+         Строки появляются по мере того, как под них освобождается место:
+         на первых пикселях подпись обрезалась бы по половине строки. -->
     <div
       class="pointer-events-none absolute inset-x-0 top-0 z-30 flex flex-col items-center justify-end overflow-hidden px-6 pb-1"
-      :style="{ height: `${pull}px`, transition: pull > 0 ? 'none' : 'height 0.25s ease-out' }"
-      aria-hidden="true"
+      :style="{ height: `${panel}px`, transition: panelLive ? 'none' : 'height 0.28s cubic-bezier(0.32, 0.72, 0, 1)' }"
+      role="status"
+      aria-live="polite"
     >
+      <!-- Пока приложение занято собой, на панели стоит знак марки: связка
+           имени целиком, шагает только шеврон внутри неё. Порознь шеврон
+           иконкой не работает нигде — здесь он и не порознь. -->
+      <template v-if="refreshBusy">
+        <BrandLockup size="1.125rem" :running="refreshStatus === 'working'" />
+        <span class="mt-2 block text-center text-[0.8125rem] leading-tight text-[var(--text-muted)]">
+          {{ REFRESH_TEXT[refreshStatus] }}
+        </span>
+      </template>
+
       <!-- Стрелка вниз, пока тянут, и вверх на пороге срабатывания: знак
-           говорит, куда идёт жест, а не какой марки приложение. Шеврон
-           Ранскеила иконкой не работает нигде. -->
-      <ArrowDown
-        class="h-[22px] w-[22px] shrink-0 transition-all duration-150"
-        :class="pullReady
-          ? 'rotate-180 text-[var(--action)] opacity-100'
-          : 'text-[var(--text-muted)] opacity-60'"
-        :stroke-width="2.5"
-      />
-      <span
-        v-if="pull >= 44"
-        class="font-label mt-1 block whitespace-nowrap text-[0.75rem] uppercase tracking-[0.12em]"
-        :style="{ color: pullReady ? 'var(--action)' : 'var(--text-muted)' }"
-      >Обновить Трек</span>
-      <!-- Строка снимает единственное беспокойство жеста — «а не потеряю ли
-           я введённое». Поэтому подтверждения у жеста нет: вопрос закрыт
-           до того, как он задан. -->
-      <span
-        v-if="pull >= 74"
-        class="mt-0.5 block text-center text-[0.6875rem] leading-tight text-[var(--text-muted)]"
-      >Данные сохранятся. Ранскеил станет полезнее.</span>
+           говорит, куда идёт жест, а не какой марки приложение. -->
+      <template v-else>
+        <ArrowDown
+          class="h-[22px] w-[22px] shrink-0 transition-all duration-150"
+          :class="pullReady
+            ? 'rotate-180 text-[var(--action)] opacity-100'
+            : 'text-[var(--text-muted)] opacity-60'"
+          :stroke-width="2.5"
+          aria-hidden="true"
+        />
+        <span
+          v-if="pull >= 44"
+          class="font-label mt-1 block whitespace-nowrap text-[0.75rem] uppercase tracking-[0.12em]"
+          :style="{ color: pullReady ? 'var(--action)' : 'var(--text-muted)' }"
+        >Обновить Трек</span>
+        <!-- Строка снимает единственное беспокойство жеста — «а не потеряю ли
+             я введённое». Поэтому подтверждения у жеста нет: вопрос закрыт
+             до того, как он задан. -->
+        <span
+          v-if="pull >= 74"
+          class="mt-0.5 block text-center text-[0.6875rem] leading-tight text-[var(--text-muted)]"
+        >Данные сохранятся. Ранскеил станет полезнее.</span>
+      </template>
     </div>
 
     <div
       ref="scrollEl"
       class="relative flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain pb-28"
-      :style="pull > 0 ? { transform: `translateY(${pull}px)`, transition: 'none' } : { transition: 'transform 0.25s ease-out' }"
+      :style="panelLive
+        ? { transform: `translateY(${panel}px)`, transition: 'none' }
+        : { transform: `translateY(${panel}px)`, transition: 'transform 0.28s cubic-bezier(0.32, 0.72, 0, 1)' }"
       @scroll="onScroll"
       @touchstart.passive="onTouchStart"
       @touchmove="onTouchMove"

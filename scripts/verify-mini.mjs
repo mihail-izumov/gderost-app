@@ -10,6 +10,7 @@ import { HEAD, LEVEL_ROWS } from '../src/i18n/growth247.js'
 import { TELEMETRY, COUNTERS, scoreNow } from '../src/data/runscaleCounters.js'
 import { computeTodaySignal } from '../src/composables/signalModel.js'
 import { honestLoop } from '../src/composables/honestLoop.js'
+import { PULL, pullOffset, canStartPull, shouldFirePull } from '../src/composables/pullGesture.js'
 
 let fails = 0
 const ok = (cond, name) => {
@@ -643,6 +644,41 @@ for (const [ym, dim] of [['2026-02', 28], ['2026-08', 31], ['2026-11', 30], ['20
   ok([1, 2, 3, 4].every((n) => st[n].ring && st[n].ring.highlight === n - 1
     && st[n].checks.length === 1 && st[n].checks[0].on === l3.segs[n - 1].on),
     'сторис: слайд шага указывает на свою дугу и несёт свой ответ')
+}
+
+// 19. Жест «потяни-обнови». Правила вынесены чистыми функциями именно ради
+//     этого блока: обе аварии жеста жили в формуле среди обработчиков касания
+//     и глазами в коде не читались.
+{
+  // Н-24: панель обязана ехать МЕДЛЕННЕЕ пальца на всём диапазоне.
+  ok([1, 5, 10, 12, 13, 40, 64, 138, 400].every((dy) => pullOffset(dy) < dy),
+    'жест: панель едет медленнее пальца на всём диапазоне')
+  ok(pullOffset(PULL.SLOP) === 0 && pullOffset(PULL.SLOP + 1) >= 0,
+    'жест: до люфта панель стоит — прокрутка остаётся прокруткой')
+  ok(pullOffset(10_000) === PULL.MAX, 'жест: панель дальше своего предела не едет')
+  // Порог берётся осознанным протягиванием, а не рывком при чтении.
+  const pathToTrigger = PULL.SLOP + PULL.TRIGGER / PULL.DAMP
+  ok(pathToTrigger >= 150, `жест: до порога палец проходит ${pathToTrigger} px`)
+
+  // Н-26: инерция. Прокрутка обязана стоять до касания, иначе последний рывок
+  // при возврате к верху страницы читается жестом.
+  const base = { scrollTop: 0, sinceScrollMs: 5000, busy: false }
+  ok(canStartPull(base), 'жест: на стоящей странице у верха жест возможен')
+  ok(!canStartPull({ ...base, sinceScrollMs: 120 }),
+    'жест: сразу после прокрутки не заводится — это инерция, а не жест')
+  ok(!canStartPull({ ...base, scrollTop: 24 }), 'жест: не от верха не заводится')
+  ok(!canStartPull({ ...base, busy: true }), 'жест: во время обновления не заводится')
+
+  // Отпускание: путь, длительность и вертикальность — все три обязательны.
+  const fired = { offset: PULL.TRIGGER, heldMs: PULL.HOLD_MS, drift: 0 }
+  ok(shouldFirePull(fired), 'жест: протянули до порога и держали — засчитано')
+  ok(!shouldFirePull({ ...fired, offset: PULL.TRIGGER - 1 }), 'жест: не дотянули — не засчитано')
+  ok(!shouldFirePull({ ...fired, heldMs: PULL.HOLD_MS - 1 }),
+    'жест: рывок короче порога длительности — не засчитано')
+  ok(!shouldFirePull({ ...fired, drift: PULL.DRIFT + 1 }),
+    'жест: увод вбок отменяет жест')
+  ok(!shouldFirePull({ ...fired, drift: -(PULL.DRIFT + 1) }),
+    'жест: увод вбок считается в обе стороны')
 }
 
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')

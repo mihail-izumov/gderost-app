@@ -88,7 +88,7 @@ const TABS = computed(() => [
     // Заголовком стоит идущее время: имя «Сегодня» уже подписано в таб-баре,
     // а дата отвечает на вопрос, ради которого экран открывают.
     clockTitle: true,
-    leadingAction: 'hardReload',
+    leadingAction: 'update',
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
   },
@@ -105,7 +105,7 @@ const TABS = computed(() => [
     // экран начинается с состояния.
     title: 'Прогресс',
     bigTitle: false,
-    leadingAction: 'hardReload',
+    leadingAction: 'update',
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
   },
@@ -117,7 +117,7 @@ const TABS = computed(() => [
     label: 'Сигналы',
     iconKind: 'zap',
     title: 'Сигналы',
-    leadingAction: 'hardReload',
+    leadingAction: 'update',
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
   },
