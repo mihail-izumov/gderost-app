@@ -174,6 +174,24 @@ const fill = (n) => (n < i.value ? 1 : n > i.value ? 0 : progress.value)
           {{ slide.text }}
         </p>
         <p v-if="slide.value" class="mt-4 text-[2rem] font-bold tabular-nums">{{ slide.value }}</p>
+        <!-- Живой чек-лист: слайд показывает проверки с ответами человека,
+             а не рассказывает о них. Отметки приходят готовыми в slide.checks —
+             сторис ничего не считает сама. -->
+        <ul v-if="slide.checks" class="mt-5 flex max-w-[24rem] flex-col gap-2.5">
+          <li v-for="c in slide.checks" :key="c.label" class="flex items-center gap-3">
+            <span
+              class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[0.8125rem] font-bold"
+              :style="c.on
+                ? { background: 'var(--positive)', color: 'var(--ink-on-color)' }
+                : { background: 'transparent', border: '1.5px solid var(--line-on-color)', color: 'var(--line-on-color)' }"
+              aria-hidden="true"
+            >{{ c.on ? '✓' : '' }}</span>
+            <span
+              class="text-[0.9375rem] leading-snug"
+              :style="{ color: c.on ? 'var(--ink-on-color)' : 'var(--ink-on-color-muted)' }"
+            >{{ c.label }}</span>
+          </li>
+        </ul>
       </div>
 
       <div class="px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">

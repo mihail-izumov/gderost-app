@@ -4,7 +4,7 @@ import { Download, ArrowRight, Check } from 'lucide-vue-next'
 import ConnectProgress from '../components/energy/ConnectProgress.vue'
 import HonestBadge from '../components/HonestBadge.vue'
 import StoryOnboarding from '../components/StoryOnboarding.vue'
-import { HONEST_STORY } from '../i18n/stories.js'
+import { honestStory } from '../i18n/stories.js'
 import SiteFooter from '../components/SiteFooter.vue'
 import { computeMini } from '../composables/miniModel.js'
 import { honestLoop } from '../composables/honestLoop.js'
@@ -195,7 +195,7 @@ const honestOpen = ref(false)
       <SiteFooter />
       <StoryOnboarding
         :open="honestOpen"
-        :slides="HONEST_STORY"
+        :slides="honestStory(loop)"
         @close="honestOpen = false"
         @done="honestOpen = false"
       />

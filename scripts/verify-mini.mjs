@@ -5,7 +5,7 @@ import { calibrateFromDays, observationsByDow, shapeStatus, shapeName } from '..
 import { computeEnergy, computeGaps, moduleGain, LEVELS, PART, PARTS, MODULE_LIFTS } from '../src/composables/energyModel.js'
 import { encodeState, decodeState, readShared, shareUrl, hasSharePayload } from '../src/composables/shareLink.js'
 import { MODULES, SESSIONS, BY_LABEL, isLocked, ORIGINS, SIGNAL } from '../src/i18n/energy.js'
-import { INTRO_STORY } from '../src/i18n/stories.js'
+import { INTRO_STORY, honestStory } from '../src/i18n/stories.js'
 import { HEAD, LEVEL_ROWS } from '../src/i18n/growth247.js'
 import { TELEMETRY, COUNTERS, scoreNow } from '../src/data/runscaleCounters.js'
 import { computeTodaySignal } from '../src/composables/signalModel.js'
@@ -609,12 +609,12 @@ for (const [ym, dim] of [['2026-02', 28], ['2026-08', 31], ['2026-11', 30], ['20
   for (let d = 1; d <= 14; d++) days2.push({ date: `2026-08-${String(d).padStart(2, '0')}`, rev: 100_000, planRef: 100_000 })
   const s2 = { ...base, carry: null, days: days2 }
   const l2 = honestLoop(s2, computeMini(s2, NOW))
-  ok(l2.lit === 4 && /замкнута/.test(l2.note), 'петля: все прошедшие дни с фактом — замкнута')
+  ok(l2.lit === 4 && /замкнулось/.test(l2.note), 'петля: все прошедшие дни с фактом — кольцо замкнулось')
   // Пропущенный день размыкает только замер.
   const s3 = { ...base, carry: null, days: days2.filter((x) => x.date !== '2026-08-10') }
   const l3 = honestLoop(s3, computeMini(s3, NOW))
-  ok(l3.segs[2].on && !l3.segs[3].on && /Замер/.test(l3.note),
-    'петля: день без факта гасит замер и называет его в подписи')
+  ok(l3.segs[2].on && !l3.segs[3].on && /без выручки/.test(l3.note),
+    'петля: день без факта гасит четвёртую дугу и зовёт внести дни')
   // Дни, внесённые без плана на день, действия не зажигают.
   const s4 = { ...base, carry: null, days: days2.map(({ planRef, ...x }) => x) }
   const l4 = honestLoop(s4, computeMini(s4, NOW))
@@ -622,6 +622,20 @@ for (const [ym, dim] of [['2026-02', 28], ['2026-08', 31], ['2026-11', 30], ['20
   // Цепность: на всех фикстурах сегмент не горит раньше предыдущего.
   ok([l0, l1, l2, l3, l4].every((l) => l.segs.every((s, i, a) => !s.on || i === 0 || a[i - 1].on)),
     'петля цепная: сегмент не горит без предыдущего')
+  // Голос витрины: «замер» существительным на экран не выходит (словарь
+  // docs/контент/ГОЛОС.md). Проверяются все строки, которые печатает петля.
+  const screenWords = [l0, l1, l2, l3, l4]
+    .flatMap((l) => [l.note, ...l.segs.flatMap((s) => [s.label, s.check])])
+  ok(screenWords.every((w) => !/замер/i.test(w)),
+    'голос: строки петли не печатают «замер»')
+  // Сторис строится от живой петли: шесть слайдов, первый несёт чек-лист
+  // из четырёх проверок с теми же отметками, что дуги.
+  const st = honestStory(l3)
+  ok(st.length === 6 && Array.isArray(st[0].checks) && st[0].checks.length === 4
+    && st[0].checks.every((c, i) => c.on === l3.segs[i].on && c.label === l3.segs[i].check),
+    'сторис: чек-лист первого слайда совпадает с дугами петли')
+  ok(st.every((s) => !/замер/i.test(`${s.title} ${s.text}`)),
+    'голос: сторис не печатает «замер»')
 }
 
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')

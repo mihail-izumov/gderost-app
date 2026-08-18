@@ -19,7 +19,7 @@ import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
 import { sigClass, todayISO } from '../composables/miniModel.js'
 import { honestLoop } from '../composables/honestLoop.js'
 import { mlnRub, mlnSigned, pct1, pctDelta, monthCap } from '../i18n/home.js'
-import { widgetStory, HONEST_STORY } from '../i18n/stories.js'
+import { widgetStory, honestStory } from '../i18n/stories.js'
 
 // Главная — дека виджетов. Устройство взято у рабочего Ранскеила:
 // дека месяца в рублях и днях, два виджета в отношениях, вход внутрь по тапу.
@@ -150,7 +150,7 @@ const widgetSlides = computed(() => widgetStory({
   pace: m.value ? mlnRub(m.value.landing) : '',
   paceLine: paceInfo.value,
 }))
-const storySlides = computed(() => (storyKind.value === 'honest' ? HONEST_STORY : widgetSlides.value))
+const storySlides = computed(() => (storyKind.value === 'honest' ? honestStory(loop.value) : widgetSlides.value))
 
 function openWidgetStory() {
   storyKind.value = 'widgets'
