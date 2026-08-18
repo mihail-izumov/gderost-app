@@ -126,12 +126,12 @@ function startRefresh() {
       v-if="leadingAction === 'update'"
       type="button"
       data-test="nav-update"
-      class="font-label flex h-[26px] shrink-0 items-center justify-center rounded-full border px-3 indent-[0.12em] text-[0.75rem] uppercase tracking-[0.12em]
+      class="font-label flex h-[26px] shrink-0 items-center justify-center rounded-full border px-3 text-[0.75rem] uppercase
              text-[var(--text-secondary)] active:bg-[var(--surface-2)]"
-      :style="{ borderColor: 'var(--line)' }"
+      :style="{ borderColor: 'var(--line)', '--caps-track': '0.12em' }"
       aria-label="Обновить Трек до последней версии"
       @click="updateOpen = true"
-    >Обновить Трек</button>
+    ><span class="gr-caps">Обновить Трек</span></button>
   </div>
 
   <!-- Крупный заголовок в потоке. Подпись — absolute НАД ним, чтобы h1

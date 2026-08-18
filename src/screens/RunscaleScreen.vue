@@ -7,6 +7,7 @@ import EnergyBreakdown from '../components/energy/EnergyBreakdown.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
 import AddReportForm from '../components/AddReportForm.vue'
 import WeekRows from '../components/growth/WeekRows.vue'
+import CurrentWeekCard from '../components/growth/CurrentWeekCard.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { computeEnergy } from '../composables/energyModel.js'
@@ -23,8 +24,10 @@ import { monthOf } from '../i18n/format.js'
 // каждый день, не видит своих пропусков и не понимает, почему следующая
 // неделя закрыта.
 //
-// Сверху вниз: повод (когда он есть) · статус с полосой пути · эта неделя ·
-// недели месяца · что доступно сейчас. Числа системы («Растём вместе») уехали
+// Сверху вниз: идущая неделя · статус с полосой пути · «Важно» (когда есть
+// повод) · недели месяца · что доступно сейчас. Порядок правился 18.08:
+// повод стоял первым и перебивал собой главное — сколько дней у человека
+// есть и что внести сегодня. Числа системы («Растём вместе») уехали
 // на «Ультру»: они отвечают на вопрос «кто вы такие», а он возникает там,
 // где идёт разговор о работе команды. Здесь человек смотрит свои дни, а не
 // наши, и страница целиком принадлежит ему.
@@ -46,20 +49,24 @@ const moduleOpen = ref('')
 // его на другой экран ради одной цифры значит терять место, куда он смотрел.
 const dayOpen = ref(false)
 const dayPick = ref('')
-function openDay(iso) { dayPick.value = iso || ''; dayOpen.value = true }
+// ⚠ Форма ввода не открывается на не наступивший день. Выручки за завтра
+// не существует, и открытое поле под неё — предложение её выдумать. Раньше
+// защита стояла только на том, что будущая неделя не даёт ссылки; любой
+// другой вход (кнопка повода, главный блок) её обходил.
+function openDay(iso) {
+  if (iso && iso > today.value) return
+  dayPick.value = iso || ''
+  dayOpen.value = true
+}
 const energy = computed(() => computeEnergy(state, m.value))
 const rated = computed(() => state.razborRating !== null && state.razborRating !== undefined)
 const today = computed(() => todayISO())
 
-// Текущая неделя месяца приложения. На закрытом месяце текущей недели нет —
-// тогда блок молчит, а не показывает «0 из 7» про август в июле.
 // Заголовок списка недель называет месяц, о котором он говорит: «недели
 // месяца» на закрытом августе читались бы как недели текущего календаря.
+// Идущую неделю держит `CurrentWeekCard` — он же решает, что показывать,
+// когда текущей недели в месяце нет.
 const weeksTitle = computed(() => (m.value ? `Недели ${monthOf(m.value.month)}` : 'Недели месяца'))
-
-const thisWeek = computed(() => (m.value ? m.value.weeks.find((w) => w.isCurrent) || null : null))
-const weekDone = computed(() => (thisWeek.value ? thisWeek.value.days.filter((d) => d.closed).length : 0))
-const weekTotal = computed(() => (thisWeek.value ? thisWeek.value.days.length : 0))
 
 // Повод-плашка. Есть пропуски в прошедших неделях — говорим о них и даём
 // кнопку; повода нет — плашки нет. Пустая плашка «всё хорошо» приучает
@@ -88,26 +95,13 @@ const reason = computed(() => {
 
 <template>
   <div v-if="m" class="w-full px-4 pb-4">
-    <!-- 1 · Повод -->
-    <div
-      v-if="reason"
-      class="mb-3 rounded-2xl border p-3.5"
-      :style="{ borderColor: 'var(--warning)', background: 'var(--surface)' }"
-    >
-      <p class="text-[0.875rem] leading-snug text-[var(--text)]">{{ reason.text }}</p>
-      <!-- Кнопка жёлтая, как и плашка вокруг неё: жёлтый в системе означает
-           меру и незавершённость, а тут именно она — данных не хватает.
-           Синий отсюда убран: он рассказывал бы про обычное действие. -->
-      <button
-        type="button"
-        class="mt-2.5 min-h-[44px] w-full rounded-xl text-[0.9375rem] font-bold"
-        :style="{ background: 'var(--warning)', color: 'var(--accent-ink)' }"
-        @click="openDay(reason.iso)"
-      >Внести</button>
-    </div>
+    <!-- 1 · Идущая неделя — главный блок экрана. Стоит первым: человек
+         приходит сюда с вопросом «сколько дней у меня есть и что внести
+         сегодня», и ответ обязан быть раньше всего остального. -->
+    <CurrentWeekCard :m="m" :today="today" @enter="openDay" />
 
     <!-- 2 · Статус и полоса пути -->
-    <h2 class="mb-2 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+    <h2 class="mb-2 mt-5 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
       {{ HEAD.level }}
     </h2>
     <ConnectProgress
@@ -118,23 +112,29 @@ const reason = computed(() => {
       @stage="moduleOpen = $event"
     />
 
-    <!-- 4 · Эта неделя -->
-    <section v-if="thisWeek" class="mt-4">
-      <div class="flex items-baseline justify-between gap-3">
-        <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-          {{ HEAD.week }}
-        </h2>
-        <span class="text-[0.8125rem] font-semibold tabular-nums text-[var(--text)]">
-          {{ weekDone }} из {{ weekTotal }}
-        </span>
+    <!-- 3 · Важно. Повод стоит под статусом и подписан как раздел: сверху
+         он перебивал главный блок и читался ошибкой приложения, а не
+         состоянием данных. Заголовка без повода не бывает — пустой раздел
+         «Важно» приучает не читать это место вовсе. -->
+    <section v-if="reason" class="mt-5">
+      <h2 class="mb-2 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+        {{ HEAD.important }}
+      </h2>
+      <div
+        class="rounded-2xl border p-3.5"
+        :style="{ borderColor: 'var(--warning)', background: 'var(--surface)' }"
+      >
+        <p class="text-[0.875rem] leading-snug text-[var(--text)]">{{ reason.text }}</p>
+        <!-- Кнопка жёлтая, как и плашка вокруг неё: жёлтый в системе означает
+             меру и незавершённость, а тут именно она — данных не хватает.
+             Синий отсюда убран: он рассказывал бы про обычное действие. -->
+        <button
+          type="button"
+          class="mt-2.5 min-h-[44px] w-full rounded-xl text-[0.9375rem] font-bold"
+          :style="{ background: 'var(--warning)', color: 'var(--accent-ink)' }"
+          @click="openDay(reason.iso)"
+        >Внести</button>
       </div>
-      <span class="mt-2 block h-[8px] w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
-        <span
-          class="block h-full rounded-full"
-          :style="{ width: `${weekTotal ? Math.round((weekDone / weekTotal) * 100) : 0}%`, background: 'var(--text)' }"
-        ></span>
-      </span>
-      <p class="mt-1.5 text-[0.75rem] text-[var(--text-muted)]">Счёт начнётся заново в понедельник.</p>
     </section>
 
     <!-- 4 · Недели месяца -->

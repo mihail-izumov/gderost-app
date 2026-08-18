@@ -83,10 +83,14 @@ onBeforeUnmount(() => {
     >
       <span
         data-test="business-chip-pill"
-        class="font-brand flex h-[26px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-[var(--graphite)] pl-3.5 pr-2 text-[0.8125rem] uppercase tracking-[0.18em] text-[var(--ink-on-color)]"
+        class="font-brand flex h-[26px] min-w-0 max-w-full items-center gap-1.5 rounded-full bg-[var(--graphite)] px-3 text-[0.8125rem] uppercase text-[var(--ink-on-color)]"
         :class="fullWidth ? '' : 'max-w-[13rem]'"
+        style="--caps-track: 0.18em"
       >
-        <span class="min-w-0 truncate text-left">{{ label }}</span>
+        <!-- Разгонка и оптическая посадка прописных — общим правилом `.gr-caps`
+             в `main.css`: то же самое чинится в кнопке «Обновить Трек» рядом,
+             и два разных решения одной задачи разошлись бы молча. -->
+        <span class="gr-caps min-w-0 truncate text-left">{{ label }}</span>
         <ChevronsUpDown class="h-3.5 w-3.5 shrink-0" :stroke-width="2.25" aria-hidden="true" />
       </span>
     </button>

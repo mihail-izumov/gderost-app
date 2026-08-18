@@ -8,12 +8,26 @@ import { plural, weekRangeLabel } from '../../i18n/format.js'
 //
 // Разница ролей названа вслух: в «Контроле Дня» недели — рабочий инструмент
 // ввода с таблицей дней, здесь — сводка состояния со входом в тот же ввод.
-// Человек приходит сюда с вопросом «почему следующая закрыта», и ответ обязан
-// стоять раньше таблиц.
 //
-// Статус называется словом, а не угадывается по заливке: закрыта · идёт ·
-// есть пропуски · заперта · впереди. Заперта — единственная, у которой есть
-// причина, и причина эта всегда данные.
+// ⚠ Здесь смешивались две разные оси, и от этого цвет ничего не означал.
+// Первая ось — ВРЕМЯ: неделя прошла, идёт или ещё впереди. Вторая — ДАННЫЕ:
+// дни внесены или нет. Раньше обе красили одно и то же место, и «закрыта»
+// стояло рядом с «идёт», хотя это ответы на разные вопросы. Теперь ось у
+// каждого средства своя и одна:
+//
+//   ЦВЕТ говорит про время. Прошлое — чернильное, идущая неделя — цвет
+//   действия, будущее — серое. Три состояния, между собой не пересекаются.
+//
+//   ПОЛОСА говорит про данные. Всегда одно и то же: какая доля дней недели
+//   внесена. Пустая полоса означает пустую неделю и ничего больше.
+//
+//   ЖЁЛТЫЙ говорит про долг, и только про него. Он появляется отдельной
+//   меткой «нет N дней» и не красит собой строку целиком: пропуск — это
+//   часть состояния недели, а не сама неделя.
+//
+// Номер недели важнее её дат: человек говорит «на этой неделе» и «в прошлую»,
+// а не «шестнадцатого—двадцать второго». Поэтому крупно стоит «Неделя 3»,
+// а диапазон идёт следом подписью.
 
 const props = defineProps({
   m: { type: Object, required: true },
@@ -32,47 +46,52 @@ const firstLocked = computed(() => {
   return w ? w.idx : 0
 })
 
+// Время недели — одна из трёх позиций, других не бывает.
+function timeOf(w, total) {
+  if (w.isCurrent) return 'now'
+  return w.days[total - 1].iso < props.today ? 'past' : 'ahead'
+}
+
 const rows = computed(() => props.m.weeks.map((w) => {
-  const closed = w.days.filter((d) => d.closed).length
   const total = w.days.length
-  const past = w.days[total - 1].iso < props.today
-  const future = w.days[0].iso > props.today
-  const status = !w.open ? 'locked'
-    : w.missing > 0 ? 'gaps'
-      : w.isCurrent ? 'now'
-        : past ? 'done' : 'ahead'
-  // Куда ведёт тап: в тот день, которого не хватает. У запертой недели это дыра
-  // в неделе-причине — чинится там, а не здесь.
-  const goTo = status === 'gaps' ? w.missingISO[0]
-    : status === 'locked' && w.blockedBy ? w.blockedBy.iso[0]
-      : status === 'now' || status === 'done' ? w.days.find((d) => !d.closed && d.iso <= props.today)?.iso || ''
-        : ''
-  // Цвет статуса — тот же светофор, что у дней: зелёный закрыт, жёлтый
-  // требует внимания, серый ничего не утверждает. Красного у недели нет:
-  // отсутствие данных — не провал плана.
-  // Цвет говорит про данные, а не про выполнение плана. Зелёный отсюда убран:
-  // «закрыта» означает, что дни внесены, и зелёный читался как «план сделан» —
-  // про план неделя здесь не утверждает ничего. Осталась нейтраль: тёмная
-  // у закрытой, синяя у идущей (активное состояние), жёлтая там, где не хватает
-  // данных, серая у того, что ещё не наступило.
-  const SKIN = {
-    done: { bg: 'var(--text)', ink: 'var(--ink-on-color)', bar: 'var(--text)' },
-    now: { bg: 'var(--action)', ink: 'var(--action-ink)', bar: 'var(--action)' },
-    gaps: { bg: 'var(--warning)', ink: 'var(--accent-ink)', bar: 'var(--warning)' },
-    locked: { bg: 'var(--surface-2)', ink: 'var(--text-muted)', bar: 'var(--line)' },
-    ahead: { bg: 'var(--surface-2)', ink: 'var(--text-muted)', bar: 'var(--line)' },
-  }
+  const closed = w.days.filter((d) => d.closed).length
+  const time = timeOf(w, total)
+  const locked = !w.open
+  // Долг — только про прошедшие дни. Будущий день не внесён не потому,
+  // что о нём забыли, и меткой долга он не помечается никогда.
+  const missing = w.missing
+
+  // Куда ведёт тап: в тот день, которого не хватает. У запертой недели это
+  // дыра в неделе-причине — чинится там, а не здесь. В будущее тап не ведёт:
+  // выручки за не наступивший день не бывает, и форма ввода там оказалась бы
+  // предложением её выдумать.
+  const goTo = time === 'ahead' && !locked ? ''
+    : locked && w.blockedBy ? w.blockedBy.iso[0]
+      : missing > 0 ? w.missingISO[0]
+        : time === 'now' ? w.days.find((d) => !d.closed && d.iso <= props.today)?.iso || ''
+          : ''
+
+  const INK = {
+    past: { bar: 'var(--text)', chip: 'var(--text)', chipInk: 'var(--ink-on-color)' },
+    now: { bar: 'var(--action)', chip: 'var(--action)', chipInk: 'var(--action-ink)' },
+    ahead: { bar: 'var(--line)', chip: 'var(--surface-2)', chipInk: 'var(--text-muted)' },
+  }[time]
+
   return {
     idx: w.idx,
+    name: `Неделя ${w.idx}`,
     range: weekRangeLabel(w.days[0].iso, w.days[total - 1].iso),
     closed,
     total,
     width: total ? Math.round((closed / total) * 100) : 0,
-    status,
-    label: { locked: 'ждём данные', gaps: 'есть пропуски', now: 'идёт', done: 'закрыта', ahead: 'готовимся' }[status],
-    skin: SKIN[status],
-    missing: w.missing,
-    blockedBy: w.blockedBy,
+    time,
+    now: time === 'now',
+    locked,
+    // Метка называет время, а не данные: про данные говорят полоса и счёт.
+    label: { past: 'прошла', now: 'идёт', ahead: 'впереди' }[time],
+    ink: INK,
+    missing,
+    blockedBy: locked ? w.blockedBy : null,
     goTo,
   }
 }))
@@ -89,36 +108,64 @@ const rows = computed(() => props.m.weeks.map((w) => {
         <component
           :is="r.goTo ? 'button' : 'div'"
           :type="r.goTo ? 'button' : null"
-          class="flex w-full min-h-[60px] items-center gap-3 px-4 py-3 text-left"
+          class="relative flex w-full min-h-[64px] items-center gap-3 py-3 pl-4 pr-4 text-left"
           @click="r.goTo ? emit('enter', r.goTo) : null"
         >
+          <!-- Идущая неделя отмечена полосой у самого края строки. Заливка
+               всей строки спорила бы с полосой данных внутри неё, а метка
+               «идёт» находится глазом только после чтения. -->
+          <span
+            v-if="r.now"
+            class="absolute inset-y-2 left-0 w-[3px] rounded-r-full"
+            :style="{ background: 'var(--action)' }"
+            aria-hidden="true"
+          ></span>
+
           <span class="min-w-0 flex-1">
             <span class="flex items-center gap-2">
-              <span class="text-[0.9375rem] font-semibold text-[var(--text)]">{{ r.range }}</span>
               <span
-                class="inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide"
-                :style="{ background: r.skin.bg, color: r.skin.ink }"
+                class="text-[0.9375rem] text-[var(--text)]"
+                :class="r.now ? 'font-bold' : 'font-semibold'"
+              >{{ r.name }}</span>
+              <span class="text-[0.8125rem] text-[var(--text-muted)]">{{ r.range }}</span>
+              <span
+                class="ml-auto inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide"
+                :style="{ background: r.ink.chip, color: r.ink.chipInk }"
               >{{ r.label }}</span>
             </span>
+
             <span class="mt-1.5 block h-[6px] w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
               <span
                 class="block h-full rounded-full"
-                :style="{ width: `${r.width}%`, background: r.skin.bar }"
+                :style="{ width: `${r.width}%`, background: r.ink.bar }"
               ></span>
             </span>
-            <span class="mt-1 block text-[0.75rem] text-[var(--text-muted)]">
-              {{ r.closed }} из {{ r.total }} {{ plural(r.total, 'дня', 'дней', 'дней') }}
-              <template v-if="r.status === 'gaps'">
-                · не хватает {{ r.missing }}
-              </template>
-              <template v-else-if="r.status === 'locked' && r.blockedBy && r.idx === firstLocked">
 
-                · держит неделя {{ r.blockedBy.idx }}: нет {{ r.blockedBy.days.join(', ') }}
-              </template>
+            <!-- Счёт слэшем, метка долга — отдельной плашкой. Точка-разделитель
+                 склеивала два разных сообщения в одну строку, и человек читал
+                 «не хватает 5» как продолжение счёта дней. -->
+            <span class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span class="text-[0.75rem] tabular-nums text-[var(--text-muted)]">
+                {{ r.closed }} / {{ r.total }} {{ plural(r.total, 'день', 'дня', 'дней') }}
+              </span>
+              <span
+                v-if="r.missing > 0"
+                class="inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide"
+                :style="{ background: 'var(--warning)', color: 'var(--accent-ink)' }"
+              >нет {{ r.missing }} {{ plural(r.missing, 'дня', 'дней', 'дней') }}</span>
             </span>
+
+            <!-- Причина замка — своей строкой. В общей строке счёта она
+                 читалась хвостом числа, а это единственное место экрана,
+                 где неделя объясняет, чем она держится. -->
+            <span
+              v-if="r.locked && r.blockedBy && r.idx === firstLocked"
+              class="mt-1 block text-[0.75rem] leading-snug text-[var(--text-muted)]"
+            >Держит неделя {{ r.blockedBy.idx }} — нет {{ r.blockedBy.days.join(', ') }}</span>
           </span>
+
           <Lock
-            v-if="r.status === 'locked'"
+            v-if="r.locked"
             class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]"
             :stroke-width="2"
             aria-hidden="true"
@@ -132,9 +179,5 @@ const rows = computed(() => props.m.weeks.map((w) => {
         </component>
       </li>
     </ul>
-
-    <p class="mt-2 text-[0.75rem] leading-snug text-[var(--text-muted)]">
-      Неделя открывается внесёнными днями. Деньгами её не открыть — и не нужно.
-    </p>
   </section>
 </template>

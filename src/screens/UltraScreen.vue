@@ -43,15 +43,19 @@ const connectOpen = ref(false)
 </script>
 
 <template>
-  <div class="px-4 pb-2">
+  <div class="px-4 pb-2 pt-3">
     <!-- Обещание и абзац под ним стоят по центру, под заголовком: это одна
          речь на три строки, и левый край разложил бы её на три отдельных
          сообщения. Ниже, с плашки, выключка возвращается к левой — там
-         начинается интерфейс, а не речь. -->
+         начинается интерфейс, а не речь.
+
+         Воздуха здесь больше, чем на рабочих разделах, и это не украшение:
+         страница не про работу с цифрами, а про обещание, и обещание, зажатое
+         между заголовком и синей плашкой, читается пунктом списка. -->
     <p class="text-center text-[1.375rem] font-bold leading-tight tracking-tight text-[var(--text)]">
-      {{ ULTRA.promise }}
+      {{ ULTRA.promiseLine1 }}<br>{{ ULTRA.promiseLine2 }}
     </p>
-    <p class="mt-2.5 text-center text-[0.9375rem] leading-relaxed text-[var(--text-secondary)]">
+    <p class="mx-auto mt-4 max-w-[22rem] text-center text-[0.9375rem] leading-relaxed text-[var(--text-secondary)]">
       {{ ULTRA.body }}
     </p>
 
@@ -59,7 +63,7 @@ const connectOpen = ref(false)
          именем режима: имя он прочитает внутри, когда решит посмотреть. -->
     <button
       type="button"
-      class="mt-5 flex w-full items-center gap-3.5 rounded-[22px] p-4 text-left"
+      class="mt-7 flex w-full items-center gap-3.5 rounded-[22px] p-4 text-left"
       :style="{ background: 'var(--action)', color: 'var(--ink-on-color)' }"
       @click="passportOpen = true"
     >

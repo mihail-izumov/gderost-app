@@ -93,7 +93,7 @@ const razbor = MODULES.razbor
     <div
       v-else
       class="flex min-h-[11rem] flex-col items-center justify-center gap-1 rounded-2xl px-5 py-6 text-center"
-      :style="{ background: 'var(--surface-2)' }"
+      :style="{ background: 'var(--surface)' }"
     >
       <span class="block text-[1.0625rem] font-bold leading-tight text-[var(--text)]">{{ razbor.title }}</span>
       <span class="block text-[0.8125rem] leading-snug text-[var(--text-secondary)]">{{ razbor.subtitle }}</span>

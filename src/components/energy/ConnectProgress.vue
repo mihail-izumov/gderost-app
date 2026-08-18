@@ -1,6 +1,6 @@
 <script setup>
 import { Info } from 'lucide-vue-next'
-import { LEVELS } from '../../composables/energyModel.js'
+import { PATH_VISIBLE } from '../../composables/energyModel.js'
 
 // Плашка юнита со статусом подключения и прогрессом по пути к буткемпу.
 //
@@ -26,9 +26,15 @@ defineEmits(['info', 'stage'])
 
 // Этап пути — вход в паспорт своей ступени. «Трек» товаром не является:
 // её не покупают, и кнопкой она не становится.
-const STAGE_MODULE = { razbory: 'razbor', bootcamp: 'bootcamp', runscale: 'runscale' }
+const STAGE_MODULE = { razbory: 'razbor', bootcamp: 'bootcamp' }
 
-const levels = LEVELS
+// ⚠ Подписки на этой дороге нет. Она осталась в расчёте и в паспортах,
+// но здесь, на странице собственного состояния, ежемесячный режим стоял
+// концом пути у человека, который вчера подключил бизнес и внёс два дня.
+// Дорога, у которой видимый конец недостижим, перестаёт быть дорогой
+// и читается прайсом. Дальний шаг называется словами в разборе состава —
+// без цены, кнопки и обещания.
+const levels = PATH_VISIBLE
 </script>
 
 <template>

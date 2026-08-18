@@ -2,7 +2,7 @@
 // Запуск: node scripts/verify-mini.mjs (из app/).
 import { computeMini, nextMonthState, sigClass } from '../src/composables/miniModel.js'
 import { calibrateFromDays, observationsByDow, shapeStatus, shapeName } from '../src/data/weekShape.js'
-import { computeEnergy, computeGaps, moduleGain, LEVELS, PART, PARTS, MODULE_LIFTS } from '../src/composables/energyModel.js'
+import { computeEnergy, computeGaps, moduleGain, LEVELS, PATH_VISIBLE, PART, PARTS, MODULE_LIFTS } from '../src/composables/energyModel.js'
 import { encodeState, decodeState, readShared, shareUrl, hasSharePayload } from '../src/composables/shareLink.js'
 import { MODULES, SESSIONS, BY_LABEL, isLocked, ORIGINS, SIGNAL } from '../src/i18n/energy.js'
 import { INTRO_STORY, honestStory } from '../src/i18n/stories.js'
@@ -679,6 +679,22 @@ for (const [ym, dim] of [['2026-02', 28], ['2026-08', 31], ['2026-11', 30], ['20
     'жест: увод вбок отменяет жест')
   ok(!shouldFirePull({ ...fired, drift: -(PULL.DRIFT + 1) }),
     'жест: увод вбок считается в обе стороны')
+}
+
+// 20. Дорога на странице состояния. Подписка живёт в расчёте и в паспортах,
+//     но видимым концом пути у человека с двумя внесёнными днями не стоит:
+//     дорога с недостижимым концом читается прайсом, а не дорогой.
+{
+  ok(!PATH_VISIBLE.some((l) => l.id === 'runscale'),
+    'дорога состояния: подписки на ней нет')
+  ok(PATH_VISIBLE.length === LEVELS.length - 1,
+    'дорога состояния короче полной лестницы ровно на подписку')
+  ok(PATH_VISIBLE[0].id === 'mini' && PATH_VISIBLE[PATH_VISIBLE.length - 1].id === 'bootcamp',
+    'дорога состояния идёт от Трека до буткемпа')
+  // Расчёт при этом не тронут: сто процентов остаются полной системой,
+  // иначе паспорта показали бы мощность от другой шкалы.
+  ok(LEVELS.some((l) => l.id === 'runscale' && l.cap === 100),
+    'в расчёте подписка на месте и держит потолок шкалы')
 }
 
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')
