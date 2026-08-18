@@ -7,11 +7,16 @@
 // и знак обязан краситься её чернилами — белым на тёмной заливке, тёмным
 // на жёлтой. Толщина обводки, которую передаёт виджет, здесь ни на что
 // не влияет: знак набран заливками, штрихов в нём нет.
+//
+// Масштаб 1,15 от центра выбирает поля, оставшиеся в присланном файле:
+// круг занимал 848 единиц из 1080 и на плитке терял седьмую часть роста
+// впустую. Контур не тронут, увеличена рамка вокруг него.
 </script>
 
 <template>
   <svg viewBox="0 0 1080 1080" fill="currentColor" aria-hidden="true"
        style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+      <g transform="translate(540,540) scale(1.15) translate(-540,-540)">
       <g transform="matrix(1,0,0,1,-4005.28,0)">
           <g id="plans-icon" transform="matrix(0.18288,0,0,0.0257578,4005.28,0)">
               <rect x="0" y="0" width="5905.51" height="41929.1" style="fill:none;"/>
@@ -24,6 +29,7 @@
                   </g>
               </g>
           </g>
+      </g>
       </g>
   </svg>
 </template>

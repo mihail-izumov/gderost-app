@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { Check } from 'lucide-vue-next'
+import HonestDigitIcon from './icons/HonestDigitIcon.vue'
 
 // Шильд «Честная цифра» — статус чисел, показанный знаком.
 //
@@ -12,6 +12,13 @@ import { Check } from 'lucide-vue-next'
 //
 // Пилюля молчит о себе: устройство объясняет сторис, которая открывается
 // тапом. Подписи под шильдом нет — экран сообщает состояние.
+//
+// На крупной плашке шкалу держит сам знак: кольцо вокруг сердца разрезано
+// на три дуги, и горит столько, сколько ступеней набрано. Три полоски справа
+// после этого убраны — они повторяли ту же величину вторым голосом, и человек
+// читал два индикатора одного и того же. В узкой пилюле полоски остались:
+// знак там пришлось бы отдать пикселей двадцати, а на такой высоте дуги
+// сливаются в сплошное кольцо и шкала перестаёт быть шкалой.
 
 const props = defineProps({
   // Сколько делений заполнено. Три бывает только там, где прошёл чекап,
@@ -44,7 +51,6 @@ const NOTE = {
 const note = computed(() => NOTE[props.filled] || NOTE[2])
 
 const tone = computed(() => (props.filled >= 3 ? 'var(--positive)' : 'var(--warning)'))
-const toneInk = computed(() => (props.filled >= 3 ? 'var(--ink-on-color)' : 'var(--accent-ink)'))
 </script>
 
 <template>
@@ -55,24 +61,10 @@ const toneInk = computed(() => (props.filled >= 3 ? 'var(--ink-on-color)' : 'var
     :aria-label="`Честная цифра: ${filled} из 3`"
     @click="$emit('open')"
   >
-    <span
-      class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-      :style="{ background: tone, color: toneInk }"
-      aria-hidden="true"
-    >
-      <Check class="h-[18px] w-[18px]" :stroke-width="3" />
-    </span>
+    <HonestDigitIcon class="h-9 w-9 shrink-0" :filled="filled" :tone="tone" />
     <span class="min-w-0 flex-1">
       <span class="block text-[0.9375rem] font-bold leading-tight text-[var(--text)]">Честная цифра</span>
       <span class="mt-0.5 block text-[0.75rem] leading-snug text-[var(--text-muted)]">{{ note }}</span>
-    </span>
-    <span class="flex shrink-0 items-center gap-[4px]" aria-hidden="true">
-      <span
-        v-for="(s, i) in STEPS"
-        :key="s"
-        class="h-[8px] w-[18px] rounded-full"
-        :style="{ background: i < filled ? tone : 'var(--line)' }"
-      ></span>
     </span>
   </button>
 

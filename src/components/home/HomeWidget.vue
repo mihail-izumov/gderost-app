@@ -3,7 +3,12 @@ import { computed } from 'vue'
 import { MoveUpRight, MoveDownRight, MoveRight } from 'lucide-vue-next'
 import TopoLayer from '../TopoLayer.vue'
 
-// Виджет-кнопка на Главной. Перенесено из рабочего Ранскеила один в один.
+// Виджет-кнопка на Главной. Перенесено из рабочего Ранскеила один в один,
+// с единственным названным расхождением: знак на плитке 26 пикселей вместо
+// 22. В оригинале стоят контурные знаки библиотеки, они рисуются тонкой
+// линией и держат плитку одним размахом; здесь знаки залитые и своей формы,
+// на 22 они оставляли вокруг себя пустое кольцо.
+//
 // Стрелка тренда — три состояния, серая монохромная в круге.
 //
 // Заливка иконки несёт СТАТУС раздела, а не украшение: зелёный — держим,
@@ -51,7 +56,7 @@ const skin = computed(() => TONE[props.tone] || TONE.idle)
         class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
         :style="{ background: skin.bg, color: skin.ink }"
       >
-        <component :is="icon" class="h-[22px] w-[22px]" :stroke-width="2.1" aria-hidden="true" />
+        <component :is="icon" class="h-[26px] w-[26px]" :stroke-width="2.1" aria-hidden="true" />
       </span>
       <h2 class="whitespace-pre-line text-[0.9375rem] font-bold leading-tight text-[var(--text)]">{{ name }}</h2>
     </div>
