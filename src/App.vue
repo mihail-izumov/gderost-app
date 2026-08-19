@@ -258,6 +258,7 @@ function selectTab(id) {
   <AppShell
     v-else
     :tabs="TABS"
+    :theme="!subView && tab === 'ultra' ? 'ultra-dark' : ''"
     :active="subView ? '' : tab"
     :sub-view="subView"
     :sub-views="SUB_VIEWS"

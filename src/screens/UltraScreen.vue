@@ -45,11 +45,14 @@ const connectOpen = ref(false)
 
 <template>
   <div class="px-4 pb-2 pt-12">
-    <!-- Знак марки страницы. Плашка называет комплектацию, о которой идёт
+    <!-- Знак марки страницы — утверждённый лочкап в колонку: знак, слово,
+         комплектация рамкой. Плашка называет комплектацию, о которой идёт
          речь: связка со словом «ТРЕК» назвала бы здесь не тот продукт,
-         а шеврон отдельной картинкой перестал бы быть знаком марки. -->
+         а шеврон отдельной картинкой перестал бы быть знаком марки.
+         Цвет всей связки берётся из холста одной переменной `--text`,
+         и на другом фоне перекрашивать в ней нечего. -->
     <div class="flex justify-center">
-      <BrandLockup size="1.75rem" edition="УЛЬТРА" />
+      <BrandLockup stacked edition="УЛЬТРА" />
     </div>
 
     <!-- Обещание и абзац под ним стоят по центру, под заголовком: это одна
@@ -72,7 +75,7 @@ const connectOpen = ref(false)
     <button
       type="button"
       class="mt-10 flex w-full items-center gap-3.5 rounded-[22px] p-4 text-left"
-      :style="{ background: 'var(--action)', color: 'var(--ink-on-color)' }"
+      :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
       @click="passportOpen = true"
     >
       <span class="min-w-0 flex-1 text-[1.0625rem] font-bold leading-tight">
@@ -80,7 +83,7 @@ const connectOpen = ref(false)
       </span>
       <ChevronRight
         class="h-5 w-5 shrink-0"
-        :style="{ color: 'var(--ink-on-color)' }"
+        :style="{ color: 'var(--action-ink)' }"
         :stroke-width="2.5"
         aria-hidden="true"
       />

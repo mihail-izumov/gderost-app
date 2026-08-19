@@ -34,6 +34,12 @@ const props = defineProps({
   active: { type: String, required: true },
   subView: { type: String, default: null },
   subViews: { type: Object, default: () => ({}) },
+  // Оформление холста. Пусто — светлое приложение; строка — имя набора токенов
+  // из `styles/main.css`. Атрибут стоит именно здесь, на общем контейнере:
+  // шапка, таб-бар и подложка под навигацией собраны на токенах, и раздел
+  // с другим холстом обязан переодеть их вместе с собой, иначе тёмная
+  // страница выезжает из светлой рамки.
+  theme: { type: String, default: '' },
 })
 const emit = defineEmits(['update:active', 'back'])
 
@@ -204,6 +210,7 @@ watch(() => [props.active, props.subView], async () => {
     class="relative mx-auto flex h-[100dvh] w-full max-w-[430px] flex-col overflow-hidden bg-[var(--bg)]
            pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]
            md:border-x md:border-[var(--line)]"
+    :data-theme="theme || null"
   >
     <!-- Панель сверху. Пока тянут — индикатор жеста, дальше она же держит
          состояние обновления: без неё человек отпускает палец и смотрит
