@@ -38,6 +38,35 @@ const open = ref('')
 const clientsOpen = ref(false)
 function toggle(id) { open.value = open.value === id ? '' : id }
 
+// ⚠ Раскрытая плитка выворачивается: заливка цветом текста, содержимое
+// чернилами наоборот. Повод назван Михаилом на приёмке — раскрытый блок лежит
+// под ОБЕИМИ плитками во всю ширину, плитки при этом одинаковые, и понять,
+// чей он, нельзя. Поворота шеврона на это не хватает: он мелкий и стоит
+// в углу, а вопрос человек задаёт про всю карточку.
+//
+// Средство сильное и потому единственное: выворотка помечает ровно одно
+// состояние — «открыто», и второй метки у плитки не появляется: у объекта
+// на экране одна метка, и все средства показа красятся одним состоянием.
+//
+// Сделано двумя уровнями, и это не украшательство. Заливка стоит на кнопке
+// и берёт `--text` в его обычном значении; подмена токенов живёт на вложенном
+// слое с `display: contents` — тот же элемент, переопределяющий `--text`
+// и одновременно красящийся им, дал бы ссылку токена на самого себя,
+// и правило целиком отменяется браузером. `contents` при этом не заводит
+// собственной коробки: дети остаются детьми кнопки, и её раскладка
+// не меняется ни на пиксель.
+const INVERT = {
+  '--text': 'var(--ink-inverse)',
+  '--text-secondary': 'var(--ink-inverse-secondary)',
+  '--text-muted': 'var(--ink-inverse-muted)',
+  '--surface-2': 'var(--surface-inverse-soft)',
+  // Синий знак на светлой заливке — тот же, что на светлой теме:
+  // осветлённый нужен только на тёмном холсте.
+  '--action-text': 'var(--action)',
+}
+const inverted = (id) => (open.value === id ? INVERT : {})
+const plateFill = (id) => (open.value === id ? { background: 'var(--text)' } : {})
+
 // Переключатель месяцев у каждой плитки свой: ряды у них разные.
 const monthPick = ref({ checkups: 'jul', reviews: 'jul' })
 
@@ -110,9 +139,11 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
       <button
         type="button"
         class="flex min-h-[9rem] flex-col gap-2 rounded-2xl bg-[var(--surface)] p-3.5 text-left"
+        :style="plateFill('checkups')"
         :aria-expanded="open === 'checkups' ? 'true' : 'false'"
         @click="toggle('checkups')"
       >
+      <span class="contents" :style="inverted('checkups')">
         <span class="flex items-center justify-between">
           <span class="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
             {{ checkups.title }}
@@ -139,15 +170,18 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
           </span>
           <span><b class="font-semibold tabular-nums text-[var(--text)]">{{ formatPct(TELEMETRY.readsRate * 100, 0) }}</b> прочтений</span>
         </span>
+      </span>
       </button>
 
       <!-- РАЗБОРЫ: живые встречи -->
       <button
         type="button"
         class="flex min-h-[9rem] flex-col gap-2 rounded-2xl bg-[var(--surface)] p-3.5 text-left"
+        :style="plateFill('reviews')"
         :aria-expanded="open === 'reviews' ? 'true' : 'false'"
         @click="toggle('reviews')"
       >
+      <span class="contents" :style="inverted('reviews')">
         <span class="flex items-center justify-between">
           <span class="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
             {{ reviews.title }}
@@ -176,6 +210,7 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
             >{{ d }}</span>
           </span>
         </span>
+      </span>
       </button>
 
     </div>
