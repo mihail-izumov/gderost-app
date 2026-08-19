@@ -34,6 +34,9 @@ const props = defineProps({
   signal: { type: Object, default: null },
   // Месяц закрыт: планка дня не существует, сигнал говорит про переход.
   over: { type: Boolean, default: false },
+  // Состояние месяца — то же, что стоит бейджем над карточкой и строкой
+  // в шапке «Контроля Дня». Плашка метода красится им же.
+  goalState: { type: String, default: 'unknown' },
 })
 const emit = defineEmits(['origin', 'go', 'method'])
 
@@ -66,6 +69,23 @@ const rows = computed(() => {
   })
   return out
 })
+
+// Плашка метода красится состоянием месяца — тем же, что стоит бейджем выше
+// и строкой в шапке «Контроля Дня». Графит на ней был единственным местом
+// экрана, где цвет ничего не значил: человек читал «Нужен рекордный темп»
+// жёлтым и тут же видел серую плашку про рост по плану, будто она про другой
+// месяц. Состояние одно — цвет один.
+//
+// На жёлтом текст тёмный, на зелёном и красном белый: цветного текста
+// и полутонов на цвете в системе нет.
+const METHOD_SKIN = {
+  ok: { bg: 'var(--positive)', ink: 'var(--ink-on-color)' },
+  record: { bg: 'var(--warning)', ink: 'var(--accent-ink)' },
+  out: { bg: 'var(--negative)', ink: 'var(--ink-on-color)' },
+  unknown: { bg: 'var(--graphite)', ink: 'var(--ink-on-color)' },
+  none: { bg: 'var(--graphite)', ink: 'var(--ink-on-color)' },
+}
+const method = computed(() => METHOD_SKIN[props.goalState] || METHOD_SKIN.unknown)
 </script>
 
 <template>
@@ -97,16 +117,16 @@ const rows = computed(() => {
       <button
         type="button"
         class="mt-2 flex min-h-[56px] w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left"
-        :style="{ background: 'var(--graphite)', color: 'var(--ink-on-color)' }"
+        :style="{ background: method.bg, color: method.ink }"
         @click="emit('method')"
       >
         <span class="min-w-0 flex-1">
           <span class="block text-[0.9375rem] font-bold leading-tight">Расти по плану</span>
-          <span class="mt-0.5 block text-[0.75rem] leading-snug" :style="{ color: 'var(--ink-on-color)', opacity: 0.8 }">
+          <span class="mt-0.5 block text-[0.75rem] leading-snug" :style="{ color: method.ink, opacity: 0.8 }">
             Система роста: факт, прогноз, план и цель
           </span>
         </span>
-        <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: 'var(--ink-on-color)' }" :stroke-width="2.5" aria-hidden="true" />
+        <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: method.ink }" :stroke-width="2.5" aria-hidden="true" />
       </button>
     </template>
 

@@ -20,11 +20,26 @@ defineProps({
 </script>
 
 <template>
+  <!-- На «Прогрессе» блок стоит сам по себе, и заголовок раздела уходит НАД
+       карточкой — в общий ряд с «Важно» и «Сводкой по неделям»: внутри рамки
+       он читался подписью к полосе, а не именем раздела. Охват («N дн
+       с фактом») становится заголовком внутри — тем же набором, каким
+       подписаны недели в списке выше. В сводке «Контроля Дня» блок остаётся
+       последней строкой общей карточки и заголовок держит при себе. -->
+  <h2
+    v-if="standalone"
+    class="mb-2 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]"
+  >{{ L.days_by_plan }}</h2>
+
   <div
     class="px-4 py-3"
     :class="standalone ? 'rounded-2xl border border-[var(--line)] bg-[var(--surface)]' : 'border-t border-[var(--line)]'"
   >
-    <div class="mb-2 text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+    <div
+      v-if="standalone"
+      class="mb-2 text-[0.9375rem] font-semibold text-[var(--text)]"
+    >{{ stats.total }} дн с фактом</div>
+    <div v-else class="mb-2 text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
       {{ L.days_by_plan }} <span class="font-normal normal-case">({{ stats.total }} дн с фактом)</span>
     </div>
     <div class="flex h-4 gap-0.5 overflow-hidden rounded-lg bg-[var(--surface-2)]">

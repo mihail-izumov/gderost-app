@@ -43,6 +43,27 @@ ok(близко(m3.landing, 3_100_000, 1e-3), 'ровный темп → при�
 ok(близко(m3.onPlan, 1, 1e-9), 'onPlan = 1 при факте, равном плану')
 ok(m3.goalState === 'ok', 'достижимость ok при ровном темпе')
 
+// 3а. Стрелка динамики на виджете «Контроль Дня»: куда движется исполнение
+// плана. Три состояния и ни одного четвёртого; сравнивать не с чем — стрелки
+// нет вовсе. Ровный темп даёт «flat»: отношение стоит на месте.
+ok(m3.onPlanTrend === 'flat', 'ровный темп → стрелка «ровно»')
+
+const trendUp = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: [1,1,1,1,1,1,1], carry: null,
+  days: [{ date: '2026-08-01', rev: 50_000 }, { date: '2026-08-02', rev: 200_000 }] }, NOW)
+ok(trendUp.onPlanTrend === 'up', 'день выше прежнего темпа → стрелка вверх')
+
+const trendDown = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: [1,1,1,1,1,1,1], carry: null,
+  days: [{ date: '2026-08-01', rev: 200_000 }, { date: '2026-08-02', rev: 50_000 }] }, NOW)
+ok(trendDown.onPlanTrend === 'down', 'день ниже прежнего темпа → стрелка вниз')
+
+const trendOne = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: [1,1,1,1,1,1,1], carry: null,
+  days: [{ date: '2026-08-01', rev: 100_000 }] }, NOW)
+ok(trendOne.onPlanTrend === null, 'один внесённый день → стрелки нет: сравнивать не с чем')
+
+const trendNone = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: [1,1,1,1,1,1,1],
+  carry: { upTo: '2026-08-10', amount: 1_000_000 }, days: [] }, NOW)
+ok(trendNone.onPlanTrend === null, 'месяц из одной стартовой суммы → стрелки нет')
+
 // 4. Прошлое одной суммой: по 10-е = 1 000 000, дней по одному нет.
 const m4 = computeMini({ month: '2026-08', month_target: 3_100_000, dow_coef: [1,1,1,1,1,1,1],
   carry: { upTo: '2026-08-10', amount: 1_000_000 }, days: [] }, NOW)

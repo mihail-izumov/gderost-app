@@ -217,6 +217,7 @@ function storyDone() {
         name="Контроль&#10;Дня"
         metric-label="План/Факт"
         :value-main="m.onPlan == null ? '—' : pct1(m.onPlan)"
+        :trend="m.onPlanTrend"
         :sub-label="gapLabel"
         :sub-value="gapValue"
         :tone="dayTone"
@@ -247,15 +248,19 @@ function storyDone() {
          и «Попробовать неделю» — три плашки подряд, и глаз выбирал между ними
          вместо того, чтобы читать. Бабл принадлежит тому, на что указывает,
          и в очередь равных блоков не встаёт. -->
+    <!-- Заливка бабла темнее холста и заметно темнее белых карточек вокруг:
+         на `--surface` он был белым пятном среди белых плашек и читался
+         четвёртой карточкой подряд. Реплика обязана отличаться от того,
+         о чём говорит. -->
     <div class="mt-2 flex justify-center">
       <button
         type="button"
         class="gr-bubble relative flex min-h-[40px] items-center gap-1.5 rounded-2xl px-3.5 py-2 text-left"
-        :style="{ background: 'var(--surface)' }"
+        :style="{ background: 'var(--line)' }"
         @click="openWidgetStory"
       >
-        <QuestionIcon class="h-[17px] w-[17px] shrink-0 text-[var(--text-muted)]" />
-        <span class="text-[0.8125rem] text-[var(--text-secondary)]">Как читать виджеты</span>
+        <QuestionIcon class="h-[17px] w-[17px] shrink-0 text-[var(--text-secondary)]" />
+        <span class="text-[0.8125rem] font-medium text-[var(--text-secondary)]">Как читать виджеты</span>
       </button>
     </div>
 
@@ -305,7 +310,7 @@ function storyDone() {
   height: 10px;
   margin-left: -5px;
   transform: rotate(45deg);
-  background: var(--surface);
+  background: var(--line);
   border-radius: 2px;
 }
 </style>

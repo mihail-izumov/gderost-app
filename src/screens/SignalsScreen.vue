@@ -137,6 +137,7 @@ function storyDone() {
     <!-- Живой сигнал: полезное вперёд продаваемого. -->
     <SignalTodayCard
       :signal="signal"
+      :goal-state="m.goalState"
       :over="store.monthOver.value"
       @origin="originOpen = $event"
       @go="emit('go', $event)"
@@ -151,7 +152,7 @@ function storyDone() {
          узкая пилюля у левого края читалась подписью, а не контролом. -->
     <div class="mb-2 flex w-full rounded-full bg-[var(--surface-2)] p-[3px]">
       <button
-        v-for="t in [{ id: 'sessions', label: 'Запуски' }, { id: 'mine', label: 'Мои старты' }]"
+        v-for="t in [{ id: 'sessions', label: 'Разборы' }, { id: 'mine', label: 'Мои старты' }]"
         :key="t.id"
         type="button"
         class="min-h-[40px] flex-1 rounded-full px-3.5 text-[0.9375rem] font-semibold transition-colors"

@@ -147,14 +147,18 @@ function startRefresh() {
   <div
     v-if="bigTitle && (title || caption || clockTitle)"
     class="relative px-4 pb-3 text-center"
-    :class="showBack ? 'pt-5' : hasContextRow ? 'pt-2' : 'pt-[calc(env(safe-area-inset-top)+1.125rem)]'"
+    :class="showBack ? 'pt-9' : hasContextRow ? 'pt-2' : 'pt-[calc(env(safe-area-inset-top)+1.125rem)]'"
   >
     <!-- ⚠ На заходе вглубь подпись пряталась под липкой полосой: она стоит
          `absolute` над заголовком, а полоса с кнопкой «назад» там занимает
-         настоящую высоту. Отступ сверху отводит подписи её место. -->
+         настоящую высоту. Отступ сверху отводит подписи её место — и на заходе
+         вглубь подпись живёт ВНУТРИ этого отступа, а не над ним: отрицательный
+         `top` уводил её ровно под полосу, из-за чего строка «данные от…»
+         читалась наполовину. -->
     <p
       v-if="caption"
-      class="pointer-events-none absolute inset-x-0 -top-2 text-[0.75rem] leading-none text-[var(--text-muted)]"
+      class="pointer-events-none absolute inset-x-0 text-[0.75rem] leading-none text-[var(--text-muted)]"
+      :class="showBack ? 'top-3' : '-top-2'"
     >{{ caption }}</p>
     <LiveClock v-if="clockTitle" size="lg" />
     <h1 v-else-if="title" class="text-[2.125rem] font-bold leading-tight tracking-tight text-[var(--text)]">

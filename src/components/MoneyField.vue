@@ -16,6 +16,21 @@ const emit = defineEmits(['update:modelValue'])
 const shown = computed(() =>
   props.modelValue === null || props.modelValue === '' ? '' : formatInt(props.modelValue))
 
+// ⚠ Вторая половина той же беды. Отступ `--gr-kb` поднимает шторку целиком,
+// но само поле может стоять в её прокручиваемой части — и тогда оно уезжает
+// под клавиатуру внутри шторки, а не вместе с ней. Поэтому после фокуса поле
+// подводится к середине видимой области.
+//
+// Задержка обязательна: клавиатура выезжает примерно четверть секунды,
+// и подводка, сделанная сразу, считает высоту старого, ещё полного экрана.
+function onFocus(e) {
+  const el = e.target
+  if (!el || typeof el.scrollIntoView !== 'function') return
+  setTimeout(() => {
+    try { el.scrollIntoView({ block: 'center', behavior: 'smooth' }) } catch { el.scrollIntoView() }
+  }, 320)
+}
+
 function onInput(e) {
   const digits = String(e.target.value).replace(/\D/g, '')
   const next = digits === '' ? null : Number(digits)
@@ -40,6 +55,7 @@ function onInput(e) {
         autocomplete="off"
         :placeholder="placeholder"
         :value="shown"
+        @focus="onFocus"
         @input="onInput"
       >
       <span class="shrink-0 text-[1rem] text-[var(--text-muted)]">₽</span>

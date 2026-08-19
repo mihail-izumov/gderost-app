@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { X } from 'lucide-vue-next'
+import { ChevronRight, X } from 'lucide-vue-next'
 import MoneyField from './MoneyField.vue'
 import { formatRub } from '../i18n/format.js'
 
@@ -75,18 +75,6 @@ function save() {
       </div>
     </div>
 
-    <!-- Тихая вторая кнопка. Разрыв назван словами из той же строки, что
-         человек видел на экране, и ведёт она не в оплату, а в паспорт разбора:
-         сначала он читает, что это, и только потом решает. Обводка вместо
-         заливки — у шторки одно главное действие, и это правка числа. -->
-    <button
-      v-if="gapLabel"
-      type="button"
-      class="mt-3 min-h-[48px] w-full rounded-2xl border text-[0.9375rem] font-semibold text-[var(--text)]"
-      :style="{ borderColor: 'var(--rim)', background: 'var(--surface)' }"
-      @click="emit('razbor')"
-    >Разобрать разрыв: {{ gapLabel }}</button>
-
     <template v-if="editLabel">
       <button
         v-if="!editing"
@@ -115,5 +103,22 @@ function save() {
         </div>
       </div>
     </template>
+
+    <!-- Вторая кнопка — вход в паспорт разбора. Стоит ПОД главным действием
+         и набрана его ростом: над ним она читалась полем ввода, а не выходом,
+         светлая заливка с тонкой обводкой в этом месте не отличалась от строки
+         с числом. Теперь это кнопка: та же высота, серая заливка, шеврон
+         справа — второе действие шторки, и видно, что оно второе.
+         Ведёт она не в оплату, а в паспорт: сначала человек читает, что это. -->
+    <button
+      v-if="gapLabel"
+      type="button"
+      class="mt-2 flex min-h-[52px] w-full items-center gap-2 rounded-2xl px-4 text-left text-[1.0625rem] font-semibold text-[var(--text)]"
+      :style="{ background: 'var(--surface-2)' }"
+      @click="emit('razbor')"
+    >
+      <span class="min-w-0 flex-1 truncate">Разобрать разрыв: {{ gapLabel }}</span>
+      <ChevronRight class="h-5 w-5 shrink-0 text-[var(--text-muted)]" :stroke-width="2.5" aria-hidden="true" />
+    </button>
   </div>
 </template>

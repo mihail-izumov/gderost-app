@@ -28,30 +28,37 @@ const gsOf = (s) => GOAL_STATE[s.goalState] || GOAL_STATE.none
       <ChevronDown class="h-4 w-4 transition-transform group-open:rotate-180" :stroke-width="2.5" />
     </summary>
     <div class="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
-      <div class="overflow-x-auto" style="-webkit-overflow-scrolling: touch">
-        <div class="min-w-[600px]">
-          <div
-            v-for="(s, i) in rows"
-            :key="i"
-            class="grid items-center gap-3 border-t border-[var(--line)] px-4 py-2 text-[0.8125rem] first:border-t-0"
-            style="grid-template-columns: 84px 1fr 72px 64px 132px"
-          >
-            <div class="font-semibold text-[var(--text)]">{{ dayGenIso(s.date) }}</div>
-            <div class="[font-variant-numeric:tabular-nums] text-[var(--text)]">
+      <!-- ⚠ Горизонтального скролла здесь больше нет. Таблица шириной 600 px
+           не помещалась в мобильную колонку, и первым за край уезжал процент —
+           главное число строки: человек видел дату, сумму и полосу, а на месте
+           доли плана — обрезанную цифру. Достижимость переехала второй строкой,
+           и всё, что несёт число, стоит в видимой ширине. -->
+      <div
+        v-for="(s, i) in rows"
+        :key="i"
+        class="border-t border-[var(--line)] px-4 py-2 text-[0.8125rem] first:border-t-0"
+      >
+        <div
+          class="grid items-center gap-2.5"
+          style="grid-template-columns: 5.25rem 1fr 2.75rem"
+        >
+          <div class="font-semibold text-[var(--text)]">{{ dayGenIso(s.date) }}</div>
+          <div class="flex min-w-0 items-center gap-2">
+            <span class="whitespace-nowrap [font-variant-numeric:tabular-nums] text-[var(--text)]">
               {{ mln(s.landing) }} <span class="text-[var(--text-muted)]">{{ arrowChar(s.arrow) }}</span>
-            </div>
-            <div class="relative h-3 overflow-hidden rounded-full bg-[var(--surface-2)]">
+            </span>
+            <span class="relative h-3 min-w-0 flex-1 overflow-hidden rounded-full bg-[var(--surface-2)]">
               <i class="absolute bottom-0 left-0 top-0 rounded-full" :style="{ width: Math.min(100, s.landingPct * 100) + '%', background: SIG_VAR[s.sig] }" />
-            </div>
-            <!-- Колонка процента расширена и держит строку в одну: «103 %»
-                 в сорока шести пикселях жирного набора не помещалось и
-                 вылезало за границу своей ячейки на соседнюю. -->
-            <div class="whitespace-nowrap text-right font-bold [font-variant-numeric:tabular-nums] text-[var(--text)]">{{ pctWhole(s.landingPct) }}</div>
-            <div class="flex items-center justify-end gap-1 whitespace-nowrap text-[0.75rem] text-[var(--text-muted)]">
-              <i class="inline-block h-1.5 w-1.5 shrink-0 rounded-full" :style="{ background: gsOf(s).dot }" />
-              {{ gsOf(s).journal }}
-            </div>
+            </span>
           </div>
+          <div class="whitespace-nowrap text-right font-bold [font-variant-numeric:tabular-nums] text-[var(--text)]">{{ pctWhole(s.landingPct) }}</div>
+        </div>
+        <div
+          v-if="gsOf(s).journal !== '—'"
+          class="mt-0.5 flex items-center gap-1.5 text-[0.75rem] text-[var(--text-muted)]"
+        >
+          <i class="inline-block h-1.5 w-1.5 shrink-0 rounded-full" :style="{ background: gsOf(s).dot }" />
+          {{ gsOf(s).journal }}
         </div>
       </div>
     </div>

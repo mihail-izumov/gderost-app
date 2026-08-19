@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
 import HandIcon from '../icons/HandIcon.vue'
 import TopoLayer from '../TopoLayer.vue'
@@ -74,11 +74,49 @@ const cards = computed(() => RAIL.map((id) => {
     topoOpacity: onColor ? 0.07 : 0.028,
   }
 }))
+
+// Полоса под лентой: сколько её видно и где человек внутри неё.
+//
+// Горизонтальная лента на телефоне не показывает, что справа есть ещё
+// карточки: системной полосы прокрутки там нет вовсе, а обрезанный край
+// последней видимой карточки читается краем экрана. Человек честно решает,
+// что ступеней две, и до третьей не доходит.
+//
+// Полоса считается от самой ленты, а не от числа карточек: их станет больше
+// или меньше — она останется верной.
+const railEl = ref(null)
+const bar = ref({ width: 100, left: 0, show: false })
+
+function measure() {
+  const el = railEl.value
+  if (!el) return
+  const { scrollWidth, clientWidth, scrollLeft } = el
+  const hidden = scrollWidth - clientWidth
+  if (hidden <= 4) { bar.value = { width: 100, left: 0, show: false }; return }
+  const width = Math.max(18, Math.round((clientWidth / scrollWidth) * 100))
+  const left = Math.round((scrollLeft / hidden) * (100 - width))
+  bar.value = { width, left: Math.max(0, Math.min(100 - width, left)), show: true }
+}
+
+let ro = null
+onMounted(() => {
+  measure()
+  if (typeof ResizeObserver !== 'undefined' && railEl.value) {
+    ro = new ResizeObserver(measure)
+    ro.observe(railEl.value)
+  }
+})
+onBeforeUnmount(() => { if (ro) { ro.disconnect(); ro = null } })
 </script>
 
 <template>
-  <div class="-mx-4 overflow-x-auto px-4 pb-1">
-    <ul class="flex snap-x snap-mandatory gap-2.5" style="scrollbar-width: none">
+  <div
+    ref="railEl"
+    class="-mx-4 overflow-x-auto px-4 pb-1"
+    style="scrollbar-width: none"
+    @scroll="measure"
+  >
+    <ul class="flex snap-x snap-mandatory gap-2.5">
       <li v-for="c in cards" :key="c.id" class="w-[15.5rem] shrink-0 snap-start">
         <button
           type="button"
@@ -88,16 +126,24 @@ const cards = computed(() => RAIL.map((id) => {
         >
           <TopoLayer :seed="`ступень-${c.id}`" :ink="c.topoInk" :opacity="c.topoOpacity" />
 
+          <!-- ⚠ Знак стоит в одном месте у всех карточек и одного роста.
+               Рука была вдвое крупнее стрелки и вставала ниже неё — в ленте,
+               где карточки читаются рядом, разнобой знаков сообщал разницу,
+               которой нет: и рука, и стрелка тут говорят одно, «сюда можно
+               заглянуть». Крупная рука осталась на строке недели, где стоит
+               одна и означает состояние. -->
           <span class="flex items-start justify-between gap-2">
-            <span class="text-[0.9375rem] font-bold leading-tight" :style="{ color: c.ink }">{{ c.title }}</span>
-            <!-- Замок вместо стрелки у запертой ступени: стрелка обещает шаг
-                 вперёд, а шага вперёд отсюда пока нет. Паспорт всё равно
-                 открывается — заперт заказ, а не чтение. -->
-            <!-- Рука вместо замка. Ступень не заперта деньгами: её открывает
-                 состоявшийся разбор, то есть работа, а не покупка. -->
+            <!-- Заголовок держит место под две строки: подписи под ним
+                 обязаны стоять на одной высоте у всех карточек ленты, иначе
+                 глаз читает разную длину имени как разный состав ступени. -->
+            <span class="min-h-[2.375rem] text-[0.9375rem] font-bold leading-tight" :style="{ color: c.ink }">{{ c.title }}</span>
+            <!-- Рука вместо стрелки у запертой ступени. Ступень не заперта
+                 деньгами: её открывает состоявшийся разбор, то есть работа,
+                 а не покупка. Паспорт всё равно открывается — заперт заказ,
+                 а не чтение. -->
             <HandIcon
               v-if="c.locked"
-              class="h-[30px] w-[30px] shrink-0"
+              class="h-[18px] w-[18px] shrink-0"
               :style="{ color: c.inkFaint, opacity: c.faintOpacity }"
             />
             <ChevronRight
@@ -143,5 +189,17 @@ const cards = computed(() => RAIL.map((id) => {
            ленте дышать справа. -->
       <li class="w-1 shrink-0" aria-hidden="true"></li>
     </ul>
+  </div>
+
+  <!-- Полоса ленты. Показывается только когда есть что прокручивать: полоса
+       во всю ширину под лентой, которая и так видна целиком, сообщала бы
+       о прокрутке там, где её нет. -->
+  <div v-if="bar.show" class="mt-2 flex justify-center" aria-hidden="true">
+    <span class="relative block h-[3px] w-[64px] overflow-hidden rounded-full bg-[var(--line)]">
+      <span
+        class="absolute inset-y-0 rounded-full bg-[var(--text-muted)] transition-[left] duration-150"
+        :style="{ width: bar.width + '%', left: bar.left + '%' }"
+      ></span>
+    </span>
   </div>
 </template>

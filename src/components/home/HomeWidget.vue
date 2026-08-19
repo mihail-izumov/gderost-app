@@ -68,12 +68,16 @@ const skin = computed(() => TONE[props.tone] || TONE.idle)
          и высота карточки менялась от суммы: две плитки в деке вставали
          разной высоты, а число прыгало на месте. Перенос запрещён, единица
          отделена неразрывным пробелом ещё в форматтере. -->
-    <div class="mt-1 flex min-h-[30px] items-center gap-2">
+    <!-- ⚠ Единица набирается по ОБЩЕЙ базовой линии с числом, а не по нижнему
+         краю строки: `self-end` ставил «млн» ниже подошвы цифр, и на глаз
+         единица висела под числом отдельным предметом. Круг стрелки базовой
+         линии не имеет и центруется сам. -->
+    <div class="mt-1 flex min-h-[30px] items-baseline gap-1.5">
       <span class="whitespace-nowrap text-[1.875rem] font-extrabold leading-none tracking-tight text-[var(--text)]">{{ valueMain }}</span>
-      <span v-if="valueUnit" class="self-end text-[1.0625rem] font-bold leading-none text-[var(--text)]">{{ valueUnit }}</span>
+      <span v-if="valueUnit" class="text-[1.0625rem] font-bold leading-none text-[var(--text)]">{{ valueUnit }}</span>
       <span
         v-if="trend"
-        class="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-[var(--surface-2)] text-[var(--text-secondary)]"
+        class="ml-0.5 flex h-[26px] w-[26px] shrink-0 items-center justify-center self-center rounded-full bg-[var(--surface-2)] text-[var(--text-secondary)]"
         aria-hidden="true"
       >
         <component

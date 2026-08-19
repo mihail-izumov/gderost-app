@@ -60,6 +60,42 @@ function waitInstalled(worker) {
   })
 }
 
+// Сколько ждём, пока браузер объявит найденную версию. См. ниже: обещание
+// `update()` возвращается раньше, чем появляется новый обработчик.
+const FIND_TIMEOUT_MS = 3500
+
+// ⚠ Здесь жила разница между жестом и кнопкой, из-за которой они говорили
+// разное об одном и том же. `reg.update()` на iOS отдаёт управление ДО того,
+// как в регистрации появится `installing`: сразу после него `reg.installing`
+// и `reg.waiting` пусты, и проверка честно отвечала «новой версии нет». Пока
+// человек читал этот ответ и тянулся к кнопке в шапке, загрузка успевала
+// начаться — и второй заход, уже кнопкой, версию находил. Выглядело как
+// «жест сломан», хотя сломана была первая проверка, какой бы она ни была.
+//
+// Поэтому после `update()` мы ещё ждём объявления: подписываемся на
+// `updatefound` и параллельно опрашиваем регистрацию. Пусто и через это
+// окно — значит новой версии действительно нет.
+function waitUpdateFound(reg) {
+  return new Promise((resolve) => {
+    let done = false
+    const finish = (w) => {
+      if (done) return
+      done = true
+      clearInterval(poll)
+      clearTimeout(timer)
+      reg.removeEventListener('updatefound', onFound)
+      resolve(w || null)
+    }
+    const onFound = () => finish(reg.installing || reg.waiting)
+    reg.addEventListener('updatefound', onFound)
+    const poll = setInterval(() => {
+      const w = reg.installing || reg.waiting
+      if (w) finish(w)
+    }, 200)
+    const timer = setTimeout(() => finish(null), FIND_TIMEOUT_MS)
+  })
+}
+
 // Есть ли новая версия. Возвращает true, только когда она действительно
 // появилась и встала: перезагружать страницу ради ничего — обман.
 async function fetchUpdate() {
@@ -71,7 +107,7 @@ async function fetchUpdate() {
   // поэтому у новой версии файл отличается байтами и браузер видит замену.
   await reg.update()
 
-  const next = reg.installing || reg.waiting
+  const next = reg.installing || reg.waiting || await waitUpdateFound(reg)
   if (!next) return 'none'
 
   const settled = await Promise.race([

@@ -4,7 +4,7 @@ import { Check } from 'lucide-vue-next'
 import BottomSheet from '../components/BottomSheet.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
 import WeekRows from '../components/growth/WeekRows.vue'
-import CurrentWeekCard from '../components/growth/CurrentWeekCard.vue'
+import MonthCard from '../components/growth/MonthCard.vue'
 import DaysByPlan from '../components/daily/DaysByPlan.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
@@ -13,7 +13,6 @@ import { todayISO } from '../composables/miniModel.js'
 import { isLocked } from '../i18n/energy.js'
 import { HEAD, LEVEL_ROWS } from '../i18n/growth247.js'
 import { plural } from '../i18n/format.js'
-import { monthOf } from '../i18n/format.js'
 
 // «Прогресс» — страница состояния, а не витрина системы.
 //
@@ -77,17 +76,10 @@ const energy = computed(() => computeEnergy(state, m.value))
 const rated = computed(() => state.razborRating !== null && state.razborRating !== undefined)
 const today = computed(() => todayISO())
 
-// Заголовок списка недель называет месяц, о котором он говорит: «недели
-// месяца» на закрытом августе читались бы как недели текущего календаря.
-// Идущую неделю держит `CurrentWeekCard` — он же решает, что показывать,
-// когда текущей недели в месяце нет.
-// «Август 2026» — месяц приложения полностью, с годом: закрытый месяц
-// в январе иначе читается как текущий.
-const monthTitleFull = computed(() => (m.value
-  ? `${monthOf(m.value.month)} ${m.value.month.slice(0, 4)}`
-  : ''))
-
-const weeksTitle = computed(() => (m.value ? `Недели ${monthOf(m.value.month)}` : 'Недели месяца'))
+// Заголовок списка недель называет то, чем список является: это сводка,
+// а месяц назван выше, в главном блоке. «Недели августа» повторяли имя месяца
+// третий раз на одном экране и ничего не добавляли.
+const weeksTitle = 'Сводка по неделям'
 
 // Повод-плашка. Есть пропуски в прошедших неделях — говорим о них и даём
 // кнопку; повода нет — плашки нет. Пустая плашка «всё хорошо» приучает
@@ -116,21 +108,13 @@ const reason = computed(() => {
 
 <template>
   <div v-if="m" class="w-full px-4 pb-4">
-    <!-- Месяц, о котором идёт речь. Заголовок «Прогресс» не отвечает на вопрос
-         «прогресс чего и когда», а недели без месяца читаются календарём
-         устройства. Бабл стоит под заголовком и держит ответ одной строкой —
-         это подпись к экрану, а не элемент управления. -->
-    <div class="mb-3 flex justify-center">
-      <span
-        class="font-label inline-flex items-center rounded-full px-3 py-1 text-[0.75rem] uppercase text-[var(--text-secondary)]"
-        :style="{ background: 'var(--surface-2)', '--caps-track': '0.1em' }"
-      ><span class="gr-caps">{{ monthTitleFull }}</span></span>
-    </div>
+    <!-- ⚠ Бабл с именем месяца снят: месяц теперь называет сам главный блок
+         своим заголовком, и подпись над ним говорила то же самое второй раз. -->
 
-    <!-- 1 · Идущая неделя — главный блок экрана. Стоит первым: человек
-         приходит сюда с вопросом «сколько дней у меня есть и что внести
-         сегодня», и ответ обязан быть раньше всего остального. -->
-    <CurrentWeekCard :m="m" :today="today" @enter="openDay" />
+    <!-- 1 · Месяц — главный блок экрана. Стоит первым: раздел отвечает
+         на вопрос «куда идёт месяц», и ответ обязан быть раньше всего
+         остального. Недели живут ниже сводкой. -->
+    <MonthCard :m="m" :today="today" @enter="openDay" />
 
     <!-- 2 · Важно. Повод стоит под статусом и подписан как раздел: сверху
          он перебивал главный блок и читался ошибкой приложения, а не

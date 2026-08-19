@@ -204,7 +204,9 @@ function saveCarry(v) {
       @click="storyOpen = true"
     >
       <span class="min-w-0 flex-1">
-        <span class="block text-[1.0625rem] font-bold leading-tight">Расти с прогнозом</span>
+        <!-- Имя марки в названии метода: экран объясняет не прогноз вообще,
+             а прогноз Ранскеила — тот, что стоит на числах владельца. -->
+        <span class="block text-[1.0625rem] font-bold leading-tight">Расти с прогнозом Ранскеил</span>
         <span class="mt-1 block text-[0.875rem] leading-snug" :style="{ opacity: 0.85 }">
           Закрывайте разрывы быстрее
         </span>
@@ -248,6 +250,12 @@ function saveCarry(v) {
              тихая строка внутри шторки самой величины: человек сначала смотрит
              своё число, а разбор ему предлагают там, где он про это число
              читает. Разрыв остался тем, чем является, — расстоянием. -->
+        <!-- ⚠ Подпись стоит по центру полоски-соединителя. Раньше она была
+             блоком со своей высотой строки, и центрировался этот блок,
+             а не текст в нём: два кегля в одной строке давали разную высоту,
+             и надпись сидела выше полоски на два-три пикселя — на ряде из трёх
+             расстояний это читалось перекосом. Теперь центрируются сами
+             величины, а высоту ряду задаёт полоска. -->
         <div
           v-if="gapFor(r.key)"
           class="flex w-full items-center gap-2.5 px-4 py-1"
@@ -257,11 +265,11 @@ function saveCarry(v) {
             :style="{ background: gapColor(gapFor(r.key).tone) }"
             aria-hidden="true"
           ></span>
-          <span class="min-w-0 flex-1">
-            <span class="text-[0.8125rem] text-[var(--text-muted)]">{{ gapFor(r.key).label }}</span>
+          <span class="flex min-w-0 flex-1 items-center gap-1.5">
+            <span class="text-[0.8125rem] leading-none text-[var(--text-muted)]">{{ gapFor(r.key).label }}</span>
             <span
               v-if="gapFor(r.key).value !== null"
-              class="ml-1.5 text-[0.9375rem] font-bold tabular-nums"
+              class="text-[0.9375rem] font-bold leading-none tabular-nums"
               :style="{ color: gapColor(gapFor(r.key).tone) }"
             >{{ formatRub(gapFor(r.key).value) }}</span>
           </span>

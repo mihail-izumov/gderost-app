@@ -169,11 +169,16 @@ watch(() => store.state.ready, (ready) => {
 // говорит: «внесите прошедшие дни» без адреса возвращает человека к поиску.
 const dayPreset = ref('')
 
-// Под-страницы принадлежат вкладкам: «Контроль Дня» и «Цели и планы» —
-// это заход вглубь «Сегодня». Пока активная вкладка не переключалась, человек
-// уходил с «Прогресса» в «Контроль Дня» и видел в таб-баре, что он всё ещё
-// на «Прогрессе»: подпись внизу противоречила тому, что на экране.
-const SUB_OWNER = { day: 'today', goals: 'today' }
+// ⚠ Под-страница принадлежит тому разделу, ОТКУДА в неё вошли, а не одному
+// назначенному владельцу. «Контроль Дня» открывается и с «Сегодня», и тапом
+// по неделе с «Прогресса», и кнопка «Назад» обязана вернуть туда же, откуда
+// человек пришёл: он открыл неделю, посмотрел её и хочет обратно к списку
+// недель, а не на главную. Подпись в таб-баре при этом остаётся верной —
+// она показывает раздел, в который ведёт возврат.
+//
+// Раньше владелец был прописан жёстко (`day: 'today'`), и возврат с «Прогресса»
+// уводил на «Сегодня»: путь терялся молча.
+const homeTab = ref('today')
 
 // Второй аргумент — либо дата дня строкой (как было), либо адрес назначения
 // объектом: `{ anchor, week, day }`. Оболочка подведёт прокрутку к блоку,
@@ -183,12 +188,22 @@ function go(where, arg) {
   setNavTarget(t)
   if (SUB_VIEWS[where]) {
     dayPreset.value = where === 'day' && t.day ? t.day : ''
+    // Куда вернёт «Назад»: раздел, в котором человек стоял в момент входа.
+    // Заход из-под другой под-страницы возврат не переписывает.
+    if (!subView.value) homeTab.value = tab.value
     subView.value = where
-    if (SUB_OWNER[where]) tab.value = SUB_OWNER[where]
     return
   }
   subView.value = ''
   tab.value = where
+}
+
+// Возврат с под-страницы: закрываем её и встаём в тот раздел, из которого
+// в неё вошли.
+function backFromSub() {
+  subView.value = ''
+  dayPreset.value = ''
+  tab.value = homeTab.value
 }
 
 function selectTab(id) {
@@ -269,7 +284,7 @@ function selectTab(id) {
     :sub-view="subView"
     :sub-views="SUB_VIEWS"
     @update:active="selectTab"
-    @back="subView = ''"
+    @back="backFromSub"
   >
     <!-- Отказ записи виден на каждом экране: человек вводит числа и обязан
          знать, что они живут только до закрытия вкладки. -->
@@ -283,7 +298,7 @@ function selectTab(id) {
     </p>
 
     <DayControlScreen v-if="subView === 'day'" :open-day="dayPreset" />
-    <GoalsScreen v-else-if="subView === 'goals'" @back="subView = ''" />
+    <GoalsScreen v-else-if="subView === 'goals'" @back="backFromSub" />
     <template v-else>
       <TodayScreen v-if="tab === 'today'" @go="go" />
       <SignalsScreen v-else-if="tab === 'power'" @go="go" />

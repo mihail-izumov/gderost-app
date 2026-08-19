@@ -223,6 +223,44 @@ export function computeMini(set, now = new Date()) {
   const onPlan = planRealized > 0 ? realizedRev / planRealized : null
   const tailCum = planRealized - realizedRev
 
+  // Куда движется исполнение плана: сравнение сегодняшнего отношения
+  // «факт / план» с тем, каким оно было на конец предыдущего дня с фактом.
+  //
+  // Ряд строится накопительно по закрытым дням — той же величиной, что стоит
+  // на виджете, а не отдельной формулой: два счёта одного отношения разошлись
+  // бы молча. Стартовая сумма входит в накопление целиком с первого своего
+  // дня — она уже заработана, и делать вид, что её нет, значило бы показать
+  // падение там, где ничего не падало.
+  //
+  // Три состояния и ни одного четвёртого: `up` — отношение выросло, `down` —
+  // упало, `flat` — стоит в пределах десятой процента. Точек меньше двух —
+  // `null`: стрелка «ровно» там, где сравнивать не с чем, утверждает, что
+  // ничего не менялось, а это неизвестно.
+  const onPlanSeries = []
+  {
+    let cumFact = carry ? carry.amount : 0
+    let cumPlan = 0
+    let seenEntered = 0
+    for (const x of closed) {
+      if (x.entered) { cumFact += x.fact; seenEntered += 1 }
+      cumPlan += x.planAt
+      // Точка ряда появляется только там, где день внесён руками: дни,
+      // покрытые стартовой суммой, дневного факта не имеют, и движение
+      // отношения на них — арифметика раскладки, а не работа бизнеса.
+      if (x.entered && cumPlan > 0) onPlanSeries.push(cumFact / cumPlan)
+    }
+    if (seenEntered < 2) onPlanSeries.length = 0
+  }
+  const onPlanTrend = onPlanSeries.length < 2
+    ? null
+    : (() => {
+      const last = onPlanSeries[onPlanSeries.length - 1]
+      const prev = onPlanSeries[onPlanSeries.length - 2]
+      if (last > prev * 1.001) return 'up'
+      if (last < prev * 0.999) return 'down'
+      return 'flat'
+    })()
+
   // Нужный темп и цена промедления.
   const lastClosedISO = closed.length ? closed[closed.length - 1].iso : null
   const futureDays = days.filter((x) => !x.closed && (!lastClosedISO || x.iso > lastClosedISO))
@@ -392,7 +430,7 @@ export function computeMini(set, now = new Date()) {
     impliedBase, adjBase,
     landing, landDev, fcSig: sigClass(T ? landing / T : null),
     achievable, goalState, remainTarget, factPct, landPct, gap,
-    planRealized, onPlan, tailCum,
+    planRealized, onPlan, onPlanTrend, tailCum,
     spread: remaining.length ? Math.abs(tailCum) / remaining.length : 0,
     currentPace, needPerDay, paceGap, futureCount: futureDays.length,
     daysLeft, todayNeed: todayRow && !todayRow.closed ? todayRow.need : null,

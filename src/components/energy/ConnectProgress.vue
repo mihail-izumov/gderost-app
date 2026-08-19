@@ -17,11 +17,22 @@ import { PATH_VISIBLE } from '../../composables/energyModel.js'
 // Разбор состава открывается отсюда же: расшифровка числа стоит там, где
 // стоит число, а не отдельной строкой под плашкой.
 
-defineProps({
+const props = defineProps({
   unit: { type: String, default: '' },
   pct: { type: Number, default: 0 },
   levelId: { type: String, default: 'mini' },
 })
+
+// Цвет этапа. Жёлтый на «Сигналах» — то же значение, что у жёлтого везде
+// в приложении: мера и незавершённость. Это ступень, которую владелец уже
+// прошёл собственной работой, и она единственная на дороге принадлежит ему,
+// а не нам. Полоска и подпись красятся одним цветом: разный цвет у знака
+// и его имени читается как два разных состояния.
+function stageInk(id, isBar) {
+  if (id === 'mini') return 'var(--warning)'
+  if (id === props.levelId) return 'var(--ink-on-color)'
+  return isBar ? 'var(--line-on-color)' : 'var(--ink-on-color-muted)'
+}
 defineEmits(['info', 'stage'])
 
 // Этап пути — вход в паспорт своей ступени. «Трек» товаром не является:
@@ -45,16 +56,12 @@ const levels = PATH_VISIBLE
     <div class="flex items-start justify-between gap-3">
       <span class="min-w-0">
         <span class="block truncate text-[1.0625rem] font-bold leading-tight">{{ unit || 'Ваш бизнес' }}</span>
-        <span class="mt-1 flex items-center gap-1.5">
-          <!-- Точка статуса — жёлтая: подключение идёт и не закончено.
-               Это её единственное законное место на экране. -->
-          <span
-            class="inline-block h-[7px] w-[7px] rounded-full"
-            :style="{ background: 'var(--warning)' }"
-            aria-hidden="true"
-          ></span>
-          <span class="text-[0.8125rem]" :style="{ color: 'var(--ink-on-color-muted)' }">Считаем дни</span>
-        </span>
+        <!-- ⚠ Точка статуса снята. Она означала «идёт процесс», а процесса
+             со стороны приложения не идёт: человек ведёт свои дни, и это
+             состояние, а не операция. Строка называет то же самое прямо —
+             «Рост на Треке»; «Считаем дни» описывало занятие приложения,
+             а не положение владельца. -->
+        <span class="mt-1 block text-[0.8125rem]" :style="{ color: 'var(--ink-on-color-muted)' }">Рост на Треке</span>
       </span>
 
       <!-- Знак «инфо» стоит в одной строке с процентом и ровно слева от него:
@@ -90,13 +97,13 @@ const levels = PATH_VISIBLE
       >
         <span
           class="mb-1.5 h-[3px] w-full rounded-full"
-          :style="{ background: l.id === levelId ? 'var(--ink-on-color)' : 'var(--line-on-color)' }"
+          :style="{ background: stageInk(l.id, true) }"
           aria-hidden="true"
         ></span>
         <span
           class="truncate text-[0.75rem] leading-tight"
           :style="{
-            color: l.id === levelId ? 'var(--ink-on-color)' : 'var(--ink-on-color-muted)',
+            color: stageInk(l.id, false),
             fontWeight: l.id === levelId ? 700 : 400,
           }"
         >{{ l.label }}</span>
