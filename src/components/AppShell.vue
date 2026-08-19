@@ -7,6 +7,7 @@ import BrandLockup from './BrandLockup.vue'
 import { ArrowDown } from 'lucide-vue-next'
 import { useAppRefresh } from '../composables/useAppRefresh.js'
 import { PULL, pullOffset, canStartPull, shouldFirePull } from '../composables/pullGesture.js'
+import { takeNavTarget } from '../composables/useNavAnchor.js'
 
 // Оболочка приложения. Перенесена из рабочего Ранскеила.
 //
@@ -165,6 +166,12 @@ const REFRESH_TEXT = {
   offline: 'Нет сети — Трек остался прежним',
 }
 
+// Смена экрана возвращает прокрутку к верху — экран, открытый с середины,
+// читается продолжением предыдущего. Исключение одно: человек шёл к
+// конкретному блоку, и тогда оболочка подводит его туда сама.
+//
+// Два кадра ожидания вместо одного: первый отдаёт разметку нового экрана,
+// второй — раскрытые им блоки. Искать якорь раньше значит не найти ничего.
 watch(() => [props.active, props.subView], async () => {
   await nextTick()
   if (scrollEl.value) scrollEl.value.scrollTop = 0
@@ -172,6 +179,18 @@ watch(() => [props.active, props.subView], async () => {
   navHidden.value = false
   navPinned.value = false
   pull.value = 0
+
+  const target = takeNavTarget()
+  if (!target || !target.anchor || !scrollEl.value) return
+  await nextTick()
+  requestAnimationFrame(() => {
+    const el = scrollEl.value && scrollEl.value.querySelector(`[data-anchor="${target.anchor}"]`)
+    if (!el) return
+    // Отступ сверху — под липкую полосу: иначе блок встаёт ровно под ней
+    // и первая строка читается наполовину.
+    const top = el.offsetTop - 64
+    scrollEl.value.scrollTo({ top: top > 0 ? top : 0, behavior: 'smooth' })
+  })
 })
 </script>
 
@@ -248,6 +267,7 @@ watch(() => [props.active, props.subView], async () => {
         :leading-action="current.leadingAction || null"
         :eyebrow="current.eyebrow || null"
         :eyebrow-name="current.eyebrowName || ''"
+        :eyebrow-company="current.eyebrowCompany || ''"
         :clock-title="!!current.clockTitle"
         :big-title="current.bigTitle !== false"
         @back="emit('back')"

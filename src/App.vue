@@ -13,6 +13,7 @@ import AppShell from './components/AppShell.vue'
 import StoryOnboarding from './components/StoryOnboarding.vue'
 import { INTRO_STORY } from './i18n/stories.js'
 import { useMiniStore } from './composables/useMiniStore.js'
+import { setNavTarget } from './composables/useNavAnchor.js'
 import { readShared, hasSharePayload } from './composables/shareLink.js'
 
 // Три состояния входа: витрина → подключение бизнеса → свои цифры.
@@ -91,6 +92,7 @@ const TABS = computed(() => [
     leadingAction: 'update',
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
+    eyebrowCompany: store.state.company || '',
   },
   // «Прогресс» стоит вторым, сразу за своими цифрами: сегодня человек вносит
   // день, следом смотрит, куда он его двинул. «Сигналы» — предмет торговли,
@@ -107,6 +109,7 @@ const TABS = computed(() => [
     leadingAction: 'update',
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
+    eyebrowCompany: store.state.company || '',
   },
   // Чип бизнеса и перезагрузка живут и здесь: «Сигналы» говорят про тот же
   // юнит, что «Сегодня», и переключаться между ними, теряя контекст в шапке,
@@ -119,6 +122,7 @@ const TABS = computed(() => [
     leadingAction: 'update',
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',
+    eyebrowCompany: store.state.company || '',
   },
   // Верхняя комплектация линейки. Чипа бизнеса и перезагрузки здесь нет:
   // страница говорит не про юнит владельца, а про то, что делает команда, —
@@ -165,10 +169,22 @@ watch(() => store.state.ready, (ready) => {
 // говорит: «внесите прошедшие дни» без адреса возвращает человека к поиску.
 const dayPreset = ref('')
 
+// Под-страницы принадлежат вкладкам: «Контроль Дня» и «Цели и планы» —
+// это заход вглубь «Сегодня». Пока активная вкладка не переключалась, человек
+// уходил с «Прогресса» в «Контроль Дня» и видел в таб-баре, что он всё ещё
+// на «Прогрессе»: подпись внизу противоречила тому, что на экране.
+const SUB_OWNER = { day: 'today', goals: 'today' }
+
+// Второй аргумент — либо дата дня строкой (как было), либо адрес назначения
+// объектом: `{ anchor, week, day }`. Оболочка подведёт прокрутку к блоку,
+// экран раскроет его, если он свёрнут.
 function go(where, arg) {
+  const t = typeof arg === 'string' ? { day: arg } : (arg || {})
+  setNavTarget(t)
   if (SUB_VIEWS[where]) {
-    dayPreset.value = where === 'day' && typeof arg === 'string' ? arg : ''
+    dayPreset.value = where === 'day' && t.day ? t.day : ''
     subView.value = where
+    if (SUB_OWNER[where]) tab.value = SUB_OWNER[where]
     return
   }
   subView.value = ''

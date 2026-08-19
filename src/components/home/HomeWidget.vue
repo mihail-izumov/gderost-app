@@ -63,8 +63,13 @@ const skin = computed(() => TONE[props.tone] || TONE.idle)
 
     <p class="text-[0.78rem] font-medium text-[var(--text-muted)]">{{ metricLabel }}</p>
 
+    <!-- ⚠ Число живёт в одну строку и не переносится никогда. «3,10 млн ₽»
+         не помещалось в ширину плитки, «млн» уезжало на вторую строку,
+         и высота карточки менялась от суммы: две плитки в деке вставали
+         разной высоты, а число прыгало на месте. Перенос запрещён, единица
+         отделена неразрывным пробелом ещё в форматтере. -->
     <div class="mt-1 flex min-h-[30px] items-center gap-2">
-      <span class="text-[1.875rem] font-extrabold leading-none tracking-tight text-[var(--text)]">{{ valueMain }}</span>
+      <span class="whitespace-nowrap text-[1.875rem] font-extrabold leading-none tracking-tight text-[var(--text)]">{{ valueMain }}</span>
       <span v-if="valueUnit" class="self-end text-[1.0625rem] font-bold leading-none text-[var(--text)]">{{ valueUnit }}</span>
       <span
         v-if="trend"

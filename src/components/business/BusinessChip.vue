@@ -24,6 +24,11 @@ const props = defineProps({
   // Имя в списке отличается от подписи в чипе: в чипе капс — это стиль,
   // а не написание имени.
   name: { type: String, default: '' },
+  // Компания, которой принадлежит юнит. В свёрнутом чипе её нет — там стоит
+  // то, о чьих цифрах идёт речь; в раскрытом списке она встаёт первой строкой:
+  // выбирают всегда внутри компании, и без неё пункт списка отвечает только
+  // на половину вопроса «что я выбираю».
+  company: { type: String, default: '' },
   // Чип растёт по содержимому до всей доступной ширины и обрезается только
   // тогда, когда места действительно нет. Прибитая ширина в тринадцать знаков
   // резала короткие имена по границе, а растянутый на всю строку чип читался
@@ -110,7 +115,16 @@ onBeforeUnmount(() => {
         class="bc-menu-item flex min-h-[56px] w-full items-center gap-2 rounded-lg bg-[var(--surface-2)] px-3 py-2 text-left outline-none focus-visible:ring-2 focus-visible:ring-[var(--text-muted)] active:bg-[var(--surface-hover)]"
         @click="close"
       >
-        <span class="text-[1rem] text-[var(--text)]">{{ name || label }}</span>
+        <span class="flex min-w-0 flex-col">
+          <span
+            v-if="company && company !== (name || label)"
+            class="truncate text-[1rem] font-bold leading-tight text-[var(--text)]"
+          >{{ company }}</span>
+          <span
+            class="truncate leading-tight text-[var(--text)]"
+            :class="company && company !== (name || label) ? 'text-[0.8125rem] text-[var(--text-secondary)]' : 'text-[1rem]'"
+          >{{ name || label }}</span>
+        </span>
         <Check class="ml-auto h-5 w-5 shrink-0 text-[var(--text)]" :stroke-width="2.25" aria-label="Активный бизнес" />
       </button>
 

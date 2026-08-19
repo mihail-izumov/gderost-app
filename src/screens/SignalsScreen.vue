@@ -15,6 +15,7 @@ import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { computeEnergy } from '../composables/energyModel.js'
 import { computeTodaySignal } from '../composables/signalModel.js'
+import { GOAL_STATE } from '../i18n/daily.js'
 import { ENTITY_STORY } from '../i18n/stories.js'
 import { isLocked } from '../i18n/energy.js'
 import { HEAD } from '../i18n/growth247.js'
@@ -62,6 +63,20 @@ const unlocked = computed(() => state.razborRating !== null && state.razborRatin
 
 const rateOpen = ref(false)
 const breakdownOpen = ref(false)
+
+// Состояние месяца одной строкой — то же слово, что стоит в шапке «Контроля
+// Дня». Второй формулировки у этого состояния нет и быть не может: два разных
+// слова об одном человек прочтёт как два разных положения дел.
+//
+// Бейдж во всю ширину и над сигналом: он рамка для чисел под ним. «Нужен
+// рекордный темп» меняет смысл строки «надо сегодня» целиком, и узнавать
+// об этом после числа поздно.
+const monthState = computed(() => {
+  const mm = m.value
+  if (!mm) return null
+  const g = GOAL_STATE[mm.goalState] || GOAL_STATE.unknown
+  return { label: g.label, dot: g.dot }
+})
 const moduleOpen = ref('')
 const storyOpen = ref(false)
 // Происхождение числа: ключ открытой шторки. Механика честной цифры —
@@ -103,6 +118,21 @@ function storyDone() {
     />
 
     <h2 class="mb-2 mt-6 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">Сегодня</h2>
+
+    <!-- Состояние месяца рамкой над числами. Тап ведёт в «Контроль Дня»,
+         к той самой шапке, откуда это слово взято: человек, которому сказали
+         «нужен рекордный темп», следующим движением хочет увидеть, из чего
+         это следует. -->
+    <button
+      v-if="monthState"
+      type="button"
+      class="mb-2 flex min-h-[44px] w-full items-center gap-2.5 rounded-2xl bg-[var(--surface)] px-4 text-left"
+      @click="emit('go', 'day', { anchor: 'hero' })"
+    >
+      <span class="h-[10px] w-[10px] shrink-0 rounded-full" :style="{ background: monthState.dot }" aria-hidden="true"></span>
+      <span class="min-w-0 flex-1 text-[0.9375rem] font-semibold text-[var(--text)]">{{ monthState.label }}</span>
+      <ChevronRight class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" :stroke-width="2.5" aria-hidden="true" />
+    </button>
 
     <!-- Живой сигнал: полезное вперёд продаваемого. -->
     <SignalTodayCard

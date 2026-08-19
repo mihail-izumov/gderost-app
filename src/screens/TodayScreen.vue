@@ -19,7 +19,7 @@ import CarrySheet from '../components/CarrySheet.vue'
 import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
 import { sigClass, todayISO } from '../composables/miniModel.js'
 import { honestLoop } from '../composables/honestLoop.js'
-import { mlnRub, pct1, pctDelta, monthCap } from '../i18n/home.js'
+import { mlnRub, mlnNum, pct1, pctDelta, monthCap } from '../i18n/home.js'
 import { widgetStory, honestStory } from '../i18n/stories.js'
 
 // Главная — дека виджетов. Устройство взято у рабочего Ранскеила:
@@ -232,7 +232,8 @@ function storyDone() {
         :icon="PlansIcon"
         name="Цели и&#10;планы"
         metric-label="Прогноз"
-        :value-main="mlnRub(m.landing)"
+        :value-main="mlnNum(m.landing)"
+        value-unit="млн"
         :trend="fcTrend"
         sub-label="Цель"
         :sub-value="m.goal ? mlnRub(m.goal) : '—'"
@@ -241,20 +242,22 @@ function storyDone() {
       />
     </div>
 
-    <!-- Как читать виджеты — подпись к деке, а не карточка рядом с ней.
-         Плашкой она спорила с «Честной цифрой» и «Попробовать неделю»: три
-         блока одного вида подряд, и глаз выбирал между ними вместо того,
-         чтобы читать. Теперь это строка без фона, прижатая к сетке виджетов:
-         принадлежность видна расстоянием, а не рамкой. Иконка и подзаголовок
-         сняты — знак вопроса говорит то же самое одним символом. -->
-    <button
-      type="button"
-      class="mt-1.5 flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl text-[var(--text-muted)] active:bg-[var(--surface-2)]"
-      @click="openWidgetStory"
-    >
-      <QuestionIcon class="h-[15px] w-[15px] shrink-0" />
-      <span class="text-[0.8125rem]">Как читать виджеты</span>
-    </button>
+    <!-- Как читать виджеты — реплика от самих виджетов: облачко с хвостиком,
+         направленным в деку. Карточкой этот блок спорил с «Честной цифрой»
+         и «Попробовать неделю» — три плашки подряд, и глаз выбирал между ними
+         вместо того, чтобы читать. Бабл принадлежит тому, на что указывает,
+         и в очередь равных блоков не встаёт. -->
+    <div class="mt-2 flex justify-center">
+      <button
+        type="button"
+        class="gr-bubble relative flex min-h-[40px] items-center gap-1.5 rounded-2xl px-3.5 py-2 text-left"
+        :style="{ background: 'var(--surface)' }"
+        @click="openWidgetStory"
+      >
+        <QuestionIcon class="h-[17px] w-[17px] shrink-0 text-[var(--text-muted)]" />
+        <span class="text-[0.8125rem] text-[var(--text-secondary)]">Как читать виджеты</span>
+      </button>
+    </div>
 
     <div class="mt-3">
       <TryWeekCard />
@@ -288,3 +291,21 @@ function storyDone() {
     />
   </div>
 </template>
+
+<style scoped>
+/* Хвостик облачка. Смотрит вверх, в деку виджетов: реплика принадлежит тому,
+   о чём говорит, и стрелка — единственный способ это показать, не рисуя
+   рамку вокруг обоих. */
+.gr-bubble::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  margin-left: -5px;
+  transform: rotate(45deg);
+  background: var(--surface);
+  border-radius: 2px;
+}
+</style>

@@ -97,7 +97,7 @@ const cards = computed(() => RAIL.map((id) => {
                  состоявшийся разбор, то есть работа, а не покупка. -->
             <HandIcon
               v-if="c.locked"
-              class="h-[20px] w-[20px] shrink-0"
+              class="h-[30px] w-[30px] shrink-0"
               :style="{ color: c.inkFaint, opacity: c.faintOpacity }"
             />
             <ChevronRight

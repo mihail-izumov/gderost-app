@@ -1,10 +1,11 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Check, ChevronRight } from 'lucide-vue-next'
+import { Check } from 'lucide-vue-next'
 import BottomSheet from '../components/BottomSheet.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
 import WeekRows from '../components/growth/WeekRows.vue'
 import CurrentWeekCard from '../components/growth/CurrentWeekCard.vue'
+import DaysByPlan from '../components/daily/DaysByPlan.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { computeEnergy } from '../composables/energyModel.js'
@@ -64,7 +65,13 @@ const moduleOpen = ref('')
 // и поле под неё — предложение её выдумать.
 function openDay(iso) {
   if (iso && iso > today.value) return
-  emit('go', 'day', iso || '')
+  emit('go', 'day', { day: iso || '', anchor: 'hero' })
+}
+
+// Тап по неделе — посмотреть её в «Контроле Дня»: экран откроет именно эту
+// неделю и подведёт к ней прокрутку. Ввода здесь по-прежнему нет.
+function openWeek(idx) {
+  emit('go', 'day', { week: idx, anchor: `week-${idx}` })
 }
 const energy = computed(() => computeEnergy(state, m.value))
 const rated = computed(() => state.razborRating !== null && state.razborRating !== undefined)
@@ -74,17 +81,11 @@ const today = computed(() => todayISO())
 // месяца» на закрытом августе читались бы как недели текущего календаря.
 // Идущую неделю держит `CurrentWeekCard` — он же решает, что показывать,
 // когда текущей недели в месяце нет.
-// Сводка дней месяца: сколько закрыто по плану, сколько с недобором.
-// Числа берутся из модели, второго счёта здесь не заводится.
-const dayTiles = computed(() => {
-  const s = m.value && m.value.dayStats
-  if (!s) return []
-  return [
-    { key: 'good', n: s.good, label: 'по плану', color: 'var(--positive)' },
-    { key: 'warn', n: s.warn, label: 'близко', color: 'var(--warning)' },
-    { key: 'bad', n: s.bad, label: 'недобор', color: 'var(--negative)' },
-  ]
-})
+// «Август 2026» — месяц приложения полностью, с годом: закрытый месяц
+// в январе иначе читается как текущий.
+const monthTitleFull = computed(() => (m.value
+  ? `${monthOf(m.value.month)} ${m.value.month.slice(0, 4)}`
+  : ''))
 
 const weeksTitle = computed(() => (m.value ? `Недели ${monthOf(m.value.month)}` : 'Недели месяца'))
 
@@ -115,6 +116,17 @@ const reason = computed(() => {
 
 <template>
   <div v-if="m" class="w-full px-4 pb-4">
+    <!-- Месяц, о котором идёт речь. Заголовок «Прогресс» не отвечает на вопрос
+         «прогресс чего и когда», а недели без месяца читаются календарём
+         устройства. Бабл стоит под заголовком и держит ответ одной строкой —
+         это подпись к экрану, а не элемент управления. -->
+    <div class="mb-3 flex justify-center">
+      <span
+        class="font-label inline-flex items-center rounded-full px-3 py-1 text-[0.75rem] uppercase text-[var(--text-secondary)]"
+        :style="{ background: 'var(--surface-2)', '--caps-track': '0.1em' }"
+      ><span class="gr-caps">{{ monthTitleFull }}</span></span>
+    </div>
+
     <!-- 1 · Идущая неделя — главный блок экрана. Стоит первым: человек
          приходит сюда с вопросом «сколько дней у меня есть и что внести
          сегодня», и ответ обязан быть раньше всего остального. -->
@@ -147,31 +159,14 @@ const reason = computed(() => {
 
     <!-- 3 · Недели месяца -->
     <div class="mt-4">
-      <WeekRows :m="m" :today="today" :month-title="weeksTitle" @enter="openDay" />
+      <WeekRows :m="m" :today="today" :month-title="weeksTitle" @week="openWeek" />
     </div>
 
-    <!-- 4 · Дни месяца одной строкой. Сводка живёт здесь, а сами дни —
-         в «Контроле Дня»: страница недель показывает, из чего они сложились,
-         и отдаёт разбор туда, где лежит таблица. Пока внесённых дней нет,
-         блока нет: три нуля ничего не сообщают. -->
+    <!-- 4 · Дни по плану — тот же блок, что в сводке «Контроля Дня».
+         Ссылки на него нет намеренно: он сам и есть ответ, а вход в дни
+         стоит выше, у недели. Дублирования нет — компонент один. -->
     <section v-if="m.dayStats" class="mt-5">
-      <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-        {{ HEAD.days }}
-      </h2>
-      <button
-        type="button"
-        class="mt-2 flex w-full items-center gap-3 rounded-2xl bg-[var(--surface)] p-4 text-left"
-        @click="emit('go', 'day')"
-      >
-        <span class="flex min-w-0 flex-1 items-center gap-4">
-          <span v-for="s in dayTiles" :key="s.key" class="flex items-baseline gap-1.5">
-            <span class="h-[10px] w-[10px] shrink-0 rounded-full" :style="{ background: s.color }" aria-hidden="true"></span>
-            <span class="text-[1.125rem] font-bold tabular-nums text-[var(--text)]">{{ s.n }}</span>
-            <span class="text-[0.75rem] text-[var(--text-muted)]">{{ s.label }}</span>
-          </span>
-        </span>
-        <ChevronRight class="h-5 w-5 shrink-0 text-[var(--text-muted)]" :stroke-width="2" aria-hidden="true" />
-      </button>
+      <DaysByPlan :stats="m.dayStats" standalone />
     </section>
 
     <!-- 5 · Что уже работает. Таблица вернулась сюда с «Сигналов»: она

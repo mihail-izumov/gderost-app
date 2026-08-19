@@ -39,7 +39,7 @@ const props = defineProps({
   // Заголовок с именем месяца — подставляется экраном.
   monthTitle: { type: String, default: 'Недели месяца' },
 })
-const emit = defineEmits(['enter'])
+const emit = defineEmits(['week'])
 
 // Причина замка называется один раз — у первой запертой недели. Дальше она
 // та же самая, и повторённая трижды строка перестаёт читаться вовсе.
@@ -63,22 +63,19 @@ const rows = computed(() => props.m.weeks.map((w) => {
   // что о нём забыли, и меткой долга он не помечается никогда.
   const missing = w.missing
 
-  // Куда ведёт тап: в тот день, которого не хватает. У запертой недели это
-  // дыра в неделе-причине — чинится там, а не здесь. В будущее тап не ведёт:
-  // выручки за не наступивший день не бывает, и форма ввода там оказалась бы
-  // предложением её выдумать.
-  const goTo = time === 'ahead' && !locked ? ''
-    : locked && w.blockedBy ? w.blockedBy.iso[0]
-      : missing > 0 ? w.missingISO[0]
-        : time === 'now' ? w.days.find((d) => !d.closed && d.iso <= props.today)?.iso || ''
-          : ''
+  // ⚠ Тап по неделе открывает ЭТУ неделю в «Контроле Дня» и ничего не вносит.
+  // Раньше он вёл в форму ввода конкретного дня — и спорил с правилом, ради
+  // которого весь ввод туда и уехал: страница недель показывает, а вносят
+  // в таблице дней. Человек, ткнувший в неделю, хочет посмотреть неделю.
+  //
+  // Будущая неделя не открывается: смотреть в ней нечего, а раскрытая пустая
+  // таблица читается поломкой.
+  const goTo = time === 'ahead' && !locked ? 0 : w.idx
 
-  const INK = {
-    past: { bar: 'var(--text)' },
-    now: { bar: 'var(--action)' },
-    ahead: { bar: 'var(--line)' },
-  }[time]
-
+  // Полоса прошедшей недели красится её результатом: неделя кончилась,
+  // и «сколько внесено» у неё всегда сто процентов — чернильная полоса
+  // на всю ширину не сообщала ничего. Идущая неделя остаётся цветом действия:
+  // мерить планом её рано.
   // Метка справа. У прошедшей недели она говорит про план, и это законно
   // только тогда, когда неделя внесена целиком: процент по половине данных —
   // не результат, а половина результата, выданная за целое. Неполная прошлая
@@ -89,6 +86,11 @@ const rows = computed(() => props.m.weeks.map((w) => {
   const full = closed === total && total > 0
   const ratio = w.ratio
   const donePct = full && ratio !== null ? Math.round(ratio * 100) : null
+  // Оценка для недели, закрытой стартовой суммой: её показанный факт против
+  // её же плана. Данные те же, что в сводке «Контроля Дня», второго счёта
+  // здесь не заводится.
+  const sumRatio = full && ratio === null && w.plan > 0 ? w.shownFact / w.plan : null
+  const sumPct = sumRatio !== null ? Math.round(sumRatio * 100) : null
   const SIG = {
     good: { bg: 'var(--positive)', ink: 'var(--ink-on-color)' },
     warn: { bg: 'var(--warning)', ink: 'var(--accent-ink)' },
@@ -101,11 +103,13 @@ const rows = computed(() => props.m.weeks.map((w) => {
   } else if (time === 'past' && closed < total) {
     chip = { text: `нет ${total - closed} дн`, bg: 'var(--warning)', ink: 'var(--accent-ink)' }
   } else if (time === 'past') {
-    // ⚠ Неделя внесена целиком, а процента нет: все её дни вошли в стартовую
-    // сумму, и против плана меряться нечему — дневных чисел у них не было.
-    // Прежняя ветка печатала здесь «нет 0 дн»: счёт верный, сообщение
-    // бессмысленное. Такая неделя честно говорит, чем она закрыта.
-    chip = { text: 'суммой', bg: 'var(--surface-2)', ink: 'var(--text-muted)' }
+    // Неделя целиком вошла в стартовую сумму: дневных чисел у её дней нет,
+    // и процент по ним не считается. Но недельный план и её доля общей суммы
+    // известны — процент честно берётся с них, только помечается словом
+    // «оценка»: он верен для недели в целом и не разложен по дням.
+    chip = sumPct !== null
+      ? { text: `≈ ${sumPct} %`, ...SIG[sigClass(sumRatio)] }
+      : { text: 'внесена', bg: 'var(--text)', ink: 'var(--ink-on-color)' }
   } else if (time === 'now') {
     chip = { text: 'идёт', bg: 'var(--action)', ink: 'var(--action-ink)' }
   } else {
@@ -113,6 +117,15 @@ const rows = computed(() => props.m.weeks.map((w) => {
     // а не про очередь, и не обещает срока.
     chip = { text: 'скоро', bg: 'var(--surface-2)', ink: 'var(--text-muted)' }
   }
+
+  // Полоса прошедшей недели красится её результатом: неделя кончилась, дни
+  // внесены, и «сколько внесено» у неё всегда сто процентов — чернильная
+  // полоса во всю ширину не сообщала ничего. Идущая остаётся цветом действия:
+  // мерить планом неделю, которая не кончилась, рано.
+  const doneRatio = ratio !== null ? ratio : sumRatio
+  const bar = time === 'now' ? 'var(--action)'
+    : time === 'ahead' ? 'var(--line)'
+      : doneRatio !== null ? SIG[sigClass(doneRatio)].bg : 'var(--text)'
 
   return {
     idx: w.idx,
@@ -128,7 +141,7 @@ const rows = computed(() => props.m.weeks.map((w) => {
     now: time === 'now',
     locked,
     chip,
-    ink: INK,
+    ink: { bar },
     // Долг показывается только там, где метка о нём не сказала сама.
     missing: time === 'past' ? 0 : missing,
     blockedBy: locked ? w.blockedBy : null,
@@ -149,18 +162,8 @@ const rows = computed(() => props.m.weeks.map((w) => {
           :is="r.goTo ? 'button' : 'div'"
           :type="r.goTo ? 'button' : null"
           class="relative flex w-full min-h-[64px] items-center gap-3 py-3 pl-4 pr-4 text-left"
-          @click="r.goTo ? emit('enter', r.goTo) : null"
+          @click="r.goTo ? emit('week', r.goTo) : null"
         >
-          <!-- Идущая неделя отмечена полосой у самого края строки. Заливка
-               всей строки спорила бы с полосой данных внутри неё, а метка
-               «идёт» находится глазом только после чтения. -->
-          <span
-            v-if="r.now"
-            class="absolute inset-y-2 left-0 w-[3px] rounded-r-full"
-            :style="{ background: 'var(--action)' }"
-            aria-hidden="true"
-          ></span>
-
           <span class="min-w-0 flex-1">
             <span class="flex items-center gap-2">
               <span
@@ -214,7 +217,7 @@ const rows = computed(() => props.m.weeks.map((w) => {
                забирает жёлтая метка долга рядом. -->
           <HandIcon
             v-if="r.locked"
-            class="h-[20px] w-[20px] shrink-0 text-[var(--text-muted)]"
+            class="h-[34px] w-[34px] shrink-0 text-[var(--text-muted)]"
             aria-label="Ждём данные"
           />
           <ChevronRight

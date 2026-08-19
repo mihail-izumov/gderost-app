@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { mln, pctSigned, L, SIG_VAR } from '../../i18n/daily.js'
 import { sigClass } from '../../composables/miniModel.js'
 import { useMiniStore } from '../../composables/useMiniStore.js'
+import DaysByPlan from './DaysByPlan.vue'
 
 // Сводка по неделям: полоса, суммы, отклонение · строка «Месяц» · распределение
 // внесённых дней по светофору. Перенесено из рабочего Ранскеила.
@@ -115,22 +116,7 @@ const carryWeeks = computed(() => props.m.weeks.filter(
         </span>
       </label>
 
-      <!-- Распределение дней -->
-      <div v-if="m.dayStats" class="border-t border-[var(--line)] px-4 py-3">
-        <div class="mb-2 text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-          {{ L.days_by_plan }} <span class="font-normal normal-case">({{ m.dayStats.total }} дн с фактом)</span>
-        </div>
-        <div class="flex h-4 gap-0.5 overflow-hidden rounded-lg bg-[var(--surface-2)]">
-          <i v-if="m.dayStats.good" :style="{ width: m.dayStats.pctGood + '%', background: 'var(--positive)' }" />
-          <i v-if="m.dayStats.warn" :style="{ width: m.dayStats.pctWarn + '%', background: 'var(--warning)' }" />
-          <i v-if="m.dayStats.bad" :style="{ width: m.dayStats.pctBad + '%', background: 'var(--negative)' }" />
-        </div>
-        <div class="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-[0.8125rem] text-[var(--text-muted)]">
-          <span class="inline-flex items-center gap-1.5"><i class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--positive)" /><b class="font-semibold text-[var(--text)]">{{ m.dayStats.good }}</b> {{ L.above }} ({{ m.dayStats.pctGood }}%)</span>
-          <span class="inline-flex items-center gap-1.5"><i class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--warning)" /><b class="font-semibold text-[var(--text)]">{{ m.dayStats.warn }}</b> {{ L.close }} ({{ m.dayStats.pctWarn }}%)</span>
-          <span class="inline-flex items-center gap-1.5"><i class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--negative)" /><b class="font-semibold text-[var(--text)]">{{ m.dayStats.bad }}</b> {{ L.below }} ({{ m.dayStats.pctBad }}%)</span>
-        </div>
-      </div>
+      <DaysByPlan v-if="m.dayStats" :stats="m.dayStats" />
     </div>
   </section>
 </template>

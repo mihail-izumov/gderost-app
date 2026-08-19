@@ -76,10 +76,23 @@ const date = ref(props.preset || defaultDate())
 // Теперь неверное значение просто не живёт: как только оно появилось, поле
 // возвращается к ближайшей границе. Сообщать не о чем — состояния,
 // о котором надо сообщать, не возникает.
+// Красная рамка держится, пока человек не выберет законный день: молчаливая
+// подмена даты выглядела бы как сбой календаря.
+const futureTried = ref(false)
+let futureTimer = null
+
 watch(date, (v) => {
   if (!v) return
-  if (v > maxDate.value) date.value = maxDate.value
-  else if (v < minDate.value) date.value = minDate.value
+  if (v > maxDate.value) {
+    date.value = maxDate.value
+    futureTried.value = true
+    if (futureTimer) clearTimeout(futureTimer)
+    futureTimer = setTimeout(() => { futureTried.value = false }, 6000)
+  } else if (v < minDate.value) {
+    date.value = minDate.value
+  } else {
+    futureTried.value = false
+  }
 })
 const rev = ref(null)
 const saved = ref(null)
@@ -167,14 +180,22 @@ function goToGap(iso) {
                за карточку вместе с рамкой. -->
           <input
             v-model="date"
-            class="mt-2 block min-h-[44px] w-full min-w-0 max-w-full appearance-none rounded-xl border border-[var(--line)]
-                   bg-[var(--surface-2)] px-3 text-left font-mono text-[1rem] text-[var(--text)] outline-none
-                   focus:border-[var(--text-secondary)]"
-            style="text-align: left"
+            class="gr-date mt-2 block min-h-[48px] w-full min-w-0 max-w-full appearance-none rounded-xl border
+                   bg-[var(--surface-2)] px-3 text-left font-mono text-[1rem] text-[var(--text)] outline-none"
+            :style="{ borderColor: futureTried ? 'var(--negative)' : 'var(--line)' }"
             type="date"
             :min="minDate"
             :max="maxDate"
           >
+          <!-- Попытка взять не наступивший день: поле краснеет и говорит
+               причину своими словами. Значение при этом уже вернулось
+               к последнему доступному дню — невозможной даты в поле
+               не остаётся ни секунды. -->
+          <span
+            v-if="futureTried"
+            class="mt-1.5 block text-[0.8125rem] leading-snug"
+            :style="{ color: 'var(--negative)' }"
+          >{{ dayLabel(maxDate) }} — последний закрытый день. Выручку за будущее внести нельзя.</span>
         </label>
 
         <MoneyField
@@ -206,3 +227,19 @@ function goToGap(iso) {
     </template>
   </section>
 </template>
+
+<style scoped>
+/* ⚠ Нативное поле даты на iOS выравнивает своё содержимое по центру коробки
+   и садит текст выше середины: у него собственная внутренняя вёрстка, которую
+   `text-align` не трогает. Флекс с центровкой по вертикали ставит дату
+   на одну линию с рамкой, а `-webkit-date-and-time-value` возвращает ей
+   левый край. */
+.gr-date {
+  display: flex;
+  align-items: center;
+}
+.gr-date::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
+</style>

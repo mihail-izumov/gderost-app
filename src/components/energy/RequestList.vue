@@ -95,14 +95,16 @@ const razbor = MODULES.razbor
       class="flex min-h-[11rem] flex-col items-center justify-center gap-1 rounded-2xl px-5 py-6 text-center"
       :style="{ background: 'var(--surface)' }"
     >
-      <span class="block text-[1.0625rem] font-bold leading-tight text-[var(--text)]">{{ razbor.title }}</span>
-      <span class="block text-[0.8125rem] leading-snug text-[var(--text-secondary)]">{{ razbor.subtitle }}</span>
+      <!-- Заголовком стоит то, что человек получит, а кнопка называет
+           предмет. «Детали» — слово ни о чём: за ним может быть что угодно,
+           и нажимают его от любопытства, а не за делом. -->
+      <span class="block text-[1.0625rem] font-bold leading-tight text-[var(--text)]">{{ razbor.subtitle }}</span>
       <button
         type="button"
         class="mt-3 min-h-[44px] rounded-full px-6 text-[0.9375rem] font-bold"
         :style="{ background: 'var(--positive)', color: 'var(--ink-on-color)' }"
         @click="$emit('open', 'razbor')"
-      >Детали</button>
+      >{{ razbor.title }}</button>
     </div>
   </section>
 </template>

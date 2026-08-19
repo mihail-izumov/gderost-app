@@ -29,12 +29,12 @@ const gsOf = (s) => GOAL_STATE[s.goalState] || GOAL_STATE.none
     </summary>
     <div class="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
       <div class="overflow-x-auto" style="-webkit-overflow-scrolling: touch">
-        <div class="min-w-[560px]">
+        <div class="min-w-[600px]">
           <div
             v-for="(s, i) in rows"
             :key="i"
             class="grid items-center gap-3 border-t border-[var(--line)] px-4 py-2 text-[0.8125rem] first:border-t-0"
-            style="grid-template-columns: 84px 1fr 84px 56px 128px"
+            style="grid-template-columns: 84px 1fr 72px 64px 132px"
           >
             <div class="font-semibold text-[var(--text)]">{{ dayGenIso(s.date) }}</div>
             <div class="[font-variant-numeric:tabular-nums] text-[var(--text)]">

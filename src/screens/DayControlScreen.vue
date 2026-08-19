@@ -12,6 +12,7 @@ import AddReportForm from '../components/AddReportForm.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { useNavCaption } from '../composables/useNavCaption.js'
+import { peekNavTarget } from '../composables/useNavAnchor.js'
 import { todayISO } from '../composables/miniModel.js'
 import { stampISO } from '../i18n/format.js'
 import { L } from '../i18n/daily.js'
@@ -28,6 +29,19 @@ const props = defineProps({
   // на нём. Пусто — обычный заход.
   openDay: { type: String, default: '' },
 })
+
+// Неделя, ради которой сюда пришли с «Прогресса». Экран раскрывает её сам:
+// какая неделя свёрнута, знает только он, и оболочка, которая подводит
+// прокрутку, до содержимого блоков не добирается.
+//
+// ⚠ Значение снимается один раз, при создании экрана, и дальше живёт само.
+// Вычисляемым его делать нельзя: адрес одноразовый, оболочка забирает его
+// сразу после перехода, и вычисление тут же вернуло бы ноль — неделя
+// свернулась бы у человека на глазах.
+const openWeek = ref((() => {
+  const t = peekNavTarget()
+  return t && t.week ? t.week : 0
+})())
 
 const store = useMiniStore()
 const m = store.model
@@ -76,11 +90,11 @@ onBeforeUnmount(() => { if (io) { io.disconnect(); io = null } })
 <template>
   <div v-if="m" class="px-4">
     <div class="flex flex-col gap-3">
-      <DailyHero :m="m" />
+      <DailyHero :m="m" data-anchor="hero" />
       <DailyKpis :m="m" />
-      <DailyWeeks :m="m" @pick="openSheet" @tune="tune = true" />
-      <DailySummary :m="m" />
-      <DailyJournal :m="m" />
+      <DailyWeeks :m="m" :open-week="openWeek" data-anchor="weeks" @pick="openSheet" @tune="tune = true" />
+      <DailySummary :m="m" data-anchor="summary" />
+      <DailyJournal :m="m" data-anchor="journal" />
       <DailyCoef :m="m" @tune="tune = true" />
     </div>
 

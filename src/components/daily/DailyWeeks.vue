@@ -34,7 +34,10 @@ import { shapeName } from '../../data/weekShape.js'
 // последнего блока экрана; теперь статус стоит там, где стоит и число,
 // и открывает ту же настройку.
 
-const props = defineProps({ m: { type: Object, required: true } })
+const props = defineProps({
+  // Номер недели, ради которой сюда пришли с «Прогресса»: она раскрыта,
+  // остальные свёрнуты как обычно. Ноль — обычный заход.
+  openWeek: { type: Number, default: 0 }, m: { type: Object, required: true } })
 const emit = defineEmits(['pick', 'tune'])
 const monthGen = (dd) => dayGen(dd, props.m.month)
 
@@ -82,9 +85,10 @@ function progFill(r) {
          вовсе, и человек, внёсший в неё дни, не мог их увидеть: замок толкает
          закрыть дыры, а не отбирает уже сделанную работу. -->
     <details
+      :data-anchor="`week-${w.idx}`"
       v-for="w in m.weeks"
-      :key="`${w.idx}-${w.open}`"
-      :open="(w.open || w.hasFact) && w.isCurrent"
+      :key="`${w.idx}-${w.open}-${openWeek}`"
+      :open="openWeek ? w.idx === openWeek : ((w.open || w.hasFact) && w.isCurrent)"
       class="mb-2 overflow-hidden rounded-2xl border bg-[var(--surface)]"
       :style="{ borderColor: w.isCurrent ? 'var(--text)' : 'var(--line)' }"
     >
@@ -98,7 +102,7 @@ function progFill(r) {
           <span class="text-[0.75rem] text-[var(--text-muted)]">{{ w.from }}–{{ w.to }} {{ monthGen(w.to).split(' ')[1] }}</span>
           <!-- Рука вместо замка: неделю держат недостающие данные,
                а не запрет приложения. -->
-          <HandIcon v-if="!w.open" class="ml-auto h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" aria-label="Ждём данные" />
+          <HandIcon v-if="!w.open" class="ml-auto h-[30px] w-[30px] shrink-0 text-[var(--text-muted)]" aria-label="Ждём данные" />
           <ChevronDown v-else class="ml-auto h-4 w-4 text-[var(--text-muted)]" :stroke-width="2" />
         </div>
         <!-- Свёрнутая неделя показывает план и то, что по ней известно.

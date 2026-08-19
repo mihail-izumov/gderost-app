@@ -39,9 +39,11 @@ const view = computed(() => {
   const total = w.days.length
   const closed = w.days.filter((d) => d.closed).length
   const now = !!w.isCurrent
-  // Ближайший день, который можно внести: прошедший или сегодняшний, без факта.
-  // Будущих дней здесь не бывает — выручки за них не существует.
-  const next = w.days.find((d) => !d.closed && d.iso <= props.today)
+  // ⚠ Ближайший день, который можно внести, — строго ПРОШЕДШИЙ. Сегодняшний
+  // ещё идёт: его выручка не итог, а промежуточное состояние, и форма ввода
+  // его не принимает вовсе. Блок просил внести сегодняшнее число, форма
+  // отказывала — приложение спорило само с собой.
+  const next = w.days.find((d) => !d.closed && d.iso < props.today)
   return {
     name: `Неделя ${w.idx}`,
     range: weekRangeLabel(w.days[0].iso, w.days[total - 1].iso),

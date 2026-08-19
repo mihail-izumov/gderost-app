@@ -129,6 +129,25 @@ function gapColor(tone) {
 }
 
 const moduleOpen = ref('')
+
+// Подпись разрыва для шторки величины. Берётся из той же модели, что рисует
+// строки на экране: второй формулировки у разрыва нет.
+//
+// У плана разрыв идёт от прогноза к плану, у цели — от плана к цели.
+// Ноль расстояния — не разрыв, и кнопки разбора при нём не бывает.
+const GAP_OF_VALUE = { plan: 'forecast-plan', goal: 'plan-goal' }
+function gapAfterLabel(key) {
+  const g = gaps.value[GAP_OF_VALUE[key]]
+  if (!g) return ''
+  return g.value === null || g.value > 0 ? g.label : ''
+}
+
+// Из шторки величины — прямо в паспорт разбора. Шторка при этом закрывается:
+// две панели одна поверх другой на телефоне не читаются.
+function openRazbor() {
+  sheet.value = ''
+  moduleOpen.value = 'razbor'
+}
 const storyOpen = ref(false)
 
 // Цель ниже плана — не цель, а второй план. Называем это в той же шторке,
@@ -223,21 +242,15 @@ function saveCarry(v) {
              нет. Где его двигает сессия — строка становится кнопкой. -->
         <!-- Разрывы выровнены по левому краю: по центру они читались подписями
              к плашкам, а не самостоятельным рядом чисел. -->
-        <!-- Расстояние между величинами. Соединитель — вертикальная полоска
-             цвета состояния: раньше здесь стояла третья по счёту стрелка
-             экрана, и три разных стрелки в одном столбце читались тремя
-             разными обещаниями. Полоска не обещает ничего, она соединяет.
-
-             Действие вынесено в круглую кнопку справа — залитый круг
-             по стандарту iOS: было понятно, что строка нажимаемая, только
-             после того, как человек в неё попадал. Строка целиком остаётся
-             тач-целью высотой 44. -->
-        <component
-          :is="gapFor(r.key) && gapFor(r.key).module ? 'button' : 'div'"
+        <!-- Расстояние между величинами: полоска-соединитель, подпись и число.
+             ⚠ Кнопки здесь больше нет. Синий круг со стрелкой был четвёртым
+             нажимаемым местом в одном столбце и вёл туда же, куда теперь ведёт
+             тихая строка внутри шторки самой величины: человек сначала смотрит
+             своё число, а разбор ему предлагают там, где он про это число
+             читает. Разрыв остался тем, чем является, — расстоянием. -->
+        <div
           v-if="gapFor(r.key)"
-          :type="gapFor(r.key).module ? 'button' : null"
-          class="flex min-h-[44px] w-full items-center gap-2.5 px-4 text-left"
-          @click="gapFor(r.key).module ? moduleOpen = gapFor(r.key).module : null"
+          class="flex w-full items-center gap-2.5 px-4 py-1"
         >
           <span
             class="h-[22px] w-[3px] shrink-0 rounded-full"
@@ -252,15 +265,7 @@ function saveCarry(v) {
               :style="{ color: gapColor(gapFor(r.key).tone) }"
             >{{ formatRub(gapFor(r.key).value) }}</span>
           </span>
-          <span
-            v-if="gapFor(r.key).module"
-            class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
-            :style="{ background: 'var(--action)' }"
-            aria-hidden="true"
-          >
-            <ChevronRight class="h-[18px] w-[18px]" :style="{ color: 'var(--action-ink)' }" :stroke-width="2.75" />
-          </span>
-        </component>
+        </div>
       </template>
     </div>
 
@@ -324,6 +329,8 @@ function saveCarry(v) {
             subtitle="Обязательство на месяц. Правка меняет то, что осталось разнести по открытым дням; закрытые дни остаются с прежней оценкой."
             :value="m.T"
             edit-label="Изменить план"
+            :gap-label="gapAfterLabel('plan')"
+            @razbor="openRazbor"
             hint="Сумма, которую вы обязаны сделать"
             placeholder="3 000 000"
             :error="planDraftError"
@@ -337,6 +344,8 @@ function saveCarry(v) {
             subtitle="То, ради чего стараются сверх плана. Можно не ставить — тогда шкала строится до плана."
             :value="m.goal"
             edit-label="Изменить цель"
+            :gap-label="gapAfterLabel('goal')"
+            @razbor="openRazbor"
             hint="Сверх плана"
             placeholder="3 500 000"
             :error="goalDraftError"

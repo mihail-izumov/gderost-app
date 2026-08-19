@@ -1,6 +1,10 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import HandIcon from '../icons/HandIcon.vue'
+import HonestBadge from '../HonestBadge.vue'
+import StoryOnboarding from '../StoryOnboarding.vue'
+import { honestLoop } from '../../composables/honestLoop.js'
+import { honestStory } from '../../i18n/stories.js'
 import { formatRub, dayLabel } from '../../i18n/format.js'
 import { moduleGain } from '../../composables/energyModel.js'
 import { MODULES, ORDER_STEPS, RUNSCALE_MONTHS } from '../../i18n/energy.js'
@@ -42,6 +46,18 @@ const store = useMiniStore()
 const mod = computed(() => MODULES[props.moduleId] || null)
 const gain = computed(() => moduleGain(props.moduleId, props.energy))
 const sent = computed(() => store.state.requests.find((r) => r.module === props.moduleId) || null)
+
+// ⚠ Что именно уедет с заявкой. Человек отправляет не «данные вообще»,
+// а месяц ровно в том состоянии, в каком он сейчас: где-то со слов, где-то
+// посчитанный, местами с дырами. Петля показывает это одной плашкой — и она
+// же снимает вопрос, который иначе задают на самом разборе.
+//
+// Сторис открывается прямо отсюда и закрывается обратно СЮДА, а не на экран
+// позади: человек шёл отправлять и обязан вернуться к кнопке, а не искать
+// паспорт заново.
+const loop = computed(() => honestLoop(store.state, store.model.value))
+const honestOpen = ref(false)
+const honestSlides = computed(() => honestStory(loop.value))
 
 // «Приносите» называет конкретный месяц владельца, а не абстрактную ссылку.
 const bring = computed(() => {
@@ -165,12 +181,32 @@ const tiles = computed(() => (!mod.value ? [] : [
            Кнопка здесь одна: выгрузка файлом и ссылка на сайт стояли рядом
            как равные и растаскивали действие на три. Файл живёт на «Сегодня»,
            где человек работает со своими данными. -->
+      <!-- Состояние данных перед самой кнопкой: последнее, что человек видит
+           до отправки, — то, что он отправляет. -->
+      <div class="mt-4">
+        <HonestBadge :loop="loop" large @open="honestOpen = true" />
+      </div>
+
+      <!-- ⚠ Кнопка синяя всегда и не спорит с плашкой над ней. Плашка меняет
+           цвет вместе с состоянием петли — жёлтая, зелёная, — и если красить
+           кнопку тем же, единственное действие экрана то сливалось бы с ней,
+           то читалось вторым состоянием. Синий здесь означает действие
+           и больше ничего.
+           Слово «данные» с кнопки снято: что именно уходит, сказано плашкой
+           выше словами и знаком. -->
       <ShareMonthButton
-        class="mt-3"
-        tone="accent"
+        class="mt-2"
+        tone="action"
         :icon="false"
-        :label="sent ? 'Отправить ещё раз' : mod.cta"
+        :label="sent ? 'Отправить ещё раз' : 'Отправить на разбор'"
         @shared="store.addRequest(moduleId)"
+      />
+
+      <StoryOnboarding
+        :open="honestOpen"
+        :slides="honestSlides"
+        @close="honestOpen = false"
+        @done="honestOpen = false"
       />
 
       <!-- Кнопки «Разбор уже был» здесь больше нет. Самоотметка открывала замок
@@ -182,7 +218,7 @@ const tiles = computed(() => (!mod.value ? [] : [
     <!-- Заперто: читается целиком, заказывается после первой сессии. -->
     <template v-else>
       <div class="mt-4 flex items-center gap-2.5 rounded-xl px-3 py-2.5" :style="{ background: 'var(--surface-2)' }">
-        <HandIcon class="h-[20px] w-[20px] shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
+        <HandIcon class="h-[32px] w-[32px] shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
         <span class="text-[0.8125rem] leading-snug text-[var(--text-secondary)]">
           {{ mod.lockNote || 'Будет доступно после разбора' }}
         </span>

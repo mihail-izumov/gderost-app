@@ -14,7 +14,10 @@ import { useMiniStore } from '../composables/useMiniStore.js'
 // отправить её может только владелец и только тому, кому захочет.
 
 defineProps({
-  tone: { type: String, default: 'quiet' }, // quiet | accent
+  // quiet — обычная строка, accent — жёлтая плашка, action — синяя кнопка.
+  // Синяя нужна там, где рядом стоит цветная плашка состояния: жёлтое
+  // действие рядом с жёлтым состоянием читается одним пятном.
+  tone: { type: String, default: 'quiet' }, // quiet | accent | action
   label: { type: String, default: 'Поделиться месяцем' },
   // Форма подстраивается под соседей: в ряду с прямоугольными кнопками
   // пилюля читается как элемент другой природы.
@@ -61,9 +64,11 @@ async function share() {
     :class="shape === 'card'
       ? 'min-h-[52px] rounded-2xl text-[1.0625rem] font-semibold'
       : 'min-h-[48px] rounded-full text-[0.9375rem] font-semibold'"
-    :style="tone === 'accent'
-      ? { background: 'var(--positive)', color: 'var(--ink-on-color)' }
-      : { background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--rim)' }"
+    :style="tone === 'action'
+      ? { background: 'var(--action)', color: 'var(--action-ink)' }
+      : tone === 'accent'
+        ? { background: 'var(--positive)', color: 'var(--ink-on-color)' }
+        : { background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--rim)' }"
     @click="share"
   >
     <template v-if="icon">

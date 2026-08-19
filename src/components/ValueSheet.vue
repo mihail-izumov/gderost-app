@@ -15,6 +15,8 @@ import { formatRub } from '../i18n/format.js'
 // поставить, их можно только получить.
 
 const props = defineProps({
+  // Подпись разрыва: «ниже плана», «рост без цели». Пусто — разрыва нет.
+  gapLabel: { type: String, default: '' },
   title: { type: String, required: true },
   subtitle: { type: String, default: '' },
   value: { type: Number, default: null },
@@ -24,7 +26,11 @@ const props = defineProps({
   placeholder: { type: String, default: '' },
   error: { type: String, default: '' },
 })
-const emit = defineEmits(['close', 'save'])
+// Разрыв, который эта величина создаёт: строка-подпись и признак наличия.
+// Пусто — второй кнопки нет. Разбор предлагается только тогда, когда
+// разбирать действительно есть что: кнопка «разобрать разрыв» при сошедшихся
+// числах — реклама, а не помощь.
+const emit = defineEmits(['close', 'save', 'razbor'])
 
 const editing = ref(false)
 const draft = ref(props.value)
@@ -68,6 +74,18 @@ function save() {
         {{ value ? formatRub(value) : '—' }}
       </div>
     </div>
+
+    <!-- Тихая вторая кнопка. Разрыв назван словами из той же строки, что
+         человек видел на экране, и ведёт она не в оплату, а в паспорт разбора:
+         сначала он читает, что это, и только потом решает. Обводка вместо
+         заливки — у шторки одно главное действие, и это правка числа. -->
+    <button
+      v-if="gapLabel"
+      type="button"
+      class="mt-3 min-h-[48px] w-full rounded-2xl border text-[0.9375rem] font-semibold text-[var(--text)]"
+      :style="{ borderColor: 'var(--rim)', background: 'var(--surface)' }"
+      @click="emit('razbor')"
+    >Разобрать разрыв: {{ gapLabel }}</button>
 
     <template v-if="editLabel">
       <button

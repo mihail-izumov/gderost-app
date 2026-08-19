@@ -37,6 +37,8 @@ const props = defineProps({
   // Подпись чипа бизнеса; пусто — чипа нет
   eyebrow: { type: String, default: null },
   eyebrowName: { type: String, default: '' },
+  // Компания над юнитом в раскрытом списке.
+  eyebrowCompany: { type: String, default: '' },
   // Заголовком экрана стоит идущее время. Так подписан «Сегодня»: имя экрана
   // там ничего не добавляет к подписи в таб-баре, а дата и время отвечают
   // на его единственный вопрос — какой сейчас день.
@@ -119,7 +121,7 @@ function startRefresh() {
     class="flex items-center gap-2 px-3 pt-[env(safe-area-inset-top)]"
   >
     <div v-if="eyebrow" class="min-w-0 flex-1">
-      <BusinessChip :label="eyebrow" :name="eyebrowName" full-width />
+      <BusinessChip :label="eyebrow" :name="eyebrowName" :company="eyebrowCompany" full-width />
     </div>
     <div v-else class="flex-1" aria-hidden="true"></div>
     <button
@@ -145,8 +147,11 @@ function startRefresh() {
   <div
     v-if="bigTitle && (title || caption || clockTitle)"
     class="relative px-4 pb-3 text-center"
-    :class="hasContextRow ? 'pt-2' : 'pt-[calc(env(safe-area-inset-top)+1.125rem)]'"
+    :class="showBack ? 'pt-5' : hasContextRow ? 'pt-2' : 'pt-[calc(env(safe-area-inset-top)+1.125rem)]'"
   >
+    <!-- ⚠ На заходе вглубь подпись пряталась под липкой полосой: она стоит
+         `absolute` над заголовком, а полоса с кнопкой «назад» там занимает
+         настоящую высоту. Отступ сверху отводит подписи её место. -->
     <p
       v-if="caption"
       class="pointer-events-none absolute inset-x-0 -top-2 text-[0.75rem] leading-none text-[var(--text-muted)]"
