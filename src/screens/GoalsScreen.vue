@@ -94,10 +94,12 @@ const rows = computed(() => {
       empty: '—',
     },
     { key: 'plan', label: 'План', value: m.value.T, extra: '', empty: '—' },
-    // «Не поставлена» звучало отчётом о невыполненном действии. «Рост без
-    // цели» называет то же самое состоянием: человек растёт, просто планка
-    // сверху пока не названа. Упрёка в этом нет, и ставить цель он решает сам.
-    { key: 'goal', label: 'Цель', value: m.value.goal, extra: '', empty: 'Рост без цели' },
+    // ⚠ Непоставленная цель обозначается прочерком, как и остальные пустые
+    // величины. Слова «Рост без цели» стояли в плашке, в строке разрыва над
+    // ней и в кнопке разбора — три раза об одном на одном экране, и вместе
+    // со словом «Цель» в подписи получалось пять повторов подряд. Состояние
+    // называет строка разрыва, плашка показывает величину, а её нет.
+    { key: 'goal', label: 'Цель', value: m.value.goal, extra: '', empty: '—' },
   ]
 })
 
@@ -300,15 +302,15 @@ function saveCarry(v) {
     <Teleport to="body">
       <div
         v-if="sheet"
-        class="fixed inset-0 z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm"
+        class="gr-sheet-overlay z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm"
         role="presentation"
         @click.self="sheet = ''"
       >
         <div
           class="w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4"
           :style="{
-            maxHeight: 'calc(88svh - var(--gr-kb, 0px))',
-            paddingBottom: 'calc(max(1rem, env(safe-area-inset-bottom)) + var(--gr-kb, 0px))',
+            maxHeight: '88%',
+            paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
           }"
         >
           <ValueSheet

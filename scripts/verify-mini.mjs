@@ -11,6 +11,7 @@ import { TELEMETRY, COUNTERS, scoreNow } from '../src/data/runscaleCounters.js'
 import { computeTodaySignal } from '../src/composables/signalModel.js'
 import { honestLoop } from '../src/composables/honestLoop.js'
 import { PULL, pullOffset, canStartPull, shouldFirePull } from '../src/composables/pullGesture.js'
+import { initialNav, navigate, back as navBack, selectTab as navSelectTab } from '../src/composables/navFlow.js'
 
 let fails = 0
 const ok = (cond, name) => {
@@ -678,8 +679,11 @@ for (const [ym, dim] of [['2026-02', 28], ['2026-08', 31], ['2026-11', 30], ['20
     'жест: до люфта панель стоит — прокрутка остаётся прокруткой')
   ok(pullOffset(10_000) === PULL.MAX, 'жест: панель дальше своего предела не едет')
   // Порог берётся осознанным протягиванием, а не рывком при чтении.
+  // Верхняя граница важнее нижней: слишком длинный жест человек не дотягивает
+  // и читает как поломку. Нижняя держит его отличимым от случайного касания.
   const pathToTrigger = PULL.SLOP + PULL.TRIGGER / PULL.DAMP
-  ok(pathToTrigger >= 150, `жест: до порога палец проходит ${pathToTrigger} px`)
+  ok(pathToTrigger >= 90 && pathToTrigger <= 140,
+    `жест: до порога палец проходит ${pathToTrigger} px`)
 
   // Н-26: инерция. Прокрутка обязана стоять до касания, иначе последний рывок
   // при возврате к верху страницы читается жестом.
@@ -730,6 +734,36 @@ for (const [ym, dim] of [['2026-02', 28], ['2026-08', 31], ['2026-11', 30], ['20
   // у него одно.
   ok(ORIGINS.need.go === 'day' && ORIGINS.fact.go === 'day',
     'надо сегодня и факт ведут в Контроль Дня')
+}
+
+// 22. Переходы между разделами. Возврат обязан вести туда, откуда пришли:
+//     под-страница принадлежит вопросу человека, а не назначенному владельцу.
+{
+  const from = (tab) => navSelectTab(initialNav(), tab)
+
+  const a = navBack(navigate(from('power'), 'goals'))
+  ok(a.tab === 'power' && a.subView === '',
+    'переход: с «Сигналов» в цели и назад — обратно на «Сигналы»')
+
+  const b = navBack(navigate(from('runscale'), 'day', { week: 3 }))
+  ok(b.tab === 'runscale', 'переход: с «Прогресса» в неделю и назад — обратно на «Прогресс»')
+
+  const c = navBack(navigate(from('today'), 'day', '2026-08-12'))
+  ok(c.tab === 'today', 'переход: с «Сегодня» в день и назад — обратно на «Сегодня»')
+
+  const openDay = navigate(from('runscale'), 'day', '2026-08-12')
+  ok(openDay.tab === 'runscale' && openDay.subView === 'day',
+    'переход: под-страница не переключает вкладку под собой')
+  ok(openDay.dayPreset === '2026-08-12', 'переход: день едет вместе с адресом')
+
+  // Цепочка под-страниц кончается там, где началась: «неделя → цели → назад»
+  // не должно выбрасывать на «Сегодня».
+  const chain = navBack(navigate(navigate(from('runscale'), 'day'), 'goals'))
+  ok(chain.tab === 'runscale', 'переход: цепочка под-страниц возвращает к началу пути')
+
+  const t = navSelectTab(navigate(from('power'), 'goals'), 'ultra')
+  ok(t.tab === 'ultra' && t.subView === '' && t.homeTab === 'ultra',
+    'переход: выбор вкладки закрывает под-страницу и обнуляет возврат')
 }
 
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')

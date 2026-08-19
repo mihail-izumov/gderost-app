@@ -114,7 +114,7 @@ function save() {
       v-if="gapLabel"
       type="button"
       class="mt-2 flex min-h-[52px] w-full items-center gap-2 rounded-2xl px-4 text-left text-[1.0625rem] font-semibold text-[var(--text)]"
-      :style="{ background: 'var(--surface-2)' }"
+      :style="{ background: 'var(--line)' }"
       @click="emit('razbor')"
     >
       <span class="min-w-0 flex-1 truncate">Разобрать разрыв: {{ gapLabel }}</span>

@@ -74,7 +74,7 @@ function onTouchEnd() {
     <Transition name="gr-sheet" @after-leave="dy = 0">
       <div
         v-if="open"
-        class="fixed inset-0 z-[60] flex items-end justify-center"
+        class="gr-sheet-overlay z-[60] flex items-end justify-center"
         role="presentation"
       >
         <div
@@ -104,15 +104,13 @@ function onTouchEnd() {
 </template>
 
 <style scoped>
-/* Клавиатура на iOS не двигает нижний край окна — она рисуется поверх него.
-   Шторка честно стоит внизу и оказывается под клавиатурой вместе с полем,
-   в которое человек печатает. Высоту клавиатуры считает
-   `composables/useKeyboardInset.js` и кладёт в `--gr-kb`; отсюда она уходит
-   и в нижний отступ (панель поднимается), и в потолок высоты (панель
-   не вырастает под клавиатуру и остаётся прокручиваемой). */
+/* Клавиатуру держит не панель, а её оверлей: `.gr-sheet-overlay` встаёт
+   ровно по видимой области экрана (`visualViewport`), поэтому низ панели
+   всегда над клавиатурой. Отсюда и высота в процентах — от оверлея,
+   а не от окна: окно при открытой клавиатуре остаётся прежним и врёт. */
 .gr-sheet-panel {
-  padding-bottom: calc(max(1rem, env(safe-area-inset-bottom)) + var(--gr-kb, 0px));
-  max-height: calc(88svh - var(--gr-kb, 0px));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  max-height: 88%;
   transform: translateY(var(--gr-dy, 0px));
   transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
   will-change: transform;

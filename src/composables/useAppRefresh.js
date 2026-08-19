@@ -14,6 +14,20 @@
 // читалось падением, а не обновлением. Правило: частый жест не имеет права
 // звать самое дорогое действие в программе.
 //
+// ⚠ И вторая авария, из-за которой этот файл переписан целиком (Н-31).
+// Проверка спрашивала у браузера «появился ли новый обработчик» — то есть
+// смотрела на СЛЕДСТВИЕ установки, а не на факт. Следствие приходит с
+// задержкой и не всегда: приложение отвечало «Трек уже последней версии»
+// ровно тогда, когда новая версия ставилась, и наоборот молчало, когда
+// ставить было нечего. Ответ, который иногда врёт, хуже отсутствия ответа:
+// человек перестаёт верить кнопке и жмёт её по кругу.
+//
+// Теперь решает ВЕРСИЯ СБОРКИ, и решает однозначно. У обработчика внутри
+// стоит `BUILD_ID`, он называет его по запросу (`{ type: 'VERSION' }`).
+// Тот же идентификатор лежит в `sw.js`, который отдаёт сеть. Разошлись —
+// значит новая версия есть, и мы её ставим. Совпали — версия актуальная,
+// и приложение так и говорит.
+//
 // Что не трогается ни тем, ни другим: введённые данные. Они лежат на
 // устройстве и к кэшу оболочки отношения не имеют.
 
@@ -23,98 +37,68 @@ import { computed, ref } from 'vue'
 // обновление из двух мест — жест и кнопка в шапке.
 //
 //   idle    — ничего не происходит
-//   working — идёт проверка и, если есть что, установка новой версии
-//   fresh   — новой версии нет, приложение уже последнее
+//   working — идёт проверка
+//   install — версия найдена, ставим и сейчас перезагрузимся
+//   fresh   — версия актуальная, ставить нечего
 //   offline — сети нет, проверить нечем
+//   failed  — проверить не удалось, и мы говорим об этом прямо
 const state = ref('idle')
 
 // Сколько состояние держится на экране минимум. Работа часто занимает
 // двести миллисекунд, а мигнувшая и пропавшая панель читается сбоем:
 // человек не успевает прочитать, что произошло, и жмёт второй раз.
 const MIN_VISIBLE_MS = 900
-// Дольше этого не ждём: версия ставится где-то в сети, а человек смотрит
-// в экран. Не дождались — перезагружаемся, новая версия доедет сама.
+// Сколько ждём ответа обработчика о своей версии.
+const ASK_TIMEOUT_MS = 1500
+// Сколько ждём, пока найденная версия встанет и заберёт управление.
 const INSTALL_TIMEOUT_MS = 8000
-// Сколько висит ответ «уже последняя» перед тем, как панель уедет.
-const ANSWER_MS = 1500
+// Сколько висит ответ перед тем, как панель уедет.
+const ANSWER_MS = 1600
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms))
+const BASE = (import.meta.env && import.meta.env.BASE_URL) || '/'
 
-// Ждём, пока новый обработчик доберётся до рабочего состояния. Наш `sw.js`
-// зовёт `skipWaiting()` при установке, поэтому ожидание короткое: установился —
-// значит вот-вот заменит собой старый.
-function waitInstalled(worker) {
+// Версия обработчика, который сейчас управляет страницей. Спрашиваем через
+// личный канал: общий `message` у страницы один на всех, и чужой ответ
+// сюда попасть не должен.
+function askActiveVersion() {
   return new Promise((resolve) => {
-    if (['installed', 'activating', 'activated'].includes(worker.state)) return resolve(true)
-    const onChange = () => {
-      if (['installed', 'activating', 'activated'].includes(worker.state)) {
-        worker.removeEventListener('statechange', onChange)
-        resolve(true)
-      }
-      if (worker.state === 'redundant') {
-        worker.removeEventListener('statechange', onChange)
-        resolve(false)
-      }
-    }
-    worker.addEventListener('statechange', onChange)
+    const sw = navigator.serviceWorker && navigator.serviceWorker.controller
+    if (!sw) return resolve(null)
+    let done = false
+    const ch = new MessageChannel()
+    const finish = (v) => { if (!done) { done = true; resolve(v) } }
+    ch.port1.onmessage = (e) => finish(e.data && e.data.buildId ? String(e.data.buildId) : null)
+    try { sw.postMessage({ type: 'VERSION' }, [ch.port2]) } catch { return finish(null) }
+    setTimeout(() => finish(null), ASK_TIMEOUT_MS)
   })
 }
 
-// Сколько ждём, пока браузер объявит найденную версию. См. ниже: обещание
-// `update()` возвращается раньше, чем появляется новый обработчик.
-const FIND_TIMEOUT_MS = 3500
+// Версия, которая лежит в сети прямо сейчас. `cache: 'no-store'` обязателен:
+// иначе браузер отдаст тот же файл, по которому и живёт старая версия.
+async function fetchNetVersion() {
+  const res = await fetch(`${BASE}sw.js?ts=${Date.now()}`, { cache: 'no-store' })
+  if (!res.ok) throw new Error('sw unreachable')
+  const text = await res.text()
+  const m = text.match(/BUILD_ID\s*=\s*['"]([^'"]+)['"]/)
+  return m ? m[1] : null
+}
 
-// ⚠ Здесь жила разница между жестом и кнопкой, из-за которой они говорили
-// разное об одном и том же. `reg.update()` на iOS отдаёт управление ДО того,
-// как в регистрации появится `installing`: сразу после него `reg.installing`
-// и `reg.waiting` пусты, и проверка честно отвечала «новой версии нет». Пока
-// человек читал этот ответ и тянулся к кнопке в шапке, загрузка успевала
-// начаться — и второй заход, уже кнопкой, версию находил. Выглядело как
-// «жест сломан», хотя сломана была первая проверка, какой бы она ни была.
-//
-// Поэтому после `update()` мы ещё ждём объявления: подписываемся на
-// `updatefound` и параллельно опрашиваем регистрацию. Пусто и через это
-// окно — значит новой версии действительно нет.
-function waitUpdateFound(reg) {
+// Ждём, пока новая версия заберёт управление страницей. Наш обработчик зовёт
+// `skipWaiting` и `clients.claim`, поэтому событие приходит само; в ответ
+// на него мы и перезагружаемся.
+function waitTakeover() {
   return new Promise((resolve) => {
     let done = false
-    const finish = (w) => {
-      if (done) return
-      done = true
-      clearInterval(poll)
-      clearTimeout(timer)
-      reg.removeEventListener('updatefound', onFound)
-      resolve(w || null)
+    const finish = () => { if (!done) { done = true; resolve() } }
+    if (navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener('controllerchange', finish, { once: true })
+      navigator.serviceWorker.addEventListener('message', (e) => {
+        if (e.data && e.data.type === 'SW_ACTIVATED') finish()
+      })
     }
-    const onFound = () => finish(reg.installing || reg.waiting)
-    reg.addEventListener('updatefound', onFound)
-    const poll = setInterval(() => {
-      const w = reg.installing || reg.waiting
-      if (w) finish(w)
-    }, 200)
-    const timer = setTimeout(() => finish(null), FIND_TIMEOUT_MS)
+    setTimeout(finish, INSTALL_TIMEOUT_MS)
   })
-}
-
-// Есть ли новая версия. Возвращает true, только когда она действительно
-// появилась и встала: перезагружать страницу ради ничего — обман.
-async function fetchUpdate() {
-  if (!('serviceWorker' in navigator)) return 'reload' // dev-сборка: обработчика нет
-  const reg = await navigator.serviceWorker.getRegistration()
-  if (!reg) return 'reload'
-
-  // `update()` идёт в сеть за `sw.js`. В нём стоит идентификатор сборки,
-  // поэтому у новой версии файл отличается байтами и браузер видит замену.
-  await reg.update()
-
-  const next = reg.installing || reg.waiting || await waitUpdateFound(reg)
-  if (!next) return 'none'
-
-  const settled = await Promise.race([
-    waitInstalled(next),
-    wait(INSTALL_TIMEOUT_MS).then(() => true),
-  ])
-  return settled ? 'updated' : 'none'
 }
 
 export function useAppRefresh() {
@@ -127,26 +111,57 @@ export function useAppRefresh() {
     state.value = 'working'
     const started = Date.now()
 
-    let result
-    try {
-      result = await fetchUpdate()
-    } catch {
-      // Единственная причина, по которой проверка падает, — сеть.
-      // Молчать здесь нельзя: человек решит, что обновился, а он нет.
-      result = navigator.onLine === false ? 'offline' : 'none'
+    const hold = async () => {
+      const left = MIN_VISIBLE_MS - (Date.now() - started)
+      if (left > 0) await wait(left)
     }
 
-    const left = MIN_VISIBLE_MS - (Date.now() - started)
-    if (left > 0) await wait(left)
-
-    if (result === 'updated' || result === 'reload') {
+    // Обработчика нет вовсе — dev-сборка или первый запуск: перезагрузка
+    // и есть единственное честное действие.
+    if (!('serviceWorker' in navigator)) {
+      await hold()
       window.location.reload()
       return
     }
 
-    state.value = result === 'offline' ? 'offline' : 'fresh'
-    await wait(ANSWER_MS)
-    state.value = 'idle'
+    let net = null
+    try {
+      net = await fetchNetVersion()
+    } catch {
+      await hold()
+      state.value = navigator.onLine === false ? 'offline' : 'failed'
+      await wait(ANSWER_MS)
+      state.value = 'idle'
+      return
+    }
+
+    const mine = await askActiveVersion()
+
+    // Версии совпали — ставить нечего, и это законное состояние, а не отказ.
+    if (net && mine && net === mine) {
+      await hold()
+      state.value = 'fresh'
+      await wait(ANSWER_MS)
+      state.value = 'idle'
+      return
+    }
+
+    // Дальше два случая: версии разошлись (есть новая) либо обработчик
+    // не ответил и сравнивать не с чем. Оба честно решаются установкой:
+    // хуже от неё не станет, а вопрос закрывается фактом.
+    state.value = 'install'
+    try {
+      const reg = await navigator.serviceWorker.getRegistration()
+      if (reg) {
+        await reg.update()
+        await waitTakeover()
+      }
+    } catch {
+      // Не получилось — перезагружаемся всё равно: свежий `index.html`
+      // придёт сетью, и новая сборка подхватится.
+    }
+    await hold()
+    window.location.reload()
   }
 
   return { status, busy, refresh, hardReload }
@@ -157,7 +172,7 @@ export function useAppRefresh() {
 // работу, и путать эти две вещи нельзя.
 export async function hardReload() {
   if (typeof window === 'undefined') return
-  state.value = 'working'
+  state.value = 'install'
   try {
     if ('caches' in window) {
       const keys = await caches.keys()

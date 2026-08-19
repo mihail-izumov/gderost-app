@@ -1,27 +1,23 @@
 <script setup>
 import { computed } from 'vue'
-import { formatRub, formatGrowth, monthOf } from '../../i18n/format.js'
-import { mln, SIG_VAR } from '../../i18n/daily.js'
+import { formatRub, formatGrowth, monthOf, plural } from '../../i18n/format.js'
+import { SIG_VAR } from '../../i18n/daily.js'
+import { sigClass } from '../../composables/miniModel.js'
 
 // Месяц — главный блок «Прогресса».
 //
 // На его месте стояла идущая неделя, и это была ошибка масштаба: страница
-// отвечает на вопрос «куда идёт месяц», а начиналась с семи дней и счёта
-// «2 / 7 дн». Счёт дней говорит про полноту данных, а не про положение дел,
-// и человек, открывший раздел ради месяца, первым делом читал про неделю.
+// отвечает на вопрос «куда идёт месяц», а начиналась с семи дней.
 //
-// Состав повторяет строку «Месяц» из сводки «Контроля Дня»: полоса, факт,
-// план, отклонение прогноза. Одинаковые вещи на двух экранах обязаны
-// выглядеть одинаково, иначе человек считает их разными.
+// ⚠ Второй заход убрал отсюда план и прогноз. Полоса «факт · доложит темп ·
+// недобор» уже стоит на «Сегодня», считает то же самое и делает это точнее —
+// две одинаковые полосы на соседних экранах человек читает как два разных
+// расчёта и начинает сверять их между собой. У блока остался свой вопрос,
+// которого нет больше нигде: КАК ИДУТ ДНИ. Сколько их прошло, сколько
+// внесено, где дыры — и всё это видно одним рядом, по дню на деление.
 //
-// ⚠ Расхождение с той строкой одно и названо вслух: полоса здесь трёхчастная,
-// как в шапке «Контроля Дня» и в деке месяца, — заработанное сплошным,
-// то, что доложит темп, точками, недобор до плана красным. В сводке полоса
-// одна и показывает только прогноз; здесь блок стоит один на экране и обязан
-// отвечать целиком, а язык фактур в приложении уже общий.
-//
-// Дней и метки «идёт» на блоке нет: они принадлежали неделе. Ввод стоит
-// кнопкой и уводит в «Контроль Дня» — ввода на «Прогрессе» нет ни одного.
+// Деньги наверху остаются: они отвечают «сколько сделано», и ради них дни
+// и вносят. Отклонение прогноза стоит чипом — одно число, а не вторая полоса.
 
 const props = defineProps({
   m: { type: Object, required: true },
@@ -30,13 +26,6 @@ const props = defineProps({
 const emit = defineEmits(['enter'])
 
 const dayShort = (iso) => `${iso.slice(8)}.${iso.slice(5, 7)}`
-
-const FORECAST_FILL = {
-  backgroundColor: 'color-mix(in srgb, var(--accent) 40%, var(--surface))',
-  backgroundImage: 'radial-gradient(circle at 50% 50%, var(--text-muted) 0.45px, transparent 0.55px)',
-  backgroundSize: '2.5px 2.5px',
-}
-const SHORT_FILL = { backgroundColor: 'color-mix(in srgb, var(--negative) 55%, var(--surface))' }
 
 const title = computed(() => `${monthOf(props.m.month)} ${props.m.month.slice(0, 4)}`)
 
@@ -47,14 +36,22 @@ const nextISO = computed(() => {
   return d ? d.iso : ''
 })
 
-const factW = computed(() => Math.max(0, Math.min(100, props.m.factPct)))
-const fcW = computed(() => Math.max(0, Math.min(100, props.m.landPct) - factW.value))
-const shortW = computed(() => Math.max(0, 100 - factW.value - fcW.value))
+// Ряд дней месяца. Цвет говорит ровно то же, что и везде в приложении:
+// светофор у дня с известной выручкой, серый у дня, вошедшего в стартовую
+// сумму (его выручка неизвестна, оценивать нечего), жёлтый у прошедшего дня
+// без цифры — это долг, и жёлтый в системе означает именно его. Будущее
+// нейтрально: там ещё ничего не случилось.
+const strip = computed(() => props.m.days.map((d) => {
+  let bg = 'var(--line)'
+  if (d.entered) bg = SIG_VAR[sigClass(d.fact / d.planAt)]
+  else if (d.inCarry) bg = 'var(--text-muted)'
+  else if (d.iso < props.today) bg = 'var(--warning)'
+  return { key: d.iso, dd: d.dd, bg, today: d.iso === props.today }
+}))
 
-// Чип отклонения прогноза от плана — цветом светофора прогноза: тем же,
-// каким этот прогноз покрашен во всех остальных местах приложения.
-const devInk = computed(() => (props.m.fcSig === 'warn' ? 'var(--accent-ink)' : 'var(--ink-on-color)'))
-const devBg = computed(() => SIG_VAR[props.m.fcSig] || 'var(--surface-2)')
+const passed = computed(() => props.m.days.filter((d) => d.iso < props.today).length)
+const filled = computed(() => props.m.days.filter((d) => d.closed).length)
+const missing = computed(() => props.m.days.filter((d) => d.due).length)
 </script>
 
 <template>
@@ -63,30 +60,39 @@ const devBg = computed(() => SIG_VAR[props.m.fcSig] || 'var(--surface-2)')
       <h2 class="text-[1.0625rem] font-bold leading-none text-[var(--text)]">{{ title }}</h2>
       <span
         class="ml-auto inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.6875rem] font-bold tabular-nums"
-        :style="{ background: devBg, color: devInk }"
+        :style="{ background: SIG_VAR[m.fcSig] || 'var(--surface-2)', color: m.fcSig === 'warn' ? 'var(--accent-ink)' : 'var(--ink-on-color)' }"
       >{{ formatGrowth(m.landDev) }}</span>
     </div>
 
-    <!-- Факт крупно, план подписью: заработанное — то, что человек сделал,
-         план — то, с чем это сравнивается. -->
     <div class="mt-3 flex items-baseline gap-2">
       <span class="text-[2rem] font-bold leading-none tabular-nums text-[var(--text)]">{{ formatRub(m.realizedRev) }}</span>
       <span class="text-[0.875rem] text-[var(--text-muted)]">факт</span>
     </div>
-    <p class="mt-1 text-[0.8125rem] text-[var(--text-muted)]">
-      план {{ mln(m.T) }} · прогноз {{ mln(m.landing) }}
-    </p>
 
-    <div class="mt-3 flex h-[10px] overflow-hidden rounded-full bg-[var(--surface-2)]">
-      <i :style="{ width: factW + '%', background: 'var(--accent)' }" />
-      <i :style="{ width: fcW + '%', ...FORECAST_FILL }" />
-      <i :style="{ width: shortW + '%', ...SHORT_FILL }" />
+    <!-- Дни месяца, по делению на день. Сегодняшний выше остальных: человек
+         ищет глазами «где я сейчас», и это единственный способ ответить,
+         не подписывая числа под каждым делением. -->
+    <div class="mt-3.5 flex h-[26px] items-end gap-[2px]">
+      <span
+        v-for="d in strip"
+        :key="d.key"
+        class="min-w-0 flex-1 rounded-[2px]"
+        :class="d.today ? 'h-[26px]' : 'h-[18px]'"
+        :style="{ background: d.bg }"
+        :title="`${d.dd}`"
+      ></span>
     </div>
 
     <p class="mt-2.5 text-[0.8125rem] text-[var(--text-muted)]">
-      <template v-if="nextISO">{{ dayShort(nextISO) }} — нужно внести</template>
-      <template v-else>Все прошедшие дни внесены</template>
+      Прошло {{ passed }} из {{ m.days.length }} {{ plural(m.days.length, 'дня', 'дней', 'дней') }} · внесено {{ filled }}
     </p>
+
+    <p
+      v-if="missing > 0"
+      class="mt-1 text-[0.8125rem] font-semibold"
+      :style="{ color: 'var(--text)' }"
+    >Не внесено {{ missing }} {{ plural(missing, 'день', 'дня', 'дней') }}</p>
+    <p v-else class="mt-1 text-[0.8125rem] text-[var(--text-secondary)]">Все прошедшие дни внесены</p>
 
     <button
       v-if="nextISO"

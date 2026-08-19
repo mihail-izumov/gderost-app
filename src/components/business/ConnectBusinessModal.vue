@@ -73,7 +73,7 @@ onBeforeUnmount(() => {
   <Teleport to="body">
     <div
       v-if="open"
-      class="fixed inset-0 z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm sm:items-center"
+      class="gr-sheet-overlay z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm sm:items-center"
       role="presentation"
       @click.self="hide"
     >
@@ -84,7 +84,7 @@ onBeforeUnmount(() => {
         aria-modal="true"
         :aria-label="L.title"
         class="flex w-full max-w-[430px] flex-col overflow-hidden rounded-t-2xl bg-[var(--surface)] shadow-2xl sm:rounded-2xl"
-        :style="{ maxHeight: 'calc(88svh - var(--gr-kb, 0px))', marginBottom: 'var(--gr-kb, 0px)' }"
+        :style="{ maxHeight: '88%' }"
         style="padding-bottom: env(safe-area-inset-bottom)"
       >
         <header class="flex items-center gap-3 border-b border-[var(--line)] px-4 py-3">

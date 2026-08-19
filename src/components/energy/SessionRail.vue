@@ -117,10 +117,13 @@ onBeforeUnmount(() => { if (ro) { ro.disconnect(); ro = null } })
     @scroll="measure"
   >
     <ul class="flex snap-x snap-mandatory gap-2.5">
-      <li v-for="c in cards" :key="c.id" class="w-[15.5rem] shrink-0 snap-start">
+      <!-- Карточка шире экрана минус край следующей: на 375 это ровно та
+           ширина, при которой соседняя ступень видна кромкой и зовёт листать,
+           а не занимает пол-экрана вторым равноправным предложением. -->
+      <li v-for="c in cards" :key="c.id" class="w-[19.5rem] shrink-0 snap-start">
         <button
           type="button"
-          class="relative isolate flex h-full w-full flex-col overflow-hidden rounded-2xl p-3.5 text-left"
+          class="relative isolate flex h-full min-h-[13.5rem] w-full flex-col overflow-hidden rounded-2xl p-4 text-left"
           :style="{ background: c.cardBg }"
           @click="$emit('open', c.id)"
         >
@@ -136,35 +139,41 @@ onBeforeUnmount(() => { if (ro) { ro.disconnect(); ro = null } })
             <!-- Заголовок держит место под две строки: подписи под ним
                  обязаны стоять на одной высоте у всех карточек ленты, иначе
                  глаз читает разную длину имени как разный состав ступени. -->
-            <span class="min-h-[2.375rem] text-[0.9375rem] font-bold leading-tight" :style="{ color: c.ink }">{{ c.title }}</span>
+            <span class="min-h-[2.625rem] text-[1.0625rem] font-bold leading-tight" :style="{ color: c.ink }">{{ c.title }}</span>
             <!-- Рука вместо стрелки у запертой ступени. Ступень не заперта
                  деньгами: её открывает состоявшийся разбор, то есть работа,
                  а не покупка. Паспорт всё равно открывается — заперт заказ,
-                 а не чтение. -->
+                 а не чтение.
+                 ⚠ Бокс у руки крупнее стрелочного, и это не разнобой:
+                 в её `viewBox` заложены поля, знак вписывается по высоте
+                 и в равном боксе выходит заметно мельче соседа. Двадцать
+                 четыре пикселя дают ту же оптическую величину, что шеврон
+                 в восемнадцати. Приглушение снято — знак живёт тем же тоном,
+                 что стрелка. -->
             <HandIcon
               v-if="c.locked"
-              class="h-[18px] w-[18px] shrink-0"
-              :style="{ color: c.inkFaint, opacity: c.faintOpacity }"
+              class="h-[24px] w-[24px] shrink-0"
+              :style="{ color: c.inkFaint }"
             />
             <ChevronRight
               v-else
-              class="h-[18px] w-[18px] shrink-0"
+              class="mt-[3px] h-[18px] w-[18px] shrink-0"
               :style="{ color: c.inkFaint }"
               :stroke-width="2.5"
               aria-hidden="true"
             />
           </span>
 
-          <span class="mt-1 block text-[0.75rem] leading-snug" :style="{ color: c.inkMuted, opacity: c.mutedOpacity }">{{ c.subtitle }}</span>
+          <span class="mt-1.5 block text-[0.8125rem] leading-snug" :style="{ color: c.inkMuted, opacity: c.mutedOpacity }">{{ c.subtitle }}</span>
 
           <span class="mt-3 flex items-end justify-between gap-2">
             <span>
               <span class="block text-[0.625rem] uppercase tracking-wide" :style="{ color: c.inkFaint, opacity: c.faintOpacity }">Расход</span>
-              <span class="block text-[0.9375rem] font-bold tabular-nums" :style="{ color: c.ink }">{{ c.price }}</span>
+              <span class="block text-[1.0625rem] font-bold tabular-nums" :style="{ color: c.ink }">{{ c.price }}</span>
             </span>
             <span class="text-right">
               <span class="block text-[0.625rem] uppercase tracking-wide" :style="{ color: c.inkFaint, opacity: c.faintOpacity }">Мощность</span>
-              <span class="block text-[0.9375rem] font-bold tabular-nums" :style="{ color: c.ink }">
+              <span class="block text-[1.0625rem] font-bold tabular-nums" :style="{ color: c.ink }">
                 {{ c.gain > 0 ? `+${c.gain}%` : '—' }}
               </span>
             </span>

@@ -56,6 +56,19 @@ self.addEventListener('activate', (e) => {
   })())
 })
 
+// Обработчик называет свою версию по запросу страницы. Без этого клиент
+// не мог отличить «новая версия встала» от «новой версии нет»: он смотрел
+// на появление `installing` в регистрации, а оно появляется не сразу и не
+// всегда — и приложение отвечало «уже последняя», когда обновление на самом
+// деле шло. Версия — единственный факт, по которому это решается честно.
+self.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'VERSION') {
+    const reply = { type: 'VERSION', buildId: BUILD_ID, cacheName: CACHE_NAME }
+    if (e.ports && e.ports[0]) e.ports[0].postMessage(reply)
+    else if (e.source) e.source.postMessage(reply)
+  }
+})
+
 self.addEventListener('fetch', (e) => {
   const req = e.request
   if (req.method !== 'GET') return

@@ -138,15 +138,15 @@ onBeforeUnmount(() => { if (io) { io.disconnect(); io = null } })
     <Teleport to="body">
       <div
         v-if="sheet || tune"
-        class="fixed inset-0 z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm"
+        class="gr-sheet-overlay z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm"
         role="presentation"
         @click.self="sheet = false; tune = false"
       >
         <div
           class="w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4"
           :style="{
-            maxHeight: 'calc(88svh - var(--gr-kb, 0px))',
-            paddingBottom: 'calc(max(1rem, env(safe-area-inset-bottom)) + var(--gr-kb, 0px))',
+            maxHeight: '88%',
+            paddingBottom: 'max(1rem, env(safe-area-inset-bottom))',
           }"
         >
           <template v-if="sheet">

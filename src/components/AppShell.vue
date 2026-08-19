@@ -160,10 +160,15 @@ const panel = computed(() => (refreshBusy.value ? PANEL_H : pull.value))
 // Движение за пальцем идёт без перехода, всё остальное — пружиной.
 const panelLive = computed(() => !refreshBusy.value && pull.value > 0)
 
+// Каждое состояние называет ровно то, что произошло. «Трек уже последней
+// версии» стояло и там, где версия действительно ставилась: ответ, который
+// иногда врёт, обесценивает все остальные.
 const REFRESH_TEXT = {
-  working: 'Трек обновляется…',
-  fresh: 'Трек уже последней версии',
+  working: 'Проверяем версию…',
+  install: 'Ставим новую версию…',
+  fresh: 'Актуальная версия',
   offline: 'Нет сети — Трек остался прежним',
+  failed: 'Не удалось проверить версию',
 }
 
 // Смена экрана возвращает прокрутку к верху — экран, открытый с середины,
@@ -215,7 +220,7 @@ watch(() => [props.active, props.subView], async () => {
            имени целиком, шагает только шеврон внутри неё. Порознь шеврон
            иконкой не работает нигде — здесь он и не порознь. -->
       <template v-if="refreshBusy">
-        <BrandLockup size="1.125rem" :running="refreshStatus === 'working'" />
+        <BrandLockup size="1.125rem" :running="refreshStatus === 'working' || refreshStatus === 'install'" />
         <span class="mt-2 block text-center text-[0.8125rem] leading-tight text-[var(--text-muted)]">
           {{ REFRESH_TEXT[refreshStatus] }}
         </span>

@@ -14,6 +14,7 @@ import StoryOnboarding from './components/StoryOnboarding.vue'
 import { INTRO_STORY } from './i18n/stories.js'
 import { useMiniStore } from './composables/useMiniStore.js'
 import { setNavTarget } from './composables/useNavAnchor.js'
+import { initialNav, navigate, back as navBack, selectTab as navSelectTab } from './composables/navFlow.js'
 import { readShared, hasSharePayload } from './composables/shareLink.js'
 
 // Три состояния входа: витрина → подключение бизнеса → свои цифры.
@@ -33,7 +34,15 @@ import { readShared, hasSharePayload } from './composables/shareLink.js'
 
 const store = useMiniStore()
 const entered = ref(store.state.ready)
-const tab = ref('today')
+
+// ⚠ Состояние навигации — одно и цельное. Вкладка и под-страница жили
+// раздельными ссылками, и рассинхрон между ними и был обеими поломками
+// возврата. Правила переходов — чистые функции `composables/navFlow.js`
+// под самопроверкой; здесь только хранение.
+const nav = ref(initialNav())
+const tab = computed(() => nav.value.tab)
+const subView = computed(() => nav.value.subView)
+const dayPreset = computed(() => nav.value.dayPreset)
 
 // Пять слайдов между витриной и первым полем: человек узнаёт, как это
 // работает и что получит, до того как у него просят числа. Сюжет ничего
@@ -76,9 +85,8 @@ if (typeof window !== 'undefined') {
     sharedBroken.value = !next && hasSharePayload(hash())
   })
 }
-// Под-страница поверх вкладки: заход вглубь «Сегодня», поэтому у неё
-// кнопка назад, а не место в таб-баре.
-const subView = ref('')
+// Под-страница поверх вкладки: заход вглубь раздела, поэтому у неё
+// кнопка назад, а не место в таб-баре. Само состояние — ниже, в `nav`.
 
 const TABS = computed(() => [
   {
@@ -161,55 +169,25 @@ const broken = computed(() => view.value === 'app' && !store.model.value)
 
 // Сброс данных возвращает на витрину, а не на пустой экран приложения.
 watch(() => store.state.ready, (ready) => {
-  if (!ready) { entered.value = false; tab.value = 'today'; subView.value = '' }
+  if (!ready) { entered.value = false; nav.value = initialNav() }
 })
 
-// Второй аргумент — день, который надо открыть в вводе. Страница состояния
-// показывает пропуски и обязана довести до ввода именно того дня, о котором
-// говорит: «внесите прошедшие дни» без адреса возвращает человека к поиску.
-const dayPreset = ref('')
-
-// ⚠ Под-страница принадлежит тому разделу, ОТКУДА в неё вошли, а не одному
-// назначенному владельцу. «Контроль Дня» открывается и с «Сегодня», и тапом
-// по неделе с «Прогресса», и кнопка «Назад» обязана вернуть туда же, откуда
-// человек пришёл: он открыл неделю, посмотрел её и хочет обратно к списку
-// недель, а не на главную. Подпись в таб-баре при этом остаётся верной —
-// она показывает раздел, в который ведёт возврат.
-//
-// Раньше владелец был прописан жёстко (`day: 'today'`), и возврат с «Прогресса»
-// уводил на «Сегодня»: путь терялся молча.
-const homeTab = ref('today')
-
-// Второй аргумент — либо дата дня строкой (как было), либо адрес назначения
-// объектом: `{ anchor, week, day }`. Оболочка подведёт прокрутку к блоку,
-// экран раскроет его, если он свёрнут.
+// ⚠ Правила переходов живут чистыми функциями в `composables/navFlow.js`
+// и проверяются машиной. Здесь остаётся только состояние и его подстановка
+// в экраны: три строки внутри обработчика уже дважды теряли путь человека —
+// возврат с «Прогресса» уводил на «Сегодня», возврат с «Сигналов» тоже.
 function go(where, arg) {
   const t = typeof arg === 'string' ? { day: arg } : (arg || {})
   setNavTarget(t)
-  if (SUB_VIEWS[where]) {
-    dayPreset.value = where === 'day' && t.day ? t.day : ''
-    // Куда вернёт «Назад»: раздел, в котором человек стоял в момент входа.
-    // Заход из-под другой под-страницы возврат не переписывает.
-    if (!subView.value) homeTab.value = tab.value
-    subView.value = where
-    return
-  }
-  subView.value = ''
-  tab.value = where
+  nav.value = navigate(nav.value, where, arg)
 }
 
-// Возврат с под-страницы: закрываем её и встаём в тот раздел, из которого
-// в неё вошли.
 function backFromSub() {
-  subView.value = ''
-  dayPreset.value = ''
-  tab.value = homeTab.value
+  nav.value = navBack(nav.value)
 }
 
 function selectTab(id) {
-  subView.value = ''
-  dayPreset.value = ''
-  tab.value = id
+  nav.value = navSelectTab(nav.value, id)
 }
 </script>
 
