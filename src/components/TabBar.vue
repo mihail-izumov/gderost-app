@@ -22,6 +22,13 @@ import UltraIcon from './icons/UltraIcon.vue'
 // перестаёт быть знаком марки и начинает означать «раздел». Он живёт только
 // в связке имени продукта.
 //
+// ⚠ Цвета капсулы берутся из набора `--nav-*`, объявленного только в `:root`,
+// и от холста страницы не зависят. Капсула принадлежит приложению, а не
+// разделу: она стоит на всех экранах и отвечает на вопрос «где я и куда могу
+// перейти». Перекрашиваясь вместе со страницей, она сообщала бы, что изменился
+// сам орган управления, тогда как изменилась только страница под ним. Тёмный
+// раздел «Ультра» переодевает холст, шапку и подложку — капсулу он не трогает.
+//
 // Стекло — Tailwind-утилита backdrop-blur, а не своё свойство: autoprefixer
 // добавляет -webkit-backdrop-filter, без которого на iOS Safari размытие
 // не рисуется вовсе.
@@ -43,8 +50,8 @@ const today = computed(() => new Date().getDate())
 <template>
   <nav
     role="tablist"
-    class="flex items-stretch gap-1 rounded-full border border-[var(--line)] p-1 shadow-lg backdrop-blur
-           bg-[color-mix(in_srgb,var(--surface)_88%,transparent)]"
+    class="flex items-stretch gap-1 rounded-full border border-[var(--nav-line)] p-1 shadow-lg backdrop-blur
+           bg-[color-mix(in_srgb,var(--nav-surface)_88%,transparent)]"
   >
     <button
       v-for="tab in tabs"
@@ -54,33 +61,33 @@ const today = computed(() => new Date().getDate())
       :aria-selected="active === tab.id"
       :aria-label="tab.label"
       class="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-1 rounded-full px-3 outline-none transition-colors duration-150"
-      :style="active === tab.id ? { background: 'var(--action)' } : {}"
+      :style="active === tab.id ? { background: 'var(--nav-accent)' } : {}"
       @click="$emit('select', tab.id)"
     >
       <CalDateIcon
         v-if="tab.iconKind === 'cal'"
         class="h-[20px] w-[20px]"
         :day="today"
-        :class="active === tab.id ? 'text-[var(--action-ink)]' : 'text-[var(--text-muted)]'"
+        :class="active === tab.id ? 'text-[var(--nav-accent-ink)]' : 'text-[var(--nav-muted)]'"
       />
       <ProgressIcon
         v-else-if="tab.iconKind === 'growth'"
         class="h-[20px] w-[20px]"
-        :class="active === tab.id ? 'text-[var(--action-ink)]' : 'text-[var(--text-muted)]'"
+        :class="active === tab.id ? 'text-[var(--nav-accent-ink)]' : 'text-[var(--nav-muted)]'"
       />
       <UltraIcon
         v-else-if="tab.iconKind === 'ultra'"
         class="h-[20px] w-[20px]"
-        :class="active === tab.id ? 'text-[var(--action-ink)]' : 'text-[var(--text-muted)]'"
+        :class="active === tab.id ? 'text-[var(--nav-accent-ink)]' : 'text-[var(--nav-muted)]'"
       />
       <SignalsIcon
         v-else
         class="h-[20px] w-[20px]"
-        :class="active === tab.id ? 'text-[var(--action-ink)]' : 'text-[var(--text-muted)]'"
+        :class="active === tab.id ? 'text-[var(--nav-accent-ink)]' : 'text-[var(--nav-muted)]'"
       />
       <span
         class="whitespace-nowrap text-[0.625rem] font-semibold leading-none"
-        :class="active === tab.id ? 'text-[var(--action-ink)]' : 'text-[var(--text-muted)]'"
+        :class="active === tab.id ? 'text-[var(--nav-accent-ink)]' : 'text-[var(--nav-muted)]'"
       >{{ tab.label }}</span>
     </button>
   </nav>

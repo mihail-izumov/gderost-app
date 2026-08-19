@@ -334,14 +334,16 @@ watch(() => [props.active, props.subView], async () => {
           class="absolute bottom-0 left-0 flex h-14 w-14 items-center justify-center rounded-full shadow-lg active:opacity-90"
           :class="navHidden ? 'opacity-100' : 'opacity-0'"
           :style="{
-            background: 'var(--action)',
+            background: 'var(--nav-accent)',
             pointerEvents: navHidden ? 'auto' : 'none',
             transition: 'opacity 0.42s cubic-bezier(0.32, 0.72, 0, 1)',
           }"
           aria-label="Показать навигацию"
           @click="openNav"
         >
-          <CalDateIcon class="h-7 w-7" :day="today" :style="{ color: 'var(--action-ink)' }" />
+          <!-- Круглая кнопка — та же навигация, что и капсула: цвета берёт
+               из `--nav-*` и на тёмном разделе не меняется. -->
+          <CalDateIcon class="h-7 w-7" :day="today" :style="{ color: 'var(--nav-accent-ink)' }" />
         </button>
       </div>
     </div>
