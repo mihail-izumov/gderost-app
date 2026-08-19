@@ -1,8 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
+import { Check, ChevronRight } from 'lucide-vue-next'
 import BottomSheet from '../components/BottomSheet.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
-import AddReportForm from '../components/AddReportForm.vue'
 import WeekRows from '../components/growth/WeekRows.vue'
 import CurrentWeekCard from '../components/growth/CurrentWeekCard.vue'
 import SiteFooter from '../components/SiteFooter.vue'
@@ -10,7 +10,7 @@ import { useMiniStore } from '../composables/useMiniStore.js'
 import { computeEnergy } from '../composables/energyModel.js'
 import { todayISO } from '../composables/miniModel.js'
 import { isLocked } from '../i18n/energy.js'
-import { HEAD } from '../i18n/growth247.js'
+import { HEAD, LEVEL_ROWS } from '../i18n/growth247.js'
 import { plural } from '../i18n/format.js'
 import { monthOf } from '../i18n/format.js'
 
@@ -21,14 +21,18 @@ import { monthOf } from '../i18n/format.js'
 // каждый день, не видит своих пропусков и не понимает, почему следующая
 // неделя закрыта.
 //
-// Сверху вниз: идущая неделя · «Важно» (когда есть повод) · недели месяца.
-// Порядок правился 18.08: повод стоял первым и перебивал собой главное —
-// сколько дней у человека есть и что внести сегодня.
+// Сверху вниз: идущая неделя · «Важно» (когда есть повод) · недели месяца ·
+// дни месяца сводкой · что уже работает.
 //
-// ⚠ Разговора о ступенях здесь больше нет. Статус с дорогой и таблица «что
-// уже работает» уехали на «Сигналы», где идёт разговор о том, чем усилить
-// завтрашний день; страница состояния осталась целиком про свои цифры.
-// Числа системы («Растём вместе») уехали
+// ⚠ Роли разведены жёстко: «Прогресс» — про НЕДЕЛИ и месяц, «Контроль Дня» —
+// про ДНИ. Здесь видно, как сложились недели и чем они закрыты; сами дни,
+// их таблица и единственная в приложении форма ввода живут там. Любая кнопка
+// отсюда, зовущая внести день, уводит туда вместе с датой. Пока ввод стоял
+// в обоих местах, человек не заходил в «Контроль Дня» вовсе и не видел,
+// куда встала внесённая цифра.
+//
+// Статус с дорогой ступеней уехал на «Сигналы» — там разговор
+// о том, чем усилить завтрашний день. Числа системы («Растём вместе») уехали
 // на «Ультру»: они отвечают на вопрос «кто вы такие», а он возникает там,
 // где идёт разговор о работе команды. Здесь человек смотрит свои дни, а не
 // наши, и страница целиком принадлежит ему.
@@ -45,18 +49,22 @@ const state = store.state
 const m = store.model
 
 const moduleOpen = ref('')
-// Ввод дня открывается прямо здесь: человек смотрит на свои недели, и уводить
-// его на другой экран ради одной цифры значит терять место, куда он смотрел.
-const dayOpen = ref(false)
-const dayPick = ref('')
-// ⚠ Форма ввода не открывается на не наступивший день. Выручки за завтра
-// не существует, и открытое поле под неё — предложение её выдумать. Раньше
-// защита стояла только на том, что будущая неделя не даёт ссылки; любой
-// другой вход (кнопка повода, главный блок) её обходил.
+
+// ⚠ Ввода на этой странице нет ни одного. Любая кнопка, зовущая внести день,
+// уводит в «Контроль Дня» — вместе с самим днём, чтобы форма открылась там
+// уже на нужной дате.
+//
+// Раньше форма открывалась шторкой прямо здесь, и получалось два входа в одно
+// действие: человек вносил цифру, не видел, куда она встала, и в раздел,
+// сделанный ровно для дней, не заходил вовсе. Разделение теперь жёсткое —
+// «Прогресс» про недели и месяц, «Контроль Дня» про дни; переход между ними
+// в одну сторону и всегда с адресом.
+//
+// Не наступивший день не открывается: выручки за завтра не существует,
+// и поле под неё — предложение её выдумать.
 function openDay(iso) {
   if (iso && iso > today.value) return
-  dayPick.value = iso || ''
-  dayOpen.value = true
+  emit('go', 'day', iso || '')
 }
 const energy = computed(() => computeEnergy(state, m.value))
 const rated = computed(() => state.razborRating !== null && state.razborRating !== undefined)
@@ -66,6 +74,18 @@ const today = computed(() => todayISO())
 // месяца» на закрытом августе читались бы как недели текущего календаря.
 // Идущую неделю держит `CurrentWeekCard` — он же решает, что показывать,
 // когда текущей недели в месяце нет.
+// Сводка дней месяца: сколько закрыто по плану, сколько с недобором.
+// Числа берутся из модели, второго счёта здесь не заводится.
+const dayTiles = computed(() => {
+  const s = m.value && m.value.dayStats
+  if (!s) return []
+  return [
+    { key: 'good', n: s.good, label: 'по плану', color: 'var(--positive)' },
+    { key: 'warn', n: s.warn, label: 'близко', color: 'var(--warning)' },
+    { key: 'bad', n: s.bad, label: 'недобор', color: 'var(--negative)' },
+  ]
+})
+
 const weeksTitle = computed(() => (m.value ? `Недели ${monthOf(m.value.month)}` : 'Недели месяца'))
 
 // Повод-плашка. Есть пропуски в прошедших неделях — говорим о них и даём
@@ -125,16 +145,75 @@ const reason = computed(() => {
       </div>
     </section>
 
-    <!-- 4 · Недели месяца -->
+    <!-- 3 · Недели месяца -->
     <div class="mt-4">
       <WeekRows :m="m" :today="today" :month-title="weeksTitle" @enter="openDay" />
     </div>
 
-    <SiteFooter />
+    <!-- 4 · Дни месяца одной строкой. Сводка живёт здесь, а сами дни —
+         в «Контроле Дня»: страница недель показывает, из чего они сложились,
+         и отдаёт разбор туда, где лежит таблица. Пока внесённых дней нет,
+         блока нет: три нуля ничего не сообщают. -->
+    <section v-if="m.dayStats" class="mt-5">
+      <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+        {{ HEAD.days }}
+      </h2>
+      <button
+        type="button"
+        class="mt-2 flex w-full items-center gap-3 rounded-2xl bg-[var(--surface)] p-4 text-left"
+        @click="emit('go', 'day')"
+      >
+        <span class="flex min-w-0 flex-1 items-center gap-4">
+          <span v-for="s in dayTiles" :key="s.key" class="flex items-baseline gap-1.5">
+            <span class="h-[10px] w-[10px] shrink-0 rounded-full" :style="{ background: s.color }" aria-hidden="true"></span>
+            <span class="text-[1.125rem] font-bold tabular-nums text-[var(--text)]">{{ s.n }}</span>
+            <span class="text-[0.75rem] text-[var(--text-muted)]">{{ s.label }}</span>
+          </span>
+        </span>
+        <ChevronRight class="h-5 w-5 shrink-0 text-[var(--text-muted)]" :stroke-width="2" aria-hidden="true" />
+      </button>
+    </section>
 
-    <BottomSheet :open="dayOpen" @close="dayOpen = false">
-      <AddReportForm :preset="dayPick" @done="dayOpen = false" />
-    </BottomSheet>
+    <!-- 5 · Что уже работает. Таблица вернулась сюда с «Сигналов»: она
+         отвечает не «что взять дальше», а «что у меня есть», и это состояние. -->
+    <section class="mt-5">
+      <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+        {{ HEAD.access }}
+      </h2>
+      <ul class="mt-2 overflow-hidden rounded-2xl bg-[var(--surface)]">
+        <li v-for="r in LEVEL_ROWS" :key="r.id" class="border-b border-[var(--line)] last:border-b-0">
+          <component
+            :is="r.module ? 'button' : 'div'"
+            :type="r.module ? 'button' : null"
+            class="flex min-h-[48px] w-full items-center gap-3 px-4 py-2.5 text-left"
+            @click="r.module ? moduleOpen = r.module : null"
+          >
+            <span
+              v-if="r.has"
+              class="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full"
+              :style="{ background: 'var(--positive)' }"
+              aria-hidden="true"
+            >
+              <Check class="h-[13px] w-[13px]" :style="{ color: 'var(--ink-on-color)' }" :stroke-width="3" />
+            </span>
+            <span
+              v-else
+              class="h-[20px] w-[20px] shrink-0 rounded-full border-2"
+              :style="{ borderColor: 'var(--line)' }"
+              aria-hidden="true"
+            ></span>
+            <span class="min-w-0 flex-1 text-[0.9375rem] leading-snug text-[var(--text)]">{{ r.what }}</span>
+            <span
+              v-if="!r.has"
+              class="inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide"
+              :style="{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }"
+            >{{ r.by }}</span>
+          </component>
+        </li>
+      </ul>
+    </section>
+
+    <SiteFooter />
 
     <BottomSheet :open="!!moduleOpen" @close="moduleOpen = ''">
       <ModulePassport

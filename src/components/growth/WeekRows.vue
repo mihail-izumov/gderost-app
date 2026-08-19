@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
 import HandIcon from '../icons/HandIcon.vue'
-import { weekRangeLabel } from '../../i18n/format.js'
+import { weekRangeLabel, formatRub } from '../../i18n/format.js'
 import { sigClass } from '../../composables/miniModel.js'
 
 // Недели месяца на странице состояния. Тот же расчёт, что в «Контроле Дня»:
@@ -98,8 +98,14 @@ const rows = computed(() => props.m.weeks.map((w) => {
   let chip
   if (time === 'past' && donePct !== null) {
     chip = { text: `${donePct} %`, ...SIG[sigClass(ratio)] }
-  } else if (time === 'past') {
+  } else if (time === 'past' && closed < total) {
     chip = { text: `нет ${total - closed} дн`, bg: 'var(--warning)', ink: 'var(--accent-ink)' }
+  } else if (time === 'past') {
+    // ⚠ Неделя внесена целиком, а процента нет: все её дни вошли в стартовую
+    // сумму, и против плана меряться нечему — дневных чисел у них не было.
+    // Прежняя ветка печатала здесь «нет 0 дн»: счёт верный, сообщение
+    // бессмысленное. Такая неделя честно говорит, чем она закрыта.
+    chip = { text: 'суммой', bg: 'var(--surface-2)', ink: 'var(--text-muted)' }
   } else if (time === 'now') {
     chip = { text: 'идёт', bg: 'var(--action)', ink: 'var(--action-ink)' }
   } else {
@@ -114,6 +120,9 @@ const rows = computed(() => props.m.weeks.map((w) => {
     range: weekRangeLabel(w.days[0].iso, w.days[total - 1].iso),
     closed,
     total,
+    // Деньги недели — то, ради чего дни и вносят. Счёт дней остаётся рядом
+    // подписью: он говорит, насколько этой сумме можно верить.
+    fact: w.hasFact || w.hasSpread ? formatRub(w.shownFact) : '',
     width: total ? Math.round((closed / total) * 100) : 0,
     time,
     now: time === 'now',
@@ -176,6 +185,9 @@ const rows = computed(() => props.m.weeks.map((w) => {
                  склеивала два разных сообщения в одну строку, и человек читал
                  «не хватает 5» как продолжение счёта дней. -->
             <span class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span v-if="r.fact" class="text-[0.9375rem] font-bold tabular-nums text-[var(--text)]">
+                {{ r.fact }}
+              </span>
               <span class="text-[0.75rem] tabular-nums text-[var(--text-muted)]">
                 {{ r.closed }} / {{ r.total }} дн
               </span>
@@ -196,18 +208,15 @@ const rows = computed(() => props.m.weeks.map((w) => {
           </span>
 
           <!-- Рука вместо замка: закрыто здесь не приложением и не за деньги,
-               а отсутствием фактов. Знак стоит в жёлтом круге — жёлтый
-               в системе означает незавершённость, и это ровно тот случай;
-               сам знак тёмный, потому что жёлтая фигура на белом не читается,
-               а производных оттенков в системе нет. -->
-          <span
+               а отсутствием фактов. Круга под знаком нет — залитый круг делал
+               из знака состояния значок действия, а нажимать тут нечего;
+               цвет тот же серый, каким был замок: знак сообщает, а внимание
+               забирает жёлтая метка долга рядом. -->
+          <HandIcon
             v-if="r.locked"
-            class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full"
-            :style="{ background: 'var(--warning)' }"
+            class="h-[20px] w-[20px] shrink-0 text-[var(--text-muted)]"
             aria-label="Ждём данные"
-          >
-            <HandIcon class="h-[15px] w-[15px]" :style="{ color: 'var(--accent-ink)' }" />
-          </span>
+          />
           <ChevronRight
             v-else-if="r.goTo"
             class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]"

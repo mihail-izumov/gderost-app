@@ -83,8 +83,8 @@ function onTouchEnd() {
         ></div>
         <div
           ref="panel"
-          class="gr-sheet-panel relative max-h-[88svh] w-full max-w-[430px] overflow-y-auto
-                 rounded-t-2xl bg-[var(--bg)] px-4 pb-[max(1rem,env(safe-area-inset-bottom))]"
+          class="gr-sheet-panel relative w-full max-w-[430px] overflow-y-auto
+                 rounded-t-2xl bg-[var(--bg)] px-4"
           :class="dragging ? 'is-dragging' : ''"
           :style="{ '--gr-dy': `${dy}px` }"
           @touchstart.passive="onTouchStart"
@@ -104,8 +104,15 @@ function onTouchEnd() {
 </template>
 
 <style scoped>
-/* Кривая системной шторки iOS. */
+/* Клавиатура на iOS не двигает нижний край окна — она рисуется поверх него.
+   Шторка честно стоит внизу и оказывается под клавиатурой вместе с полем,
+   в которое человек печатает. Высоту клавиатуры считает
+   `composables/useKeyboardInset.js` и кладёт в `--gr-kb`; отсюда она уходит
+   и в нижний отступ (панель поднимается), и в потолок высоты (панель
+   не вырастает под клавиатуру и остаётся прокручиваемой). */
 .gr-sheet-panel {
+  padding-bottom: calc(max(1rem, env(safe-area-inset-bottom)) + var(--gr-kb, 0px));
+  max-height: calc(88svh - var(--gr-kb, 0px));
   transform: translateY(var(--gr-dy, 0px));
   transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
   will-change: transform;

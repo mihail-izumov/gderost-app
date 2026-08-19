@@ -129,8 +129,11 @@ onBeforeUnmount(() => { if (io) { io.disconnect(); io = null } })
         @click.self="sheet = false; tune = false"
       >
         <div
-          class="max-h-[88svh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4
-                 pb-[max(1rem,env(safe-area-inset-bottom))]"
+          class="w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4"
+          :style="{
+            maxHeight: 'calc(88svh - var(--gr-kb, 0px))',
+            paddingBottom: 'calc(max(1rem, env(safe-area-inset-bottom)) + var(--gr-kb, 0px))',
+          }"
         >
           <template v-if="sheet">
             <div class="mb-3 flex justify-end">

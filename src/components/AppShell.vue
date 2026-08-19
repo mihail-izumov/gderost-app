@@ -262,27 +262,38 @@ watch(() => [props.active, props.subView], async () => {
       style="padding-bottom: calc(env(safe-area-inset-bottom) + 0.75rem)"
     >
       <div class="relative">
-        <!-- Уход и возврат панели идут по одной кривой и с одной длительностью.
-             Раньше `ease-out` разгонял уезжающую капсулу с места и она пропадала
-             рывком, а возвращалась мягко: одно и то же движение в две стороны
-             ощущалось разными механизмами. Кривая та же, что у шторок. -->
+        <!-- Уход и возврат идут по одной кривой и одной длительностью.
+             ⚠ Прозрачность из перехода убрана намеренно. Панель одновременно
+             уезжала на 120 % влево И гасла за то же время, поэтому исчезала
+             задолго до того, как доезжала до края: движение читалось рывком,
+             сколько бы ни длилось. Теперь она просто уходит за край экрана,
+             и длительности хватает, чтобы это увидеть. -->
         <div
           class="pointer-events-auto"
-          :class="navHidden ? '-translate-x-[120%] opacity-0' : 'translate-x-0 opacity-100'"
-          style="transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.32s cubic-bezier(0.32, 0.72, 0, 1)"
+          :class="navHidden ? '-translate-x-[120%]' : 'translate-x-0'"
+          style="transition: transform 0.42s cubic-bezier(0.32, 0.72, 0, 1)"
         >
           <TabBar :tabs="tabs" :active="active" @select="(id) => emit('update:active', id)" />
         </div>
 
         <!-- Круглая кнопка на месте капсулы появляется прозрачностью, а не
              возникает кадром: два движения в одной точке экрана обязаны
-             происходить с одной скоростью. -->
+             происходить с одной скоростью.
+             ⚠ Проходимость пальца задаётся инлайном, а не классом. Класс
+             `pointer-events-auto` в разметке и `pointer-events-none` в привязке
+             спорят между собой, и побеждает не тот, что написан позже, а тот,
+             что позже стоит в таблице стилей. Невидимая кнопка выигрывала спор
+             и ловила тапы в левом нижнем углу — ровно там, где в таб-баре
+             стоит «Сегодня»: вкладка переставала открываться. -->
         <button
           type="button"
-          class="pointer-events-auto absolute bottom-0 left-0 flex h-14 w-14 items-center justify-center rounded-full shadow-lg active:opacity-90"
-          :class="navHidden ? 'opacity-100' : 'pointer-events-none opacity-0'"
-          style="transition: opacity 0.32s cubic-bezier(0.32, 0.72, 0, 1)"
-          :style="{ background: 'var(--action)' }"
+          class="absolute bottom-0 left-0 flex h-14 w-14 items-center justify-center rounded-full shadow-lg active:opacity-90"
+          :class="navHidden ? 'opacity-100' : 'opacity-0'"
+          :style="{
+            background: 'var(--action)',
+            pointerEvents: navHidden ? 'auto' : 'none',
+            transition: 'opacity 0.42s cubic-bezier(0.32, 0.72, 0, 1)',
+          }"
           aria-label="Показать навигацию"
           @click="openNav"
         >

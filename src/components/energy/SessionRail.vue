@@ -95,14 +95,11 @@ const cards = computed(() => RAIL.map((id) => {
                  открывается — заперт заказ, а не чтение. -->
             <!-- Рука вместо замка. Ступень не заперта деньгами: её открывает
                  состоявшийся разбор, то есть работа, а не покупка. -->
-            <span
+            <HandIcon
               v-if="c.locked"
-              class="flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full"
-              :style="{ background: 'var(--warning)' }"
-              aria-hidden="true"
-            >
-              <HandIcon class="h-[15px] w-[15px]" :style="{ color: 'var(--accent-ink)' }" />
-            </span>
+              class="h-[20px] w-[20px] shrink-0"
+              :style="{ color: c.inkFaint, opacity: c.faintOpacity }"
+            />
             <ChevronRight
               v-else
               class="h-[18px] w-[18px] shrink-0"

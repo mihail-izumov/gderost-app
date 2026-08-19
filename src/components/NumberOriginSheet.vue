@@ -19,7 +19,7 @@ const props = defineProps({
   // Значение владельца — если у числа оно есть на открывшем экране.
   value: { type: String, default: '' },
 })
-defineEmits(['close'])
+const emit = defineEmits(['close', 'go'])
 
 // Неизвестный ключ — ошибка сборки, а не состояние пользователя.
 const o = computed(() => ORIGINS[props.originKey] || null)
@@ -51,11 +51,19 @@ const o = computed(() => ORIGINS[props.originKey] || null)
       </div>
     </dl>
 
+    <!-- Шторка кончается делом, а не согласием. «Понятно» закрывало её
+         и оставляло человека там же, откуда он пришёл; теперь кнопка ведёт
+         туда, где это число правится или собирается. -->
     <button
       type="button"
       class="mt-2 min-h-[48px] w-full rounded-full text-[0.9375rem] font-bold"
       :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
-      @click="$emit('close')"
-    >Понятно</button>
+      @click="emit('go', o.go)"
+    >{{ o.cta }}</button>
+    <button
+      type="button"
+      class="mt-2 min-h-[44px] w-full text-[0.875rem] text-[var(--text-muted)]"
+      @click="emit('close')"
+    >Закрыть</button>
   </section>
 </template>

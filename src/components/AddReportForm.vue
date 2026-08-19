@@ -64,6 +64,23 @@ function defaultDate() {
 }
 
 const date = ref(props.preset || defaultDate())
+
+// ⚠ Дата не бывает вне разрешённого окна ни секунды.
+//
+// Раньше границы стояли атрибутами `min`/`max`, и на этом всё кончалось:
+// нативный выбор на iOS позволяет вписать любое число, а браузер отвечал
+// своим пузырём «Значение должно быть меньше или равно 2026-08-18» —
+// чужим голосом, латиницей формата и посреди экрана. Человек оставался
+// с полем, в котором стоит невозможная дата, и сам догадывался, что делать.
+//
+// Теперь неверное значение просто не живёт: как только оно появилось, поле
+// возвращается к ближайшей границе. Сообщать не о чем — состояния,
+// о котором надо сообщать, не возникает.
+watch(date, (v) => {
+  if (!v) return
+  if (v > maxDate.value) date.value = maxDate.value
+  else if (v < minDate.value) date.value = minDate.value
+})
 const rev = ref(null)
 const saved = ref(null)
 const error = ref('')
@@ -143,15 +160,17 @@ function goToGap(iso) {
         Все прошедшие дни месяца закрыты. Следующий отчёт — завтра.
       </p>
 
-      <form v-else class="mt-3 flex flex-col gap-4" @submit.prevent="submit">
+      <form v-else novalidate class="mt-3 flex flex-col gap-4" @submit.prevent="submit">
         <label class="block">
           <span class="block text-[0.8125rem] font-medium text-[var(--text-secondary)]">За какой день</span>
           <!-- Поле даты на iOS имеет собственную ширину и без max-w вылезает
                за карточку вместе с рамкой. -->
           <input
             v-model="date"
-            class="mt-2 block min-h-[44px] w-full min-w-0 max-w-full rounded-xl border border-[var(--line)] bg-[var(--surface-2)] px-3
-                   font-mono text-[1rem] text-[var(--text)] outline-none focus:border-[var(--text-secondary)]"
+            class="mt-2 block min-h-[44px] w-full min-w-0 max-w-full appearance-none rounded-xl border border-[var(--line)]
+                   bg-[var(--surface-2)] px-3 text-left font-mono text-[1rem] text-[var(--text)] outline-none
+                   focus:border-[var(--text-secondary)]"
+            style="text-align: left"
             type="date"
             :min="minDate"
             :max="maxDate"

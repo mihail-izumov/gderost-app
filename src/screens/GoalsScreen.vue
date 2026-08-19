@@ -291,7 +291,13 @@ function saveCarry(v) {
         role="presentation"
         @click.self="sheet = ''"
       >
-        <div class="max-h-[88svh] w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+        <div
+          class="w-full max-w-[430px] overflow-y-auto rounded-t-2xl bg-[var(--bg)] p-4"
+          :style="{
+            maxHeight: 'calc(88svh - var(--gr-kb, 0px))',
+            paddingBottom: 'calc(max(1rem, env(safe-area-inset-bottom)) + var(--gr-kb, 0px))',
+          }"
+        >
           <ValueSheet
             v-if="sheet === 'fact'"
             title="Факт"

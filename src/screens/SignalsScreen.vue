@@ -17,8 +17,7 @@ import { computeEnergy } from '../composables/energyModel.js'
 import { computeTodaySignal } from '../composables/signalModel.js'
 import { ENTITY_STORY } from '../i18n/stories.js'
 import { isLocked } from '../i18n/energy.js'
-import { Check as CheckMark } from 'lucide-vue-next'
-import { HEAD, LEVEL_ROWS } from '../i18n/growth247.js'
+import { HEAD } from '../i18n/growth247.js'
 
 // «Сигналы» — вкладка предмета торговли.
 //
@@ -39,9 +38,9 @@ import { HEAD, LEVEL_ROWS } from '../i18n/growth247.js'
 // ступени и говорит ценами. Дорога отвечает «где вы», лента — «что взять
 // дальше», и вопрос «дальше» человек задаёт именно здесь.
 //
-// «Что уже работает» переехало следом. Обе таблицы отвечают на один вопрос —
-// где владелец на дороге, — и разлучать их значило заводить разговор о ступенях
-// в двух местах сразу. «Прогресс» после этого целиком про свои цифры.
+// Таблица «Доступно сейчас» вернулась на «Прогресс» по разбору Михаила:
+// она отвечает не «что взять дальше», а «что у меня уже работает», и это
+// состояние, а не предложение.
 //
 // Числа владельца на экране есть — значит и тон обычный: экран сообщает
 // состояние и не объясняет себя абзацами.
@@ -88,21 +87,11 @@ function storyDone() {
   <div v-if="m" class="w-full px-4 pb-4">
     <!-- Заголовки разделов разводят экран на два разговора: что у вас сегодня
          и чем это усилить завтра. Без них карточки слипались в одну ленту. -->
-    <h2 class="mb-2 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">Сегодня</h2>
-
-    <!-- Живой сигнал выше товара: полезное вперёд продаваемого. -->
-    <SignalTodayCard
-      :signal="signal"
-      :over="store.monthOver.value"
-      @origin="originOpen = $event"
-      @go="emit('go', $event)"
-      @method="storyOpen = true"
-    />
-
-    <!-- Где владелец на дороге. Стоит между «сегодня» и «завтра» ровно
-         потому, что отвечает на вопрос между ними: вот ваши цифры, вот
-         где вы, вот что дальше. -->
-    <h2 class="mb-2 mt-6 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+    <!-- Где владелец на дороге. Стоит первым: это рамка всего экрана —
+         сперва видно, на каком участке человек, и только потом его сегодняшние
+         числа и то, чем их усилить. Раньше сигнал шёл выше и читался вырванным
+         из общего разговора. -->
+    <h2 class="mb-2 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
       {{ HEAD.level }}
     </h2>
     <ConnectProgress
@@ -113,13 +102,26 @@ function storyDone() {
       @stage="openModule"
     />
 
-    <h2 class="mb-2 mt-6 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">Завтра</h2>
+    <h2 class="mb-2 mt-6 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">Сегодня</h2>
+
+    <!-- Живой сигнал: полезное вперёд продаваемого. -->
+    <SignalTodayCard
+      :signal="signal"
+      :over="store.monthOver.value"
+      @origin="originOpen = $event"
+      @go="emit('go', $event)"
+      @method="storyOpen = true"
+    />
+
+    <!-- «Доступ» вместо «Завтра»: раздел называет не срок, а то, что человек
+         может открыть. «Завтра» обещало время, которого приложение не знает. -->
+    <h2 class="mb-2 mt-6 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">Доступ</h2>
 
     <!-- Переключатель режимов ленты вместо заголовка «Сессии». Во всю ширину:
          узкая пилюля у левого края читалась подписью, а не контролом. -->
     <div class="mb-2 flex w-full rounded-full bg-[var(--surface-2)] p-[3px]">
       <button
-        v-for="t in [{ id: 'sessions', label: 'Разборы' }, { id: 'mine', label: 'Мои старты' }]"
+        v-for="t in [{ id: 'sessions', label: 'Запуски' }, { id: 'mine', label: 'Мои старты' }]"
         :key="t.id"
         type="button"
         class="min-h-[40px] flex-1 rounded-full px-3.5 text-[0.9375rem] font-semibold transition-colors"
@@ -163,45 +165,6 @@ function storyDone() {
       <span class="shrink-0 text-[0.8125rem] font-medium" :style="{ color: 'var(--action)' }">Изменить</span>
     </button>
 
-    <!-- Что уже работает. Пустой круг вместо прочерка: место под то, чего
-         ещё нет, а не знак отсутствия. Чем открывается — бейджем. -->
-    <section class="mt-6">
-      <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-        {{ HEAD.access }}
-      </h2>
-      <ul class="mt-2 overflow-hidden rounded-2xl bg-[var(--surface)]">
-        <li v-for="r in LEVEL_ROWS" :key="r.id" class="border-b border-[var(--line)] last:border-b-0">
-          <component
-            :is="r.module ? 'button' : 'div'"
-            :type="r.module ? 'button' : null"
-            class="flex min-h-[48px] w-full items-center gap-3 px-4 py-2.5 text-left"
-            @click="r.module ? openModule(r.module) : null"
-          >
-            <span
-              v-if="r.has"
-              class="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full"
-              :style="{ background: 'var(--positive)' }"
-              aria-hidden="true"
-            >
-              <CheckMark class="h-[13px] w-[13px]" :style="{ color: 'var(--ink-on-color)' }" :stroke-width="3" />
-            </span>
-            <span
-              v-else
-              class="h-[20px] w-[20px] shrink-0 rounded-full border-2"
-              :style="{ borderColor: 'var(--line)' }"
-              aria-hidden="true"
-            ></span>
-            <span class="min-w-0 flex-1 text-[0.9375rem] leading-snug text-[var(--text)]">{{ r.what }}</span>
-            <span
-              v-if="!r.has"
-              class="inline-flex shrink-0 items-center rounded-md px-1.5 py-0.5 text-[0.625rem] font-medium uppercase tracking-wide"
-              :style="{ background: 'var(--surface-2)', color: 'var(--text-secondary)' }"
-            >{{ r.by }}</span>
-          </component>
-        </li>
-      </ul>
-    </section>
-
     <SiteFooter />
 
     <BottomSheet :open="breakdownOpen" @close="breakdownOpen = false">
@@ -209,7 +172,11 @@ function storyDone() {
     </BottomSheet>
 
     <BottomSheet :open="!!originOpen" @close="originOpen = ''">
-      <NumberOriginSheet :origin-key="originOpen" @close="originOpen = ''" />
+      <NumberOriginSheet
+        :origin-key="originOpen"
+        @close="originOpen = ''"
+        @go="originOpen = ''; emit('go', $event)"
+      />
     </BottomSheet>
 
     <BottomSheet :open="!!moduleOpen" @close="moduleOpen = ''">

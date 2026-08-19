@@ -98,14 +98,7 @@ function progFill(r) {
           <span class="text-[0.75rem] text-[var(--text-muted)]">{{ w.from }}–{{ w.to }} {{ monthGen(w.to).split(' ')[1] }}</span>
           <!-- Рука вместо замка: неделю держат недостающие данные,
                а не запрет приложения. -->
-          <span
-            v-if="!w.open"
-            class="ml-auto flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full"
-            :style="{ background: 'var(--warning)' }"
-            aria-label="Ждём данные"
-          >
-            <HandIcon class="h-[14px] w-[14px]" :style="{ color: 'var(--accent-ink)' }" />
-          </span>
+          <HandIcon v-if="!w.open" class="ml-auto h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" aria-label="Ждём данные" />
           <ChevronDown v-else class="ml-auto h-4 w-4 text-[var(--text-muted)]" :stroke-width="2" />
         </div>
         <!-- Свёрнутая неделя показывает план и то, что по ней известно.
