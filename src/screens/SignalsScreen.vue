@@ -77,6 +77,12 @@ const monthState = computed(() => {
   const g = GOAL_STATE[mm.goalState] || GOAL_STATE.unknown
   return { label: g.label, dot: g.dot }
 })
+// Идёт ли зарядка: питание системы — это данные. Все прошедшие дни внесены —
+// поток есть; появился пропуск — поток прервался. Уровень (процент) от этого
+// не меняется, и это разница по существу: аккуратность в вводе не покупает
+// оснащённость, она держит точность.
+const charging = computed(() => !!m.value && m.value.days.every((d) => !d.due))
+
 const moduleOpen = ref('')
 const storyOpen = ref(false)
 // Происхождение числа: ключ открытой шторки. Механика честной цифры —
@@ -112,12 +118,13 @@ function storyDone() {
     <ConnectProgress
       :unit="state.unit || state.company"
       :pct="energy.pct"
+      :charging="charging"
       :level-id="energy.level.id"
       @info="breakdownOpen = true"
       @stage="openModule"
     />
 
-    <h2 class="mb-2 mt-6 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">Сегодня</h2>
+    <h2 class="mb-2 mt-6 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">Сигналы</h2>
 
     <!-- Состояние месяца рамкой над числами. Тап ведёт в «Контроль Дня»,
          к той самой шапке, откуда это слово взято: человек, которому сказали

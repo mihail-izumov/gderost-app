@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { ChevronRight, Eye, Clock, Zap } from 'lucide-vue-next'
+import { ChevronRight, Eye, Clock } from 'lucide-vue-next'
+import ZapIcon from '../icons/ZapIcon.vue'
 import BottomSheet from '../BottomSheet.vue'
 import { COUNTERS, TELEMETRY, scoreNow } from '../../data/runscaleCounters.js'
 import { formatInt, formatPct, plural } from '../../i18n/format.js'
@@ -128,7 +129,7 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
         </span>
         <span class="mt-auto flex h-6 items-center gap-2 text-[0.75rem] text-[var(--text-secondary)]">
           <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)]" aria-hidden="true">
-            <Zap class="h-3.5 w-3.5" :style="{ color: 'var(--action)' }" :stroke-width="2.4" />
+            <ZapIcon class="h-3.5 w-3.5" :style="{ color: 'var(--action)' }" />
           </span>
           <span><b class="font-semibold tabular-nums text-[var(--text)]">{{ formatInt(signals.value) }}</b> {{ word(signals) }}</span>
         </span>

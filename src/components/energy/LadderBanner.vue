@@ -1,5 +1,6 @@
 <script setup>
-import { ChevronRight, Zap } from 'lucide-vue-next'
+import { ChevronRight } from 'lucide-vue-next'
+import ZapIcon from '../icons/ZapIcon.vue'
 
 // Баннер дороги — паттерн СберПрайма в Whoosh: главное предложение
 // не лежит в общем списке, а маячит собственной тёмной карточкой там, где
@@ -27,7 +28,7 @@ defineEmits(['open'])
       :style="{ background: 'var(--line-on-color)' }"
       aria-hidden="true"
     >
-      <Zap class="h-5 w-5" :style="{ color: 'var(--ink-on-color)' }" :stroke-width="2.5" />
+      <ZapIcon class="h-5 w-5" :style="{ color: 'var(--ink-on-color)' }" />
     </span>
     <span class="min-w-0 flex-1">
       <span class="flex items-center gap-2">

@@ -1,5 +1,7 @@
 <script setup>
+import { computed } from 'vue'
 import { Info } from 'lucide-vue-next'
+import ZapIcon from '../icons/ZapIcon.vue'
 import { PATH_VISIBLE } from '../../composables/energyModel.js'
 
 // Плашка юнита со статусом подключения и прогрессом по пути к буткемпу.
@@ -21,7 +23,25 @@ const props = defineProps({
   unit: { type: String, default: '' },
   pct: { type: Number, default: 0 },
   levelId: { type: String, default: 'mini' },
+  // Идёт ли зарядка прямо сейчас: все прошедшие дни внесены — идёт, есть
+  // пропуски — стоит.
+  charging: { type: Boolean, default: false },
 })
+
+// ⚠ Молния и процент отвечают на РАЗНЫЕ вопросы, и путать их нельзя.
+//
+// Процент — оснащённость: сколько частей роста собрано и чем. Он не растёт
+// от того, что владелец внёс вчерашний день; его двигают разбор, буткемп,
+// работа с командой. Показывать это «зарядкой» значило бы обещать, что
+// аккуратность в вводе поднимает уровень, — она его не поднимает.
+//
+// Молния — поток данных: питание, на котором всё считается. Пропущенные дни
+// не отнимают процентов, но прогноз без них стоит на неполных данных, и это
+// ровно то, о чём говорит «Честная цифра». Поэтому знак горит, пока дыр нет,
+// и гаснет, как только они появились. Возвращается тем же — вводом.
+const zap = computed(() => (props.charging
+  ? { color: 'var(--warning)', label: 'Данные поступают' }
+  : { color: 'var(--line-on-color)', label: 'Данных не хватает' }))
 
 // Цвет этапа. Жёлтый на «Сигналах» — то же значение, что у жёлтого везде
 // в приложении: мера и незавершённость. Это ступень, которую владелец уже
@@ -80,6 +100,9 @@ const levels = PATH_VISIBLE
         <span class="flex items-center gap-1.5">
           <Info class="h-5 w-5 shrink-0" :style="{ color: 'var(--ink-on-color-muted)' }" :stroke-width="2" aria-hidden="true" />
           <span class="text-[1.75rem] font-bold leading-none tabular-nums">{{ pct }}%</span>
+          <!-- Знак питания: горит, пока данные поступают, и гаснет, как только
+               появились пропуски. Процент при этом не меняется — см. выше. -->
+          <ZapIcon class="h-[22px] w-[22px] shrink-0" :style="{ color: zap.color }" :aria-label="zap.label" />
         </span>
       </button>
     </div>
