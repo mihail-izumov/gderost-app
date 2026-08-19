@@ -14,7 +14,7 @@ import { L } from '../i18n/daily.js'
     <p class="whitespace-pre-line text-[1.375rem] font-bold leading-tight tracking-tight text-[var(--text)]">
       {{ L.motto }}
     </p>
-    <p class="mt-2 text-[1rem] font-semibold" :style="{ color: 'var(--action)' }">
+    <p class="mt-2 text-[1rem] font-semibold" :style="{ color: 'var(--action-text)' }">
       {{ L.refrain }}
     </p>
   </footer>

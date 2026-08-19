@@ -129,13 +129,13 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
         </span>
         <span class="mt-auto flex h-6 items-center gap-2 text-[0.75rem] text-[var(--text-secondary)]">
           <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)]" aria-hidden="true">
-            <ZapIcon class="h-3.5 w-3.5" :style="{ color: 'var(--action)' }" />
+            <ZapIcon class="h-3.5 w-3.5" :style="{ color: 'var(--action-text)' }" />
           </span>
           <span><b class="font-semibold tabular-nums text-[var(--text)]">{{ formatInt(signals.value) }}</b> {{ word(signals) }}</span>
         </span>
         <span class="flex h-6 items-center gap-2 text-[0.75rem] text-[var(--text-secondary)]">
           <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)]" aria-hidden="true">
-            <Eye class="h-3.5 w-3.5" :style="{ color: 'var(--action)' }" :stroke-width="2.2" />
+            <Eye class="h-3.5 w-3.5" :style="{ color: 'var(--action-text)' }" :stroke-width="2.2" />
           </span>
           <span><b class="font-semibold tabular-nums text-[var(--text)]">{{ formatPct(TELEMETRY.readsRate * 100, 0) }}</b> прочтений</span>
         </span>
@@ -164,7 +164,7 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
         </span>
         <span class="mt-auto flex h-6 items-center gap-2 text-[0.75rem] text-[var(--text-secondary)]">
           <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)]" aria-hidden="true">
-            <Clock class="h-3.5 w-3.5" :style="{ color: 'var(--action)' }" :stroke-width="2.2" />
+            <Clock class="h-3.5 w-3.5" :style="{ color: 'var(--action-text)' }" :stroke-width="2.2" />
           </span>
           <span class="flex items-center gap-1">
             <b class="font-semibold tabular-nums text-[var(--text)]">90</b> мин
