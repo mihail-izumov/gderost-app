@@ -1,6 +1,13 @@
 <script setup>
 import { ref } from 'vue'
 
+// ⚠ Холст панели — свой токен `--sheet`, а не холст страницы. На светлом
+// они совпадают, и правка выглядит лишней: там панель отделяет затемнение,
+// страница под ней уходит в серый. На тёмном затемнять нечего — чёрное
+// на чёрном границы не даёт, и панель, взявшая холст страницы, сливается
+// с ней в одно пятно. Отсюда же светлый кант сверху: не украшение,
+// а верхняя граница предмета, который выехал поверх другого.
+//
 // Шторка. Одна на всё приложение — как у Whoosh: всегда снизу, сверху
 // ручка-грабер, закрывается свайпом вниз, тапом по затемнению или кнопкой
 // внизу содержимого. Крестиков нет: выход всегда в одном месте, и палец
@@ -92,16 +99,16 @@ function onTouchEnd() {
         <div
           ref="panel"
           class="gr-sheet-panel relative w-full max-w-[430px] overflow-y-auto
-                 rounded-t-2xl bg-[var(--bg)] px-4"
+                 rounded-t-2xl bg-[var(--sheet)] px-4"
           :class="dragging ? 'is-dragging' : ''"
-          :style="{ '--gr-dy': `${dy}px` }"
+          :style="{ '--gr-dy': `${dy}px`, boxShadow: 'inset 0 1px 0 var(--rim-glow)' }"
           @touchstart.passive="onTouchStart"
           @touchmove="onTouchMove"
           @touchend="onTouchEnd"
           @touchcancel="onTouchEnd"
         >
           <!-- Ручка: видимое обещание, что шторку можно утащить вниз. -->
-          <div class="sticky top-0 z-10 flex justify-center bg-[var(--bg)] pb-2 pt-2.5" aria-hidden="true">
+          <div class="sticky top-0 z-10 flex justify-center bg-[var(--sheet)] pb-2 pt-2.5" aria-hidden="true">
             <span class="h-[4px] w-9 rounded-full" :style="{ background: 'var(--line)' }"></span>
           </div>
           <slot />
