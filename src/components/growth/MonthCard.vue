@@ -58,10 +58,6 @@ const nextISO = computed(() => {
   return d ? d.iso : ''
 })
 
-// Цвет говорит ровно то же, что и везде в приложении: светофор у дня
-// с известной выручкой, серый у дня, вошедшего в стартовую сумму (его
-// выручка неизвестна, оценивать нечего), жёлтый у прошедшего дня без цифры —
-// это долг. Будущее нейтрально: там ещё ничего не случилось.
 // ⚠ Ряд говорит про ДЕНЬГИ по дням, а не про веса. У прожитого дня высота —
 // его выручка, у будущего — то, что даст нынешний темп (`impliedBase` на вес
 // дня, тот же расчёт, что у всего прогноза). Цвет разводит одно с другим
@@ -73,13 +69,32 @@ const nextISO = computed(() => {
 // она видна ровно так же, потому что прогноз дня из неё и считается.
 const dayValue = (d) => (d.entered ? d.fact : (props.m.impliedBase || 0) * (d.weight || 0))
 const maxV = computed(() => Math.max(...props.m.days.map(dayValue), 1))
+
+// ⚠ Здесь жёлтый носил ДВА смысла сразу — это ловит общее правило
+// приоритета состояний (`composables/stateBadge.js`).
+// Сплошным жёлтым красился и день, отработавший близко к плану (результат),
+// и день, за который цифры нет вовсе (долг). На экране это дало дюжину жёлтых
+// столбцов при счётчике «0 близко 85–99 %»: числа были верны, врал цвет —
+// человек считал жёлтые столбцы и получал другое число.
+//
+// Разводим не цветом, а ФАКТУРОЙ. Цвет остаётся значением состояния,
+// а заливка — его природой: сплошное — измеренное, штриховка — дыра
+// в данных, серое — прогноз. Тот же приём уже работает в сводке недель,
+// где штриховкой помечена разнесённая стартовая сумма.
+const HATCH = (color) => ({
+  backgroundColor: 'var(--surface)',
+  backgroundImage: `repeating-linear-gradient(-45deg, ${color} 0 2px, transparent 2px 4px)`,
+})
+
 const strip = computed(() => props.m.days.map((d) => {
-  let bg = 'var(--line)'
-  if (d.entered) bg = SIG_VAR[sigClass(d.fact / d.planAt)]
-  else if (d.inCarry) bg = 'var(--text-muted)'
-  else if (d.iso < props.today) bg = 'var(--warning)'
   const h = Math.round(8 + (dayValue(d) / maxV.value) * 20)
-  return { key: d.iso, dd: d.dd, bg, h, today: d.iso === props.today }
+  const base = { key: d.iso, dd: d.dd, h, today: d.iso === props.today }
+  if (d.entered) return { ...base, style: { background: SIG_VAR[sigClass(d.fact / d.planAt)] } }
+  // День из стартовой суммы: выручка известна общей суммой, но не по дням —
+  // тоже не измерение, и тоже штриховка, только нейтральная.
+  if (d.inCarry) return { ...base, style: HATCH('var(--text-muted)') }
+  if (d.iso < props.today) return { ...base, style: HATCH('var(--warning)') }
+  return { ...base, style: { background: 'var(--line)' } }
 }))
 
 const passed = computed(() => props.m.days.filter((d) => d.iso < props.today).length)
@@ -119,7 +134,7 @@ const stats = computed(() => props.m.dayStats)
         v-for="d in strip"
         :key="d.key"
         class="relative min-w-0 flex-1 rounded-[2px]"
-        :style="{ height: `${d.h}px`, background: d.bg }"
+        :style="{ height: `${d.h}px`, ...d.style }"
       >
         <i
           v-if="d.today"
@@ -156,20 +171,28 @@ const stats = computed(() => props.m.dayStats)
       </div>
     </div>
 
-    <!-- Как прошли внесённые дни против плана. Полосы у этого счёта нет
-         намеренно: ряд выше показывает то же самое подробнее. -->
-    <div v-if="stats" class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-[var(--line)] pt-3 text-[0.8125rem] text-[var(--text-muted)]">
-      <span class="inline-flex items-center gap-1.5">
-        <i class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--positive)" />
-        <b class="font-semibold text-[var(--text)]">{{ stats.good }}</b> {{ L.above }}
-      </span>
-      <span class="inline-flex items-center gap-1.5">
-        <i class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--warning)" />
-        <b class="font-semibold text-[var(--text)]">{{ stats.warn }}</b> {{ L.close }}
-      </span>
-      <span class="inline-flex items-center gap-1.5">
-        <i class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--negative)" />
-        <b class="font-semibold text-[var(--text)]">{{ stats.bad }}</b> {{ L.below }}
+    <!-- Как прошли ИЗМЕРЕННЫЕ дни против плана. Счёт идёт по дням с цифрой,
+         и последним пунктом стоит их полнота: без неё человек считал жёлтые
+         столбцы в ряду и не находил их в счётчике «близко» — потому что
+         это разные вещи, дыра в данных и результат близко к плану. -->
+    <div v-if="stats || missing" class="mt-3 flex flex-wrap gap-x-4 gap-y-1 border-t border-[var(--line)] pt-3 text-[0.8125rem] text-[var(--text-muted)]">
+      <template v-if="stats">
+        <span class="inline-flex items-center gap-1.5">
+          <i class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--positive)" />
+          <b class="font-semibold text-[var(--text)]">{{ stats.good }}</b> {{ L.above }}
+        </span>
+        <span class="inline-flex items-center gap-1.5">
+          <i class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--warning)" />
+          <b class="font-semibold text-[var(--text)]">{{ stats.warn }}</b> {{ L.close }}
+        </span>
+        <span class="inline-flex items-center gap-1.5">
+          <i class="inline-block h-2.5 w-2.5 rounded-sm" style="background: var(--negative)" />
+          <b class="font-semibold text-[var(--text)]">{{ stats.bad }}</b> {{ L.below }}
+        </span>
+      </template>
+      <span v-if="missing" class="inline-flex items-center gap-1.5">
+        <i class="inline-block h-2.5 w-2.5 rounded-sm" :style="HATCH('var(--warning)')" />
+        <b class="font-semibold text-[var(--text)]">{{ missing }}</b> без цифр
       </span>
     </div>
 
