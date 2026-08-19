@@ -146,13 +146,13 @@ function storyDone() {
 
     <!-- «Доступ» вместо «Завтра»: раздел называет не срок, а то, что человек
          может открыть. «Завтра» обещало время, которого приложение не знает. -->
-    <h2 class="mb-2 mt-6 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">Доступ</h2>
+    <h2 class="mb-2 mt-6 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">Супер-силы</h2>
 
     <!-- Переключатель режимов ленты вместо заголовка «Сессии». Во всю ширину:
          узкая пилюля у левого края читалась подписью, а не контролом. -->
     <div class="mb-2 flex w-full rounded-full bg-[var(--surface-2)] p-[3px]">
       <button
-        v-for="t in [{ id: 'sessions', label: 'Разборы' }, { id: 'mine', label: 'Мои старты' }]"
+        v-for="t in [{ id: 'sessions', label: 'Запуски' }, { id: 'mine', label: 'Мои старты' }]"
         :key="t.id"
         type="button"
         class="min-h-[40px] flex-1 rounded-full px-3.5 text-[0.9375rem] font-semibold transition-colors"

@@ -1,6 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Check } from 'lucide-vue-next'
+import { ChevronRight } from 'lucide-vue-next'
+import ZapIcon from '../components/icons/ZapIcon.vue'
+import WeekShapeSheet from '../components/WeekShapeSheet.vue'
 import BottomSheet from '../components/BottomSheet.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
 import WeekRows from '../components/growth/WeekRows.vue'
@@ -48,6 +50,9 @@ const state = store.state
 const m = store.model
 
 const moduleOpen = ref('')
+// Поправка на день недели правится с двух концов: внизу «Контроля Дня»
+// и прямо в блоке месяца. Шторка настройки одна на оба места.
+const tuneOpen = ref(false)
 
 // ⚠ Ввода на этой странице нет ни одного. Любая кнопка, зовущая внести день,
 // уводит в «Контроль Дня» — вместе с самим днём, чтобы форма открылась там
@@ -113,7 +118,7 @@ const reason = computed(() => {
     <!-- 1 · Месяц — главный блок экрана. Стоит первым: раздел отвечает
          на вопрос «куда идёт месяц», и ответ обязан быть раньше всего
          остального. Недели живут ниже сводкой. -->
-    <MonthCard :m="m" :today="today" @enter="openDay" />
+    <MonthCard :m="m" :today="today" @enter="openDay" @tune="tuneOpen = true" />
 
     <!-- 2 · Важно. Повод стоит под статусом и подписан как раздел: сверху
          он перебивал главный блок и читался ошибкой приложения, а не
@@ -154,9 +159,19 @@ const reason = computed(() => {
     <!-- 5 · Что уже работает. Таблица вернулась сюда с «Сигналов»: она
          отвечает не «что взять дальше», а «что у меня есть», и это состояние. -->
     <section class="mt-5">
-      <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-        {{ HEAD.access }}
-      </h2>
+      <!-- Раздел называется тем же именем, что и место, куда он ведёт:
+           «Сила роста» — это и список включённого, и вкладка, где силу
+           добавляют. Стрелка справа — вход туда. -->
+      <button
+        type="button"
+        class="flex w-full items-center gap-2 text-left"
+        @click="emit('go', 'power')"
+      >
+        <h2 class="text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+          {{ HEAD.access }}
+        </h2>
+        <ChevronRight class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]" :stroke-width="2" aria-hidden="true" />
+      </button>
       <ul class="mt-2 overflow-hidden rounded-2xl bg-[var(--surface)]">
         <li v-for="r in LEVEL_ROWS" :key="r.id" class="border-b border-[var(--line)] last:border-b-0">
           <component
@@ -165,20 +180,13 @@ const reason = computed(() => {
             class="flex min-h-[48px] w-full items-center gap-3 px-4 py-2.5 text-left"
             @click="r.module ? moduleOpen = r.module : null"
           >
-            <span
-              v-if="r.has"
-              class="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-full"
-              :style="{ background: 'var(--positive)' }"
-              aria-hidden="true"
-            >
-              <Check class="h-[13px] w-[13px]" :style="{ color: 'var(--ink-on-color)' }" :stroke-width="3" />
-            </span>
-            <span
-              v-else
-              class="h-[20px] w-[20px] shrink-0 rounded-full border-2"
-              :style="{ borderColor: 'var(--line)' }"
-              aria-hidden="true"
-            ></span>
+            <!-- Молния вместо галочки: строка говорит не «пункт отмечен»,
+                 а «эта сила у вас включена». Выключенная — тем же знаком,
+                 но тоном линии: список остаётся одним рядом. -->
+            <ZapIcon
+              class="h-[20px] w-[20px] shrink-0"
+              :style="{ color: r.has ? 'var(--positive)' : 'var(--line)' }"
+            />
             <span class="min-w-0 flex-1 text-[0.9375rem] leading-snug text-[var(--text)]">{{ r.what }}</span>
             <span
               v-if="!r.has"
@@ -191,6 +199,10 @@ const reason = computed(() => {
     </section>
 
     <SiteFooter />
+
+    <BottomSheet :open="tuneOpen" @close="tuneOpen = false">
+      <WeekShapeSheet @close="tuneOpen = false" />
+    </BottomSheet>
 
     <BottomSheet :open="!!moduleOpen" @close="moduleOpen = ''">
       <ModulePassport

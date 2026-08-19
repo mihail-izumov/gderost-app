@@ -147,15 +147,14 @@ onBeforeUnmount(() => { if (ro) { ro.disconnect(); ro = null } })
                  знаки стоят в одном ряду и обязаны выглядеть роднёй. -->
             <HandIcon
               v-if="c.locked"
-              class="h-[20px] w-[20px] shrink-0"
-              :stroke-width="2.5"
+              class="h-[22px] w-[22px] shrink-0"
               :style="{ color: c.inkFaint }"
             />
             <ChevronRight
               v-else
-              class="h-[20px] w-[20px] shrink-0"
+              class="h-[22px] w-[22px] shrink-0"
               :style="{ color: c.inkFaint }"
-              :stroke-width="2.5"
+              :stroke-width="2"
               aria-hidden="true"
             />
           </span>

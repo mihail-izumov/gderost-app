@@ -1,5 +1,7 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import { ChevronDown } from 'lucide-vue-next'
+import CoefRows from '../daily/CoefRows.vue'
 import { formatRub, formatGrowth, plural } from '../../i18n/format.js'
 import { monthCap } from '../../i18n/home.js'
 import { SIG_VAR, L } from '../../i18n/daily.js'
@@ -32,7 +34,13 @@ const props = defineProps({
   m: { type: Object, required: true },
   today: { type: String, required: true },
 })
-const emit = defineEmits(['enter'])
+const emit = defineEmits(['enter', 'tune'])
+
+// Поправка на день недели открывается прямо здесь, вторым концом к той же
+// настройке внизу «Контроля Дня». Вопрос «почему столбцы разной высоты»
+// возникает ровно на этом ряду, и отвечать на него в другом разделе — значит
+// отправлять человека искать.
+const coefOpen = ref(false)
 
 const dayShort = (iso) => `${iso.slice(8)}.${iso.slice(5, 7)}`
 
@@ -49,6 +57,7 @@ const nextISO = computed(() => {
 // это долг. Будущее нейтрально: там ещё ничего не случилось.
 const maxW = computed(() => Math.max(...props.m.days.map((d) => d.weight || 1), 0.01))
 const strip = computed(() => props.m.days.map((d) => {
+  const ahead = !d.closed && d.iso > props.today
   let bg = 'var(--line)'
   if (d.entered) bg = SIG_VAR[sigClass(d.fact / d.planAt)]
   else if (d.inCarry) bg = 'var(--text-muted)'
@@ -56,7 +65,15 @@ const strip = computed(() => props.m.days.map((d) => {
   // Высота — доля веса дня от самого сильного дня месяца. Нижняя граница
   // нужна, чтобы слабый день оставался различимым делением, а не полоской.
   const h = Math.round(14 + ((d.weight || 1) / maxW.value) * 14)
-  return { key: d.iso, dd: d.dd, bg, h, today: d.iso === props.today }
+  // ⚠ У дня, который ещё не наступил, столбец говорит две вещи сразу: сам он —
+  // план на этот день, а заливка внутри — то, что даст нынешний темп. Разрыв
+  // между ними и есть тот самый недобор, только не суммой за месяц, а по дням,
+  // и видно, где именно он копится. Считается тем же `impliedBase`, что и весь
+  // прогноз: второго расчёта темпа в приложении нет.
+  const planDay = d.planAt || 0
+  const fcDay = (props.m.impliedBase || 0) * (d.weight || 0)
+  const fcPct = ahead && planDay > 0 ? Math.max(0, Math.min(100, (fcDay / planDay) * 100)) : 0
+  return { key: d.iso, dd: d.dd, bg, h, ahead, fcPct, today: d.iso === props.today }
 }))
 
 const passed = computed(() => props.m.days.filter((d) => d.iso < props.today).length)
@@ -87,9 +104,17 @@ const stats = computed(() => props.m.dayStats)
       <span
         v-for="d in strip"
         :key="d.key"
-        class="relative min-w-0 flex-1 rounded-[2px]"
+        class="relative min-w-0 flex-1 overflow-hidden rounded-[2px]"
         :style="{ height: `${d.h}px`, background: d.bg }"
       >
+        <!-- День, который ещё не наступил: сам столбец — план, заливка внутри —
+             то, что даст нынешний темп. Разрыв между ними и есть недобор,
+             только разложенный по дням. -->
+        <i
+          v-if="d.ahead && d.fcPct > 0"
+          class="absolute inset-x-0 bottom-0 block rounded-[2px]"
+          :style="{ height: `${d.fcPct}%`, background: 'color-mix(in srgb, var(--accent) 55%, var(--surface))' }"
+        />
         <i
           v-if="d.today"
           class="absolute -bottom-[6px] left-1/2 block h-[3px] w-[3px] -translate-x-1/2 rounded-full"
@@ -98,25 +123,39 @@ const stats = computed(() => props.m.dayStats)
       </span>
     </div>
 
-    <!-- Счёт дней — двумя величинами, а не строкой через разделитель:
-         «прошло» и «внесено» отвечают на разные вопросы, и точка между ними
-         склеивала их в одно предложение. -->
-    <div class="mt-4 grid grid-cols-2 gap-3">
-      <div>
-        <div class="text-[0.6875rem] uppercase tracking-wide text-[var(--text-muted)]">Прошло дней</div>
-        <div class="mt-0.5 text-[1.0625rem] font-bold tabular-nums text-[var(--text)]">
-          {{ passed }} <span class="text-[0.875rem] font-normal text-[var(--text-muted)]">из {{ m.days.length }}</span>
-        </div>
-      </div>
-      <div>
+    <!-- Слева — полнота данных одной величиной: сколько прошедших дней внесено.
+         Справа — поправка на день недели: вопрос «почему столбцы разной
+         высоты» возникает прямо здесь, и ответ открывается здесь же, вторым
+         концом к той же настройке внизу «Контроля Дня». -->
+    <div class="mt-4 flex items-start gap-3">
+      <div class="min-w-0 flex-1">
         <div class="text-[0.6875rem] uppercase tracking-wide text-[var(--text-muted)]">Внесено</div>
         <div class="mt-0.5 text-[1.0625rem] font-bold tabular-nums" :style="{ color: missing > 0 ? 'var(--text)' : 'var(--positive)' }">
           {{ filled }}
-          <span v-if="missing > 0" class="text-[0.875rem] font-normal text-[var(--text-muted)]">
-            нет {{ missing }} {{ plural(missing, 'дня', 'дней', 'дней') }}
+          <span class="text-[0.875rem] font-normal text-[var(--text-muted)]">
+            из {{ passed }} {{ plural(passed, 'дня', 'дн', 'дн') }}
           </span>
         </div>
       </div>
+
+      <button
+        type="button"
+        class="inline-flex min-h-[36px] shrink-0 items-center gap-1.5 rounded-full bg-[var(--surface-2)] px-3 text-left text-[0.75rem] font-medium text-[var(--text)]"
+        :aria-expanded="coefOpen ? 'true' : 'false'"
+        @click="coefOpen = !coefOpen"
+      >
+        Поправка на день недели
+        <ChevronDown
+          class="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform"
+          :class="coefOpen ? 'rotate-180' : ''"
+          :stroke-width="2"
+          aria-hidden="true"
+        />
+      </button>
+    </div>
+
+    <div v-if="coefOpen" class="mt-3 rounded-2xl border border-[var(--line)] p-3">
+      <CoefRows :m="m" @tune="emit('tune')" />
     </div>
 
     <!-- Как прошли внесённые дни против плана. Полосы у этого счёта нет

@@ -220,18 +220,20 @@ const rows = computed(() => props.m.weeks.map((w) => {
                Цвет говорит о проходимости: тёмный там, где внутрь можно,
                светлый там, где нельзя. -->
           <span class="flex w-[22px] shrink-0 justify-center" aria-hidden="true">
+            <!-- Рука стоит у каждой недели, куда сейчас не зайти: и у запертой
+                 чужими дырами, и у той, которая ещё не наступила. Пустое место
+                 в столбце знаков читалось как «здесь что-то не нарисовалось»,
+                 хотя состояние у этих недель ровно одно — «ещё рано». -->
             <HandIcon
-              v-if="r.locked"
-              class="h-[20px] w-[20px] text-[var(--line)]"
-              :stroke-width="2.5"
+              v-if="!r.goTo"
+              class="h-[22px] w-[22px] text-[var(--line)]"
               aria-label="Ждём данные"
             />
             <ChevronRight
-              v-else-if="r.goTo"
-              class="h-[20px] w-[20px] text-[var(--text-secondary)]"
-              :stroke-width="2.5"
+              v-else
+              class="h-[22px] w-[22px] text-[var(--text-secondary)]"
+              :stroke-width="2"
             />
-            <span v-else class="block h-[20px] w-[20px]"></span>
           </span>
         </component>
       </li>

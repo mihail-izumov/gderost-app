@@ -124,9 +124,9 @@ const TABS = computed(() => [
   // человеку незачем.
   {
     id: 'power',
-    label: 'Сигналы',
+    label: 'Сила роста',
     iconKind: 'zap',
-    title: 'Сигналы',
+    title: 'Сила роста',
     leadingAction: 'update',
     eyebrow: (store.state.unit || store.state.company || 'Ваш бизнес').toUpperCase(),
     eyebrowName: store.state.unit || store.state.company || 'Ваш бизнес',

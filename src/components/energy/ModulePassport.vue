@@ -218,7 +218,7 @@ const tiles = computed(() => (!mod.value ? [] : [
     <!-- Заперто: читается целиком, заказывается после первой сессии. -->
     <template v-else>
       <div class="mt-4 flex items-center gap-2.5 rounded-xl px-3 py-2.5" :style="{ background: 'var(--surface-2)' }">
-        <HandIcon class="h-[26px] w-[26px] shrink-0 text-[var(--text-muted)]" :stroke-width="2.5" aria-hidden="true" />
+        <HandIcon class="h-[26px] w-[26px] shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
         <span class="text-[0.8125rem] leading-snug text-[var(--text-secondary)]">
           {{ mod.lockNote || 'Будет доступно после разбора' }}
         </span>
