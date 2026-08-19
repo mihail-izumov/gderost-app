@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-vue-next'
 import HandIcon from '../icons/HandIcon.vue'
 import { weekRangeLabel, formatRub } from '../../i18n/format.js'
 import { sigClass } from '../../composables/miniModel.js'
+import { pickState, stateInk } from '../../composables/stateBadge.js'
 
 // Недели месяца на странице состояния. Тот же расчёт, что в «Контроле Дня»:
 // недели приходят из модели, второго правила недельного замка в проекте нет.
@@ -93,52 +94,33 @@ const rows = computed(() => props.m.weeks.map((w) => {
   // здесь не заводится.
   const sumRatio = full && ratio === null && w.plan > 0 ? w.shownFact / w.plan : null
   const sumPct = sumRatio !== null ? Math.round(sumRatio * 100) : null
-  const SIG = {
-    good: { bg: 'var(--positive)', ink: 'var(--ink-on-color)' },
-    warn: { bg: 'var(--warning)', ink: 'var(--accent-ink)' },
-    bad: { bg: 'var(--negative)', ink: 'var(--ink-on-color)' },
-    idle: { bg: 'var(--surface-2)', ink: 'var(--text-muted)' },
-  }
-
-  // ⚠ Бейдж У НЕДЕЛИ ОДИН, и цвет полосы всегда равен его цвету.
+  // ⚠ Метка у недели ОДНА, и выбирает её общее правило приложения —
+  // `composables/stateBadge.js`: долг важнее результата, результат важнее
+  // времени. Полоса красится цветом того же состояния: одно состояние —
+  // один цвет. Здесь остаются только СЛОВА, которыми это состояние названо
+  // у недели; порядок и цвет живут в правиле.
   //
-  // Раньше их бывало два: «идёт» синим и «нет 2 дн» жёлтым в одной строке, —
-  // а полоса красилась третьим правилом и могла быть зелёной под жёлтым
-  // бейджем. Три средства отвечали на разные вопросы в одном месте, и строка
-  // переставала читаться: человек видел зелёное и жёлтое рядом и не понимал,
-  // хорошо у него или плохо.
-  //
-  // Теперь порядок один и он про приоритет сообщения:
-  //   1. есть долг — говорим про долг, жёлтым; всё остальное подождёт;
-  //   2. неделя кончилась и внесена — говорим результатом, светофором;
-  //   3. неделя идёт и дыр в ней нет — «идёт», цветом действия;
-  //   4. неделя впереди или заперта — «скоро» / «ждём данные», серым.
-  let chip
-  if (missing > 0) {
-    chip = { text: `нет ${missing} дн`, bg: 'var(--warning)', ink: 'var(--accent-ink)' }
-  } else if (time === 'past' && donePct !== null) {
-    chip = { text: `${donePct} %`, ...SIG[sigClass(ratio)] }
-  } else if (time === 'past' && sumPct !== null) {
-    // Неделя целиком вошла в стартовую сумму: дневных чисел у её дней нет,
-    // и процент по ним не считается. Но недельный план и её доля общей суммы
-    // известны — процент честно берётся с них, только помечается знаком «≈»:
-    // он верен для недели в целом и не разложен по дням.
-    chip = { text: `≈ ${sumPct} %`, ...SIG[sigClass(sumRatio)] }
-  } else if (time === 'past') {
-    chip = { text: 'внесена', bg: 'var(--text)', ink: 'var(--ink-on-color)' }
-  } else if (locked) {
-    chip = { text: 'ждём данные', bg: 'var(--surface-2)', ink: 'var(--text-muted)' }
-  } else if (time === 'now') {
-    chip = { text: 'идёт', bg: 'var(--action)', ink: 'var(--action-ink)' }
-  } else {
-    // «Впереди» звучало как строка расписания. «Скоро» говорит про близость,
-    // а не про очередь, и не обещает срока.
-    chip = { text: 'скоро', bg: 'var(--surface-2)', ink: 'var(--text-muted)' }
-  }
+  // Результат законен только у недели с полными данными: процент по половине
+  // дней — половина результата, выданная за целое. Неделя, целиком вошедшая
+  // в стартовую сумму, считается по своему плану и помечается знаком «≈» —
+  // число верно для недели в целом и не разложено по дням.
+  const resultPct = donePct !== null ? donePct : sumPct
+  const resultSig = donePct !== null ? sigClass(ratio) : sigClass(sumRatio)
+  const kind = pickState({ debt: missing > 0, result: time === 'past' && resultPct !== null })
+  const skin = stateInk(kind, resultSig, locked ? 'locked' : time)
 
-  // Полоса — та же ось, что бейдж, и того же цвета. Длина говорит про данные
-  // (сколько дней недели закрыто), цвет — про состояние, которое назвал бейдж.
-  // Серый бейдж — серая полоса: у недели, которой ещё нет, показывать нечего.
+  let text
+  if (kind === 'debt') text = `нет ${missing} дн`
+  else if (kind === 'result') text = donePct !== null ? `${donePct} %` : `≈ ${sumPct} %`
+  else if (time === 'past') text = 'внесена'
+  else if (locked) text = 'ждём данные'
+  else if (time === 'now') text = 'идёт'
+  // «Впереди» звучало как строка расписания. «Скоро» говорит про близость,
+  // а не про очередь, и не обещает срока.
+  else text = 'скоро'
+
+  const chip = { text, ...skin }
+  // Полоса — та же ось, что метка: длина про данные, цвет про состояние.
   const bar = chip.bg === 'var(--surface-2)' ? 'var(--line)' : chip.bg
 
   return {

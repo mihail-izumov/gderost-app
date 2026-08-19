@@ -12,6 +12,7 @@ import { computeTodaySignal } from '../src/composables/signalModel.js'
 import { honestLoop } from '../src/composables/honestLoop.js'
 import { PULL, pullOffset, canStartPull, shouldFirePull } from '../src/composables/pullGesture.js'
 import { initialNav, navigate, back as navBack, selectTab as navSelectTab } from '../src/composables/navFlow.js'
+import { pickState, stateInk, BADGE_PRIORITY } from '../src/composables/stateBadge.js'
 
 let fails = 0
 const ok = (cond, name) => {
@@ -764,6 +765,44 @@ for (const [ym, dim] of [['2026-02', 28], ['2026-08', 31], ['2026-11', 30], ['20
   const t = navSelectTab(navigate(from('power'), 'goals'), 'ultra')
   ok(t.tab === 'ultra' && t.subView === '' && t.homeTab === 'ultra',
     'переход: выбор вкладки закрывает под-страницу и обнуляет возврат')
+}
+
+// 23. Приоритет состояний. Правило уровня приложения, формулировка Михаила
+//     19.08.2026: ДОЛГ ВАЖНЕЕ РЕЗУЛЬТАТА, РЕЗУЛЬТАТ ВАЖНЕЕ ВРЕМЕНИ, и одно
+//     состояние красится одним цветом. Проверяется машиной, потому что
+//     нарушается оно молча: два бейджа в строке и полоса третьего цвета
+//     выглядят «просто вёрсткой», а человек перестаёт понимать, хорошо у него
+//     или плохо.
+{
+  ok(BADGE_PRIORITY.join() === 'debt,result,time', 'состояния: порядок долг → результат → время')
+
+  ok(pickState({ debt: true, result: true }) === 'debt',
+    'состояния: долг перебивает результат')
+  ok(pickState({ debt: true, result: false }) === 'debt',
+    'состояния: долг перебивает время')
+  ok(pickState({ debt: false, result: true }) === 'result',
+    'состояния: результат перебивает время')
+  ok(pickState({ debt: false, result: false }) === 'time',
+    'состояния: без долга и результата остаётся время')
+  ok(pickState() === 'time', 'состояния: пустой вход — самое слабое сообщение')
+
+  // Долг всегда жёлтый, каким бы ни был светофор рядом: жёлтый в системе
+  // означает меру и незавершённость, и у долга нет второго цвета.
+  ok(stateInk('debt', 'good').bg === 'var(--warning)' && stateInk('debt', 'bad').bg === 'var(--warning)',
+    'состояния: долг всегда жёлтый')
+  ok(stateInk('result', 'good').bg === 'var(--positive)'
+    && stateInk('result', 'bad').bg === 'var(--negative)',
+    'состояния: результат говорит светофором')
+  ok(stateInk('time', 'idle', 'now').bg === 'var(--action)'
+    && stateInk('time', 'idle', 'ahead').bg === 'var(--surface-2)'
+    && stateInk('time', 'idle', 'locked').bg === 'var(--surface-2)',
+    'состояния: время — цвет действия у идущего, серый у будущего и запертого')
+
+  // Одно состояние — один цвет: у метки и полосы источник цвета общий,
+  // и второго правила окраски в проекте не заводится.
+  const a = stateInk('result', 'warn')
+  const b = stateInk('result', 'warn')
+  ok(a.bg === b.bg && a.ink === b.ink, 'состояния: цвет состояния считается одним местом')
 }
 
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')
