@@ -258,7 +258,7 @@ function selectTab(id) {
   <AppShell
     v-else
     :tabs="TABS"
-    :active="tab"
+    :active="subView ? '' : tab"
     :sub-view="subView"
     :sub-views="SUB_VIEWS"
     @update:active="selectTab"

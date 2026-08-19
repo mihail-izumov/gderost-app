@@ -5,7 +5,6 @@ import BottomSheet from '../components/BottomSheet.vue'
 import ModulePassport from '../components/energy/ModulePassport.vue'
 import WeekRows from '../components/growth/WeekRows.vue'
 import MonthCard from '../components/growth/MonthCard.vue'
-import DaysByPlan from '../components/daily/DaysByPlan.vue'
 import SiteFooter from '../components/SiteFooter.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { computeEnergy } from '../composables/energyModel.js'
@@ -146,12 +145,11 @@ const reason = computed(() => {
       <WeekRows :m="m" :today="today" :month-title="weeksTitle" @week="openWeek" />
     </div>
 
-    <!-- 4 · Дни по плану — тот же блок, что в сводке «Контроля Дня».
-         Ссылки на него нет намеренно: он сам и есть ответ, а вход в дни
-         стоит выше, у недели. Дублирования нет — компонент один. -->
-    <section v-if="m.dayStats" class="mt-5">
-      <DaysByPlan :stats="m.dayStats" standalone />
-    </section>
+    <!-- ⚠ Отдельного блока «Дни по плану» здесь больше нет: счёт «выше /
+         близко / ниже плана» переехал внутрь главного блока месяца, к ряду
+         дней. Он отвечает на тот же вопрос, и стоять двумя карточками
+         на одном экране ему незачем. В сводке «Контроля Дня» блок остаётся
+         на своём месте — там он часть общей карточки недель. -->
 
     <!-- 5 · Что уже работает. Таблица вернулась сюда с «Сигналов»: она
          отвечает не «что взять дальше», а «что у меня есть», и это состояние. -->

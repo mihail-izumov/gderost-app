@@ -1,11 +1,11 @@
 <script setup>
 // «Дни по плану» — распределение внесённых дней по светофору.
 //
-// Блок вынут из `DailySummary` в отдельный компонент, потому что живёт теперь
-// в двух местах: в сводке «Контроля Дня», где он всегда стоял, и на «Прогрессе»,
-// где отвечает на вопрос месяца — из чего сложились недели. Одна разметка
-// на оба экрана: две копии одной полосы разошлись бы молча, и человек прочёл
-// бы их как два разных счёта.
+// Живёт в одном месте: последней строкой сводки «Контроля Дня». На «Прогрессе»
+// он стоял отдельной карточкой и был снят — там тот же счёт вошёл внутрь
+// главного блока месяца, к ряду дней, и полоса ему больше не нужна: ряд
+// показывает то же самое подробнее, а два одинаковых счёта на одном экране
+// человек начинает сверять между собой.
 //
 // Считает не он: `dayStats` приходит из модели, второго счёта в проекте нет.
 
@@ -13,33 +13,12 @@ import { L } from '../../i18n/daily.js'
 
 defineProps({
   stats: { type: Object, required: true },
-  // На «Прогрессе» блок стоит сам по себе и держит собственную рамку;
-  // в сводке он — последняя строка общей карточки.
-  standalone: { type: Boolean, default: false },
 })
 </script>
 
 <template>
-  <!-- На «Прогрессе» блок стоит сам по себе, и заголовок раздела уходит НАД
-       карточкой — в общий ряд с «Важно» и «Сводкой по неделям»: внутри рамки
-       он читался подписью к полосе, а не именем раздела. Охват («N дн
-       с фактом») становится заголовком внутри — тем же набором, каким
-       подписаны недели в списке выше. В сводке «Контроля Дня» блок остаётся
-       последней строкой общей карточки и заголовок держит при себе. -->
-  <h2
-    v-if="standalone"
-    class="mb-2 text-[0.8125rem] font-bold uppercase tracking-wide text-[var(--text-muted)]"
-  >{{ L.days_by_plan }}</h2>
-
-  <div
-    class="px-4 py-3"
-    :class="standalone ? 'rounded-2xl border border-[var(--line)] bg-[var(--surface)]' : 'border-t border-[var(--line)]'"
-  >
-    <div
-      v-if="standalone"
-      class="mb-2 text-[0.9375rem] font-semibold text-[var(--text)]"
-    >{{ stats.total }} дн с фактом</div>
-    <div v-else class="mb-2 text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+  <div class="border-t border-[var(--line)] px-4 py-3">
+    <div class="mb-2 text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
       {{ L.days_by_plan }} <span class="font-normal normal-case">({{ stats.total }} дн с фактом)</span>
     </div>
     <div class="flex h-4 gap-0.5 overflow-hidden rounded-lg bg-[var(--surface-2)]">

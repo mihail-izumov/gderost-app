@@ -210,22 +210,29 @@ const rows = computed(() => props.m.weeks.map((w) => {
             >Держит неделя {{ r.blockedBy.idx }} — нет {{ r.blockedBy.days.join(', ') }}</span>
           </span>
 
-          <!-- Рука вместо замка: закрыто здесь не приложением и не за деньги,
-               а отсутствием фактов. Круга под знаком нет — залитый круг делал
-               из знака состояния значок действия, а нажимать тут нечего;
-               цвет тот же серый, каким был замок: знак сообщает, а внимание
-               забирает жёлтая метка долга рядом. -->
-          <HandIcon
-            v-if="r.locked"
-            class="h-[34px] w-[34px] shrink-0 text-[var(--text-muted)]"
-            aria-label="Ждём данные"
-          />
-          <ChevronRight
-            v-else-if="r.goTo"
-            class="h-[18px] w-[18px] shrink-0 text-[var(--text-muted)]"
-            :stroke-width="2.5"
-            aria-hidden="true"
-          />
+          <!-- ⚠ Знаки живут в СВОЁМ столбце постоянной ширины, и от этого
+               зависит не только их ряд: пока знак стоял в общем потоке,
+               ширина полос недель менялась от того, что оказалось справа —
+               рука, стрелка или ничего. Полосы разной длины на соседних
+               строках человек читает как разный масштаб.
+               Рука вместо замка: закрыто здесь не приложением и не за деньги,
+               а отсутствием фактов. Толщина линии и размер — стрелочные.
+               Цвет говорит о проходимости: тёмный там, где внутрь можно,
+               светлый там, где нельзя. -->
+          <span class="flex w-[22px] shrink-0 justify-center" aria-hidden="true">
+            <HandIcon
+              v-if="r.locked"
+              class="h-[20px] w-[20px] text-[var(--line)]"
+              :stroke-width="2.5"
+              aria-label="Ждём данные"
+            />
+            <ChevronRight
+              v-else-if="r.goTo"
+              class="h-[20px] w-[20px] text-[var(--text-secondary)]"
+              :stroke-width="2.5"
+            />
+            <span v-else class="block h-[20px] w-[20px]"></span>
+          </span>
         </component>
       </li>
     </ul>

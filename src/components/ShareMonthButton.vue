@@ -14,9 +14,15 @@ import { useMiniStore } from '../composables/useMiniStore.js'
 // отправить её может только владелец и только тому, кому захочет.
 
 defineProps({
-  // quiet — обычная строка, accent — жёлтая плашка, action — синяя кнопка.
-  // Синяя нужна там, где рядом стоит цветная плашка состояния: жёлтое
-  // действие рядом с жёлтым состоянием читается одним пятном.
+  // quiet — обычная строка, accent — жёлтая плашка, action — графитовая
+  // кнопка отправки.
+  //
+  // ⚠ Графит вместо синего, и это уточнение прежнего решения. Синий в системе
+  // означает обычное действие — им покрашены переходы, вкладки, «Внести».
+  // Отправка месяца на разбор — не рядовой шаг, а передача своих цифр другому
+  // человеку, и стоять она обязана особняком. Графит темнее любого состояния
+  // рядом и не спорит с цветной плашкой «Честной цифры» над собой, ради чего
+  // синий когда-то и брался.
   tone: { type: String, default: 'quiet' }, // quiet | accent | action
   label: { type: String, default: 'Поделиться месяцем' },
   // Форма подстраивается под соседей: в ряду с прямоугольными кнопками
@@ -65,7 +71,7 @@ async function share() {
       ? 'min-h-[52px] rounded-2xl text-[1.0625rem] font-semibold'
       : 'min-h-[48px] rounded-full text-[0.9375rem] font-semibold'"
     :style="tone === 'action'
-      ? { background: 'var(--action)', color: 'var(--action-ink)' }
+      ? { background: 'var(--graphite)', color: 'var(--ink-on-color)' }
       : tone === 'accent'
         ? { background: 'var(--positive)', color: 'var(--ink-on-color)' }
         : { background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--rim)' }"
