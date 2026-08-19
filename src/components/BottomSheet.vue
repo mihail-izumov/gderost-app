@@ -34,8 +34,15 @@ import { ref } from 'vue'
 // С переменной класс ухода перебивает её штатно, и панель уезжает с того
 // места, где её отпустили.
 
+// ⚠ Шторка уезжает в `body`, то есть наружу оболочки, и набор токенов раздела
+// до неё не долетает. Поэтому раздел со своим холстом передаёт его сюда сам:
+// шторка выезжает из страницы и является её продолжением, а белая панель,
+// выехавшая из почти чёрной страницы, читается переходом в другое приложение
+// и бьёт по глазам в темноте. Содержимое внутри собрано на токенах и одевается
+// вместе с ней.
 defineProps({
   open: { type: Boolean, default: false },
+  theme: { type: String, default: '' },
 })
 const emit = defineEmits(['close'])
 
@@ -76,6 +83,7 @@ function onTouchEnd() {
         v-if="open"
         class="gr-sheet-overlay z-[60] flex items-end justify-center"
         role="presentation"
+        :data-theme="theme || null"
       >
         <div
           class="gr-sheet-scrim absolute inset-0 bg-[var(--scrim)] backdrop-blur-sm"

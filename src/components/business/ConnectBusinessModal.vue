@@ -13,7 +13,12 @@ import { BRAND } from '../../i18n/brand.js'
 // заметном месте. Поэтому действие одно и настоящее — открыть сайт системы,
 // где заявку принимают. Обещание совпадает с тем, что произойдёт.
 
-const props = defineProps({ open: { type: Boolean, default: false } })
+// `theme` — набор токенов раздела, из которого вызвали окно. Оно уезжает
+// в `body`, наружу оболочки, и холст раздела до него сам не долетает.
+const props = defineProps({
+  open: { type: Boolean, default: false },
+  theme: { type: String, default: '' },
+})
 const emit = defineEmits(['close'])
 
 const L = {
@@ -75,6 +80,7 @@ onBeforeUnmount(() => {
       v-if="open"
       class="gr-sheet-overlay z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm sm:items-center"
       role="presentation"
+      :data-theme="theme || null"
       @click.self="hide"
     >
       <div

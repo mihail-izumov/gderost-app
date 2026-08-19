@@ -97,9 +97,12 @@ const connectOpen = ref(false)
 
     <SiteFooter />
 
-    <ConnectBusinessModal :open="connectOpen" @close="connectOpen = false" />
+    <!-- Шторки этой страницы одеваются её холстом: они выезжают из неё
+         и являются её продолжением. Белая панель поверх почти чёрной страницы
+         читалась бы переходом в другое приложение. -->
+    <ConnectBusinessModal :open="connectOpen" theme="ultra-dark" @close="connectOpen = false" />
 
-    <BottomSheet :open="passportOpen" @close="passportOpen = false">
+    <BottomSheet :open="passportOpen" theme="ultra-dark" @close="passportOpen = false">
       <ModulePassport
         module-id="runscale"
         :energy="energy"
