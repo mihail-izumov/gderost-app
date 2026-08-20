@@ -563,7 +563,7 @@ ok(SESSIONS.every((id) => MODULES[id].signals && MODULES[id].signals.length > 0)
 // обязаны говорить одно и то же, иначе разойдутся молча и веры не будет ни
 // одной. Здесь он ловит тексты, которые видит человек, — по значениям, а не
 // по файлам: словарь без чисел проверяется дословно.
-const VOICE_BAN = /контур|чекап|планк[аиуе]|вердикт|GO\s*\/\s*NO\s*GO|лаборатор/i
+const VOICE_BAN = /контур|чекап|планк[аиуе]|вердикт|GO\s*\/\s*NO\s*GO|лаборатор|кольц|дуг[аиуе]|петл[яиюе]/i
 const visible = [
   ...INTRO_STORY.flatMap((s) => [s.title, s.text, s.cta || '']),
   ...LEVEL_ROWS.flatMap((r) => [r.what, r.by]),
@@ -576,7 +576,7 @@ const visible = [
   ...Object.values(ORIGINS).flatMap((o) => [o.title, o.what, o.from, o.next]),
 ]
 ok(visible.every((s) => !VOICE_BAN.test(String(s))),
-  'на витрине нет внутренних слов: контур, чекап, планка, вердикт, лаборатория')
+  'на витрине нет внутренних слов: контур, чекап, планка, вердикт, кольцо, дуга, петля')
 
 // Онбординг входа: пять слайдов и говорящая кнопка на последнем — человек
 // узнаёт, как это работает, до того как у него просят числа.
@@ -647,7 +647,7 @@ for (const [ym, dim] of [['2026-02', 28], ['2026-08', 31], ['2026-11', 30], ['20
   for (let d = 1; d <= 14; d++) days2.push({ date: `2026-08-${String(d).padStart(2, '0')}`, rev: 100_000, planRef: 100_000 })
   const s2 = { ...base, carry: null, days: days2 }
   const l2 = honestLoop(s2, computeMini(s2, NOW))
-  ok(l2.lit === 4 && /замкнулось/.test(l2.note), 'петля: все прошедшие дни с фактом — кольцо замкнулось')
+  ok(l2.lit === 4 && /Все проверки пройдены/.test(l2.note), 'петля: все прошедшие дни с фактом — все проверки пройдены')
   // Пропущенный день размыкает только замер.
   const s3 = { ...base, carry: null, days: days2.filter((x) => x.date !== '2026-08-10') }
   const l3 = honestLoop(s3, computeMini(s3, NOW))
