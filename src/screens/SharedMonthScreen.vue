@@ -2,6 +2,8 @@
 import { computed, ref } from 'vue'
 import { ArrowRight } from 'lucide-vue-next'
 import GrowthProof from '../components/share/GrowthProof.vue'
+import MonthProgressSlide from '../components/home/MonthProgressSlide.vue'
+import LiveClock from '../components/LiveClock.vue'
 import BrandLockup from '../components/BrandLockup.vue'
 import HonestBadge from '../components/HonestBadge.vue'
 import StoryOnboarding from '../components/StoryOnboarding.vue'
@@ -68,11 +70,21 @@ const nowMonth = computed(() => {
 })
 const monthOver = computed(() => String(props.state.month) < nowMonth.value)
 
+// Бейдж месяца тот же, что в деке на «Сегодня»: считаются ОСТАВШИЕСЯ дни —
+// ими человек ещё может распорядиться.
+const daysBadge = computed(() => {
+  const x = m.value
+  if (!x) return ''
+  if (monthOver.value) return 'Месяц закрыт'
+  const left = x.daysLeft
+  return `${plural(left, 'Остался', 'Осталось', 'Осталось')} ${left} ${plural(left, 'день', 'дня', 'дней')}`
+})
+
 const rows = computed(() => {
   const x = m.value
   if (!x) return []
   return [
-    { label: 'Заработано', value: formatRub(x.realizedRev) },
+    { label: 'Факт выручки', value: formatRub(x.realizedRev) },
     { label: monthOver.value ? 'Итог месяца' : 'Прогноз месяца', value: formatRub(x.landing) },
     {
       label: monthOver.value ? (x.remainTarget > 0 ? 'Недобор до плана' : 'План закрыт') : 'Осталось до плана',
@@ -124,14 +136,24 @@ const honestOpen = ref(false)
            совпасть с маркой того, кто считал, и заголовок читался как «месяц
            компании Ранскеил». Мелкой строкой — кто считал, заголовком — чей
            это месяц. -->
+      <!-- Шапка та же, что на «Сегодня»: имя бизнеса капсом и живое время
+           заголовком. ⚠ Отличие названо вслух: чип здесь не переключатель —
+           выбирать на чужой странице нечего, поэтому знака раскрытия у него
+           нет. Связка имени в предпросмотре скрыта: отправитель и так знает,
+           чем считает, а место наверху нужнее его собственным числам.
+           Строки о приватности нет — «только чтение» экран сообщает сам,
+           полей на нём не существует. -->
       <header class="pb-3">
-        <BrandLockup size="1.25rem" class="mb-2" />
-        <h1 class="mt-1 text-[1.375rem] font-bold leading-tight text-[var(--text)]">
-          {{ state.unit || state.company || 'Бизнес' }}, {{ monthLabel(state.month) }}
-        </h1>
-        <!-- Строки о приватности здесь нет. «Только чтение» экран сообщает сам —
-             полей на нём не существует, а «ничего не сохраняем» отвечает
-             на тревогу отправителя, которой у читателя не возникало. -->
+        <BrandLockup v-if="!preview" size="1.25rem" class="mb-3" />
+        <div class="flex">
+          <span
+            class="font-brand flex h-[26px] min-w-0 max-w-full items-center rounded-full px-3 text-[0.8125rem] uppercase"
+            :style="{ background: 'var(--graphite)', color: 'var(--ink-on-color)', '--caps-track': '0.18em' }"
+          >
+            <span class="gr-caps min-w-0 truncate">{{ (state.unit || state.company || 'Бизнес').toUpperCase() }}</span>
+          </span>
+        </div>
+        <LiveClock size="lg" class="mt-2 !text-left" />
       </header>
 
       <p
@@ -140,6 +162,27 @@ const honestOpen = ref(false)
       >Этот месяц закончился. Числа ниже — его итог.</p>
 
       <GrowthProof :m="m" :month-over="monthOver" />
+
+      <!-- Полоса «факт · прогноз · план · цель» — тот же bullet chart, что
+           в деке месяца на «Сегодня». В режиме роста легенда печатает доли
+           плана вместо рублей: устройство полосы от этого не меняется,
+           меняется только линейка, которой подписаны величины. -->
+      <section class="mt-3 rounded-[22px] bg-[var(--surface)] px-4 pb-3 pt-3 shadow-sm">
+        <div class="mb-2.5 flex items-start justify-between gap-2">
+          <h3 class="truncate text-[0.9375rem] font-bold leading-tight text-[var(--text)]">{{ monthLabel(state.month) }}</h3>
+          <span
+            v-if="daysBadge"
+            class="shrink-0 whitespace-nowrap rounded-full bg-[var(--surface-2)] px-2 py-[3px] text-[0.6875rem] font-semibold text-[var(--text-secondary)]"
+          >{{ daysBadge }}</span>
+        </div>
+        <MonthProgressSlide
+          :fact="m.realizedRev"
+          :plan="m.T"
+          :forecast="m.landing"
+          :goal="m.goal"
+          :unit="full ? 'rub' : 'pct'"
+        />
+      </section>
 
       <!-- Статус чисел стоит сразу под главным числом: получатель видит чужой
            месяц и обязан знать, на чём тот стоит, до того как поверит проценту.

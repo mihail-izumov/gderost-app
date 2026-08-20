@@ -46,6 +46,11 @@ const props = defineProps({
   // к КОНКРЕТНОЙ полосе, таскать его на соседний экран значит врать про то,
   // что выбрано.
   resetToken: { type: Number, default: 0 },
+  // Линейка подписей: рубли или доли плана. Устройство полосы от этого
+  // не меняется — она и так строится на отношениях; меняется только то,
+  // чем подписаны величины. Доли нужны там, где выручка не показывается:
+  // на чужом месяце, отправленном без сумм.
+  unit: { type: String, default: 'rub' }, // rub | pct
 })
 
 // ПРОГНОЗ — светло-жёлтая заливка под точками. Заливка говорит «та же мера,
@@ -60,6 +65,14 @@ const HATCH = 'repeating-linear-gradient(-45deg, transparent 0 2px, var(--text-m
 const SHORT_BG = 'color-mix(in srgb, var(--line) 75%, var(--surface-2))'
 
 const L = computed(() => monthLayout(props))
+
+// Подпись величины. В долях плана план равен ста процентам по определению,
+// поэтому линейка читается без пояснений.
+const shown = (v) => {
+  if (v == null) return ''
+  if (props.unit !== 'pct') return mlnRub(v)
+  return props.plan ? `${Math.round((v / props.plan) * 100)}%` : '—'
+}
 const active = ref(null)
 
 const factStyle = computed(() => ({ width: `${L.value.factPct}%` }))
@@ -146,7 +159,7 @@ const columns = computed(() => {
 // Полоса с метками сама по себе недоступна — дублируем смысл строкой,
 // включая «взято»: без него скринридер получит числа, но не результат.
 const aria = computed(() => (columns.value.length
-  ? columns.value.map((c) => `${c.label} ${mlnRub(c.value)}${c.done ? ' — взято' : ''}`).join(', ')
+  ? columns.value.map((c) => `${c.label} ${shown(c.value)}${c.done ? ' — взято' : ''}`).join(', ')
   : 'Данных по месяцу нет'))
 </script>
 
@@ -268,7 +281,7 @@ const aria = computed(() => (columns.value.length
                жёлтая заливка, светофор живёт в «Контроле Дня». -->
           <Check v-if="c.done" class="h-3 w-3 shrink-0 text-[var(--text)]" :stroke-width="3" aria-hidden="true" />
         </span>
-        <span class="text-[0.8125rem] font-semibold leading-none text-[var(--text)]">{{ mlnRub(c.value) }}</span>
+        <span class="text-[0.8125rem] font-semibold leading-none text-[var(--text)]">{{ shown(c.value) }}</span>
       </button>
     </div>
   </div>

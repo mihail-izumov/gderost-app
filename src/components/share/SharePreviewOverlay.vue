@@ -101,10 +101,12 @@ async function copy() {
       </div>
 
       <div
-        class="fixed inset-x-0 bottom-0 z-10 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3"
+        class="fixed inset-x-0 bottom-0 z-10 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3"
         :style="{ background: 'color-mix(in srgb, var(--bg) 92%, transparent)', borderTop: '1px solid var(--line)' }"
       >
-        <div class="mx-auto flex w-full max-w-[430px] gap-2">
+        <!-- Сетка та же, что у содержимого страницы: колонка 430 с полями
+             по 16. Панель шире содержимого читалась чужим элементом. -->
+        <div class="mx-auto flex w-full max-w-[430px] gap-2 px-4">
           <button
             type="button"
             class="flex min-h-[52px] flex-1 items-center justify-center rounded-2xl text-[1.0625rem] font-semibold"

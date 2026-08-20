@@ -70,7 +70,7 @@ export const SIG_VAR = {
 // разойдясь шагом, они перестают читаться как одно и то же состояние.
 export const hatch = (color) => ({
   backgroundColor: 'var(--surface)',
-  backgroundImage: `repeating-linear-gradient(-45deg, ${color} 0 3px, transparent 3px 6px)`,
+  backgroundImage: `repeating-linear-gradient(-45deg, transparent 0 2px, ${color} 2px 3px)`,
 })
 
 // Три состояния достижимости. Цветная только точка-индикатор, рядом с ней

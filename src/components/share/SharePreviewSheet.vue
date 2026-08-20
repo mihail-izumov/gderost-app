@@ -45,9 +45,9 @@ const rows = [
 
 <template>
   <div>
-    <h2 class="text-[1.0625rem] font-bold text-[var(--text)]">Поделитесь ростом</h2>
+    <h2 class="pt-3 text-center text-[1.5rem] font-bold leading-tight text-[var(--text)]">Поделитесь ростом</h2>
 
-    <ul class="mt-3 flex flex-col gap-2">
+    <ul class="mt-5 flex flex-col gap-2">
       <li
         v-for="r in rows"
         :key="r"
@@ -92,8 +92,8 @@ const rows = [
 
     <button
       type="button"
-      class="mt-4 flex min-h-[52px] w-full items-center justify-center rounded-2xl text-[1.0625rem] font-semibold"
-      :style="{ background: 'var(--graphite)', color: 'var(--ink-on-color)' }"
+      class="mt-5 flex min-h-[52px] w-full items-center justify-center rounded-2xl text-[1.0625rem] font-semibold"
+      :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
       @click="emit('preview', { url, mode })"
     >
       Предпросмотр

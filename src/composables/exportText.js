@@ -350,5 +350,7 @@ export function buildExportText(state, model) {
 export function exportFileName(state) {
   const slug = String(state.unit || state.company || 'бизнес')
     .toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '').slice(0, 40)
-  return `ранскейл-мини-${slug ? `${slug}-` : ``}${state.month}.md`
+  // Имя файла называет продукт так же, как он называется на экране: «мини»
+  // осталось от прежнего имени и жило в имени каждого выгруженного месяца.
+  return `ранскеил-трек-${slug ? `${slug}-` : ``}${state.month}.md`
 }

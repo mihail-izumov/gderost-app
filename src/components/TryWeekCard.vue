@@ -34,6 +34,14 @@ function openPreview({ url }) {
   previewOpen.value = true
 }
 
+// Возврат ведёт обратно в шторку, а не на экран: человек уходит из
+// предпросмотра ровно тогда, когда захотел что-то поменять, — и переключатель
+// должен оказаться под рукой, а не через два тапа.
+function backToSheet() {
+  previewOpen.value = false
+  shareOpen.value = true
+}
+
 // Ссылка молчит, пока доказывать нечего. Месяц, целиком пришедший стартовой
 // суммой, ростом не является: дисциплины в нём нет, ряд дней пустой, и человек
 // отправил бы пустую страницу. Условие то же, что у поводов поделиться.
@@ -151,6 +159,6 @@ function reset() {
       <SharePreviewSheet @preview="openPreview" />
     </BottomSheet>
 
-    <SharePreviewOverlay :open="previewOpen" :url="previewUrl" @close="previewOpen = false" />
+    <SharePreviewOverlay :open="previewOpen" :url="previewUrl" @close="backToSheet" />
   </section>
 </template>
