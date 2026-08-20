@@ -3,7 +3,7 @@
 import { computeMini, nextMonthState, sigClass } from '../src/composables/miniModel.js'
 import { calibrateFromDays, observationsByDow, shapeStatus, shapeName } from '../src/data/weekShape.js'
 import { computeEnergy, computeGaps, moduleGain, LEVELS, PATH_VISIBLE, PART, PARTS, MODULE_LIFTS } from '../src/composables/energyModel.js'
-import { encodeState, decodeState, readShared, shareUrl, hasSharePayload } from '../src/composables/shareLink.js'
+import { encodeState, decodeState, readShared, shareUrl, hasSharePayload, packState, GROWTH_BASE } from '../src/composables/shareLink.js'
 import { MODULES, SESSIONS, BY_LABEL, isLocked, ORIGINS, SIGNAL } from '../src/i18n/energy.js'
 import { INTRO_STORY, honestStory } from '../src/i18n/stories.js'
 import { HEAD, LEVEL_ROWS } from '../src/i18n/growth247.js'
@@ -435,7 +435,7 @@ const set17 = {
   ],
   forecastLog: [{ at: '2026-08-07', after: '2026-08-06', landing: 2_900_000, was: 3_000_000, goalState: 'ok' }],
 }
-const back17 = decodeState(encodeState(set17))
+const back17 = decodeState(encodeState(set17, 'full'))
 ok(back17 !== null, 'ссылка расшифровывается обратно')
 ok(back17.month === set17.month && back17.month_target === set17.month_target
   && back17.month_goal === set17.month_goal && back17.unit === set17.unit,
@@ -460,7 +460,7 @@ ok(computeEnergy(set17, mA).pct === computeEnergy(back17, mB).pct,
 
 // Мусор в адресе не роняет приложение и не притворяется месяцем.
 ok(decodeState('не-ссылка') === null && decodeState('') === null, 'мусор в адресе даёт null')
-ok(readShared('#m=' + encodeState(set17)) !== null && readShared('#что-то') === null,
+ok(readShared('#m=' + encodeState(set17, 'full')) !== null && readShared('#что-то') === null,
   'месяц читается только из своего префикса')
 ok(hasSharePayload('#m=что-угодно') && !hasSharePayload('#другое') && !hasSharePayload(''),
   'попытка открыть месяц отличается от обычного запуска')
@@ -486,9 +486,9 @@ for (let d = 1; d <= 31; d++) {
   log17.push({ at: iso, after: iso, landing: 3_000_000 + d, was: 3_000_000, goalState: 'ok' })
 }
 const full17 = { ...set17, days: days17, forecastLog: log17 }
-const len17 = shareUrl(full17, 'https://gderost.ru/').length
+const len17 = shareUrl(full17, 'https://gderost.ru/', 'full').length
 ok(len17 < 4000, `ссылка на полный месяц с журналом укладывается в адрес (${len17} знаков)`)
-ok(decodeState(encodeState(full17)).days.length === 31, 'полный месяц доезжает целиком')
+ok(decodeState(encodeState(full17, 'full')).days.length === 31, 'полный месяц доезжает целиком')
 
 // Перенос месяца обнуляет показанные предложения поделиться: повод
 // «месяц закрыт» относится к месяцу, а не к устройству.
@@ -910,6 +910,80 @@ for (const [ym, dim] of [['2026-02', 28], ['2026-08', 31], ['2026-11', 30], ['20
   ok(texts.every((t) => t.trim().endsWith('gderost.ru')),
     'поводы: все четыре сообщения кончаются коротким адресом')
   ok(texts.every((t) => !t.includes('#m=')), 'поводы: упакованного месяца в сообщениях нет')
+}
+
+// 25. Режим ссылки. У месяца два получателя: партнёру суммы показывать нормально,
+//     клубу и в сториз — никогда. Спрятать рубли на экране мало: спрятанное число
+//     остаётся в адресе, и любой, кто умеет его читать, достанет обратно. Поэтому
+//     в режиме роста деньги нормализуются к плану ДО упаковки, и проверка держит
+//     обе стороны — что выручки в ссылке нет и что проценты при этом не поехали.
+{
+  const src = {
+    ready: true, company: 'Компания', unit: 'Первый юнит',
+    month: '2026-08', month_target: 3_100_000, month_goal: 3_500_000,
+    dow_coef: [0.85, 0.9, 0.95, 1, 1.2, 1.15, 0.95], coef_src: 'data', shape_id: 'default', shape_from: '',
+    carry: { upTo: '2026-08-05', amount: 400_000, spread: true },
+    days: [], forecastLog: [],
+  }
+  for (let d = 6; d <= 14; d++) {
+    const iso = `2026-08-${String(d).padStart(2, '0')}`
+    src.days.push({ date: iso, rev: 91_000 + d * 137, planRef: 100_000 })
+    src.forecastLog.push({ at: iso, after: iso, landing: 3_000_000 + d, was: 3_000_000, goalState: 'ok' })
+  }
+
+  const g = decodeState(encodeState(src, 'growth'))
+  const f = decodeState(encodeState(src, 'full'))
+  ok(g && f, 'ссылка: оба режима расшифровываются')
+  ok(g.shareMode === 'growth' && f.shareMode === 'full', 'ссылка: режим доезжает до экрана получателя')
+  ok(encodeState(src).length === encodeState(src, 'growth').length,
+    'ссылка: режим по умолчанию — рост')
+
+  // Ни одной исходной суммы в ссылке роста.
+  const packed = JSON.stringify(packState(src, 'growth'))
+  const secrets = [3_100_000, 3_500_000, 400_000, ...src.days.map((x) => x.rev)]
+  ok(secrets.every((n) => !packed.includes(String(n))),
+    'ссылка роста: ни одной исходной суммы в упакованном месяце')
+  ok(g.month_target === GROWTH_BASE && g.month_target !== src.month_target,
+    'ссылка роста: план заменён условной величиной')
+  ok(g.days.every((d, i) => d.rev !== src.days[i].rev) && g.carry.amount !== src.carry.amount,
+    'ссылка роста: дни и стартовая сумма пересчитаны')
+  ok(f.month_target === src.month_target && f.days[0].rev === src.days[0].rev,
+    'полная ссылка: суммы доезжают как есть')
+
+  // Отношения сохраняются: получатель видит те же проценты и те же дни.
+  const mA = computeMini(src, NOW)
+  const mG = computeMini(g, NOW)
+  const mF = computeMini(f, NOW)
+  const pct = (m) => Math.round((m.landing / m.T) * 100)
+  const pctFact = (m) => Math.round((m.realizedRev / m.T) * 100)
+  ok(pct(mA) === pct(mG) && pct(mA) === pct(mF), 'ссылка роста: процент плана у получателя тот же')
+  ok(pctFact(mA) === pctFact(mG), 'ссылка роста: доля факта та же')
+  ok(mA.enteredCount === mG.enteredCount && mA.DIM === mG.DIM && mA.days.length === mG.days.length,
+    'ссылка роста: счёт дней и длина месяца те же')
+  ok(близко(mA.landDev, mG.landDev, 1e-4), 'ссылка роста: отклонение прогноза то же')
+  ok(mA.days.every((d, i) => d.entered === mG.days[i].entered && d.inCarry === mG.days[i].inCarry),
+    'ссылка роста: какие дни внесены, а какие пришли суммой, видно так же')
+  ok(mA.weeks.length === mG.weeks.length
+    && mA.weeks.every((w, i) => близко(w.faWidth, mG.weeks[i].faWidth, 1e-3)),
+    'ссылка роста: форма недель у получателя та же')
+
+  // Журнал в режим роста не едет, и ссылка от этого короче.
+  ok(g.forecastLog.length === 0 && f.forecastLog.length === src.forecastLog.length,
+    'ссылка роста: журнал прогноза не уезжает')
+  const lenG = shareUrl(src, 'https://gderost.ru/', 'growth').length
+  const lenF = shareUrl(src, 'https://gderost.ru/', 'full').length
+  ok(lenG < lenF, `ссылка роста короче полной (${lenG} против ${lenF} знаков)`)
+
+  // Старые ссылки не ломаются: поля режима у них нет, и они полные.
+  const oldPack = packState(src, 'full')
+  delete oldPack.r
+  const b64old = Buffer.from(JSON.stringify(oldPack)).toString('base64')
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  ok(decodeState(b64old).shareMode === 'full', 'ссылка без поля режима читается полной')
+
+  // Без плана режим роста не строится: мерить процент выполнения не от чего.
+  ok(packState({ ...src, month_target: 0 }, 'growth') === null,
+    'ссылка роста: без плана месяца не собирается')
 }
 
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')

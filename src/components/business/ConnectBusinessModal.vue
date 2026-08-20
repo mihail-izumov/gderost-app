@@ -2,6 +2,7 @@
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { X } from 'lucide-vue-next'
 import { BRAND } from '../../i18n/brand.js'
+import { CONNECT_REQUEST } from '../../i18n/onboarding.js'
 
 // Модалка «Подключить бизнес». Оболочка, поведение и стили перенесены
 // из рабочего Ранскеила: bottom-sheet, ловушка фокуса, Esc, блокировка скролла.
@@ -21,11 +22,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['close'])
 
-const L = {
-  title: 'Подключить бизнес',
-  lead: 'Инженер Ранскеил подключит ваши данные и соберёт систему под ваш бизнес: проверенные цифры и сигнал каждый день.',
-  submit: 'Отправить заявку',
-}
+const L = CONNECT_REQUEST
 
 const dialogRef = ref(null)
 

@@ -13,7 +13,7 @@ import { useMiniStore } from '../composables/useMiniStore.js'
 // Ссылка несёт месяц в себе (`composables/shareLink.js`): сервера нет,
 // отправить её может только владелец и только тому, кому захочет.
 
-defineProps({
+const props = defineProps({
   // quiet — обычная строка, accent — жёлтая плашка, action — графитовая
   // кнопка отправки.
   //
@@ -31,6 +31,10 @@ defineProps({
   // Знак нужен там, где кнопка стоит одна среди текста, и лишний там,
   // где она в ряду одинаковых.
   icon: { type: Boolean, default: true },
+  // Режим ссылки: `growth` — рост без сумм, `full` — весь месяц с числами.
+  // По умолчанию стоит безопасный: цена двух ошибок разная, и лишний вопрос
+  // дешевле уехавшей выручки.
+  mode: { type: String, default: 'growth' },
 })
 const emit = defineEmits(['shared'])
 
@@ -39,7 +43,7 @@ const done = ref('')
 
 const url = computed(() => (typeof window === 'undefined'
   ? ''
-  : shareUrl(store.state, window.location.href)))
+  : shareUrl(store.state, window.location.href, props.mode)))
 
 async function share() {
   const link = url.value

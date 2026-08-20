@@ -6,6 +6,7 @@ import TopoLayer from '../components/TopoLayer.vue'
 import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
 import { todayISO } from '../composables/miniModel.js'
 import { monthLabel, formatRub } from '../i18n/format.js'
+import { CONNECT, fill } from '../i18n/onboarding.js'
 
 // Подключение бизнеса. Первый шаг — выбор пути, дальше поля по одному экрану.
 //
@@ -77,9 +78,9 @@ function looksLikeNumber(v) {
 // Что не так с именем. Пустое — просто не пускаем кнопкой; число вместо
 // названия — говорим прямо, иначе человек второй раз введёт то же самое.
 const whoError = computed(() => {
-  if (looksLikeNumber(company.value)) return 'Название компании — слово, а не число. Например: «Кофейня на углу».'
-  if (looksLikeNumber(unit.value)) return 'Бизнес-юнит — слово, а не число. Например: «Кухня» или «Доставка».'
-  if (company.value.trim().length === 1 || unit.value.trim().length === 1) return 'Одна буква — вряд ли название. Напишите так, как говорите сами.'
+  if (looksLikeNumber(company.value)) return CONNECT.errCompanyNumber
+  if (looksLikeNumber(unit.value)) return CONNECT.errUnitNumber
+  if (company.value.trim().length === 1 || unit.value.trim().length === 1) return CONNECT.errTooShort
   return ''
 })
 const whoOk = computed(() => company.value.trim().length > 1
@@ -92,8 +93,8 @@ const MAX_PLAN = 10_000_000_000
 const targetError = computed(() => {
   const v = Number(target.value)
   if (target.value === null) return ''
-  if (v < MIN_PLAN) return `План меньше ${formatRub(MIN_PLAN)} — проверьте разряды: обычно теряется три нуля.`
-  if (v > MAX_PLAN) return `План больше ${formatRub(MAX_PLAN)} — проверьте разряды: обычно лишние три нуля.`
+  if (v < MIN_PLAN) return fill(CONNECT.errPlanSmall, '{сумма}', formatRub(MIN_PLAN))
+  if (v > MAX_PLAN) return fill(CONNECT.errPlanBig, '{сумма}', formatRub(MAX_PLAN))
   return ''
 })
 const targetOk = computed(() => Number(target.value) > 0)
@@ -108,9 +109,9 @@ const goalMessage = computed(() => {
   const g = Number(goal.value)
   if (!(g > 0) || !targetOk.value) return ''
   const t = Number(target.value)
-  if (g < t) return `Цель ниже плана ${formatRub(t)}.`
+  if (g < t) return fill(CONNECT.errGoalBelow, '{план}', formatRub(t))
   if (g > t * GOAL_MAX_RATIO) {
-    return `Цель выше плана больше чем в полтора раза (${formatRub(t)} → ${formatRub(g)}). Столько не берут за месяц — пересчитайте план.`
+    return fill(fill(CONNECT.errGoalHigh, '{план}', formatRub(t)), '{цель}', formatRub(g))
   }
   return ''
 })
@@ -132,11 +133,11 @@ const canNext = computed(() => {
 // точного ответа нет. Это не абзац-объяснение на экране — это условие поля,
 // без которого человек застревает и выдумывает ответ.
 const HINT = {
-  choice: 'Короткий путь — два вопроса, и вы сразу видите свои цифры. Остальное спросим позже, когда понадобится.',
-  who: 'Имя нужно, чтобы отличать бизнесы и подписывать файл выгрузки. Юнит — точка или направление, по которому вы считаете выручку. Если у вас несколько ресторанов, то напишите название одного из них.',
-  plan: 'План — обязательство месяца, а не мечта. Не помните точно — возьмите прошлый месяц, поправить можно в любой день.',
-  earned: 'Сумма за все дни с начала месяца одним числом. Точной нет — назовите близкую: приложение разложит её по дням и подпишет допущением.',
-  goal: 'Цель — то, ради чего стараются сверх плана. Её можно не ставить, шкала построится до плана.',
+  choice: CONNECT.hintChoice,
+  who: CONNECT.hintWho,
+  plan: CONNECT.hintPlan,
+  earned: CONNECT.hintEarned,
+  goal: CONNECT.hintGoal,
 }
 const hint = computed(() => HINT[step.value] || '')
 
@@ -196,7 +197,7 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
            не сообщает, сколько ещё спросят, и на первом экране, где шаг один,
            читалась поломкой. -->
       <p v-if="at > 0" class="flex-1 text-[0.8125rem] font-medium text-[var(--text-muted)]">
-        Шаг {{ at }} из {{ STEPS.length - 1 }}
+        {{ fill(fill(CONNECT.step, '{n}', at), '{всего}', STEPS.length - 1) }}
       </p>
       <div v-else class="flex-1" aria-hidden="true"></div>
     </header>
@@ -205,7 +206,7 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
          а не голос продукта. Брендовое здесь выделяло анкету сильнее, чем
          имя на витрине. -->
     <h1 class="mt-8 text-[1.75rem] font-bold leading-tight tracking-tight text-[var(--text)]">
-      {{ step === 'choice' ? 'С чего начнём' : 'Подключить бизнес' }}
+      {{ step === 'choice' ? CONNECT.titleChoice : CONNECT.title }}
     </h1>
 
     <form class="mt-8 flex flex-1 flex-col" @submit.prevent="next">
@@ -220,9 +221,9 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
             :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
             @click="choose('short')"
           >
-            <span class="block text-[1.0625rem] font-bold leading-tight">Компания и план на месяц</span>
+            <span class="block text-[1.0625rem] font-bold leading-tight">{{ CONNECT.choiceShortTitle }}</span>
             <span class="mt-1 block text-[0.875rem] leading-snug opacity-80">
-              Остальное — потом, по ходу дела
+              {{ CONNECT.choiceShortNote }}
             </span>
           </button>
           <button
@@ -230,9 +231,9 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
             class="w-full rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-4 text-left"
             @click="choose('full')"
           >
-            <span class="block text-[1.0625rem] font-bold leading-tight text-[var(--text)]">Заполнить всё сразу</span>
+            <span class="block text-[1.0625rem] font-bold leading-tight text-[var(--text)]">{{ CONNECT.choiceFullTitle }}</span>
             <span class="mt-1 block text-[0.875rem] leading-snug text-[var(--text-secondary)]">
-              Ещё заработанное с начала месяца и цель
+              {{ CONNECT.choiceFullNote }}
             </span>
           </button>
         </template>
@@ -240,11 +241,11 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
         <!-- 1. Чей это месяц -->
         <template v-else-if="step === 'who'">
           <label class="block">
-            <span class="block text-[0.8125rem] font-medium text-[var(--text-secondary)]">Компания</span>
+            <span class="block text-[0.8125rem] font-medium text-[var(--text-secondary)]">{{ CONNECT.fieldCompany }}</span>
             <input v-model="company" :class="FIELD" class="mt-2" type="text" autocomplete="off">
           </label>
           <label class="block">
-            <span class="block text-[0.8125rem] font-medium text-[var(--text-secondary)]">Бизнес-юнит</span>
+            <span class="block text-[0.8125rem] font-medium text-[var(--text-secondary)]">{{ CONNECT.fieldUnit }}</span>
             <input v-model="unit" :class="FIELD" class="mt-2" type="text" autocomplete="off">
           </label>
           <p v-if="whoError" class="text-[0.8125rem] leading-snug text-[var(--negative)]">{{ whoError }}</p>
@@ -255,8 +256,8 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
           <MoneyField
             id="mini-target"
             v-model="target"
-            :label="`План на ${monthLabel(month)}`"
-            placeholder="3 000 000"
+            :label="fill(CONNECT.fieldPlan, '{месяц}', monthLabel(month))"
+            :placeholder="CONNECT.fieldPlanPlaceholder"
           />
           <p v-if="targetError" class="text-[0.8125rem] leading-snug text-[var(--negative)]">{{ targetError }}</p>
         </template>
@@ -266,12 +267,12 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
           <MoneyField
             id="mini-earned"
             v-model="earned"
-            label="Заработано с начала месяца"
-            placeholder="1 250 000"
+            :label="CONNECT.fieldEarned"
+            :placeholder="CONNECT.fieldEarnedPlaceholder"
           />
           <label class="block">
             <span class="block text-[0.8125rem] font-medium text-[var(--text-secondary)]">
-              По какой день включительно
+              {{ CONNECT.fieldEarnedUpTo }}
             </span>
             <input
               v-model="earnedUpTo"
@@ -283,7 +284,7 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
             >
           </label>
           <p v-if="earnedHigh" class="text-[0.8125rem] leading-snug text-[var(--text-secondary)]">
-            Больше трёх планов — проверьте разряды.
+            {{ CONNECT.errEarnedHigh }}
           </p>
         </template>
 
@@ -292,8 +293,8 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
           <MoneyField
             id="mini-goal"
             v-model="goal"
-            label="Цель на месяц"
-            placeholder="3 500 000"
+            :label="CONNECT.fieldGoal"
+            :placeholder="CONNECT.fieldGoalPlaceholder"
           />
           <p v-if="goalMessage" class="text-[0.8125rem] leading-snug text-[var(--negative)]">
             {{ goalMessage }}
@@ -313,14 +314,14 @@ const FIELD = `min-h-[52px] w-full rounded-xl border border-[var(--line)] bg-[va
                  transition-opacity disabled:opacity-40"
           :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
           :disabled="!canNext"
-        >{{ last ? 'Показать прогноз' : 'Далее' }}</button>
+        >{{ last ? CONNECT.submit : CONNECT.next }}</button>
 
         <button
           v-if="step === 'goal'"
           type="button"
           class="min-h-[44px] text-[0.9375rem] font-medium text-[var(--text-secondary)]"
           @click="skipGoal"
-        >Пропустить</button>
+        >{{ CONNECT.skip }}</button>
       </div>
     </form>
   </div>

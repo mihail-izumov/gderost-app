@@ -1,16 +1,17 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { Download, ArrowRight, Check } from 'lucide-vue-next'
-import ConnectProgress from '../components/energy/ConnectProgress.vue'
+import GrowthProof from '../components/share/GrowthProof.vue'
 import HonestBadge from '../components/HonestBadge.vue'
 import StoryOnboarding from '../components/StoryOnboarding.vue'
 import { honestStory } from '../i18n/stories.js'
 import SiteFooter from '../components/SiteFooter.vue'
 import { computeMini } from '../composables/miniModel.js'
 import { honestLoop } from '../composables/honestLoop.js'
-import { computeEnergy, computeGaps } from '../composables/energyModel.js'
+import { computeGaps } from '../composables/energyModel.js'
 import { buildExportText, exportFileName } from '../composables/exportText.js'
 import { saveText } from '../composables/saveFile.js'
+import { BRAND } from '../i18n/brand.js'
 import { formatRub, monthLabel, plural } from '../i18n/format.js'
 
 // Месяц, пришедший ссылкой. Только чтение.
@@ -21,6 +22,15 @@ import { formatRub, monthLabel, plural } from '../i18n/format.js'
 //
 // Числа считаются тем же ядром, что у автора: расхождение между тем, что видит
 // отправитель, и тем, что видит получатель, сделало бы ссылку бесполезной.
+//
+// ⚠ Экран собран вокруг одного вопроса — как месяц идёт к плану. Плашки уровня
+// с дорогой ступеней здесь больше нет: на экране, который человек прислал как
+// доказательство своего роста, прайс поставщика висел у него на лбу, а чужая
+// шкала в процентах требовала объяснения, которого получателю дать некому.
+//
+// ⚠ Суммы показываются только в полном режиме ссылки. В режиме роста их нет
+// и в самом адресе: деньги нормализованы к плану перед упаковкой
+// (`shareLink.js`), поэтому достать выручку из ссылки не может никто.
 
 const props = defineProps({
   state: { type: Object, required: true },
@@ -28,7 +38,9 @@ const props = defineProps({
 defineEmits(['exit'])
 
 const m = computed(() => computeMini(props.state, new Date()))
-const energy = computed(() => computeEnergy(props.state, m.value))
+// Полный режим: суммы, расстояния между величинами и выгрузка файлом.
+// Ссылки, выпущенные до появления режима, читаются полными — такими они и были.
+const full = computed(() => props.state.shareMode !== 'growth')
 // Петля автора: получатель видит не только числа, но и то, крутится ли
 // у отправителя цикл, которым они получены.
 const loop = computed(() => honestLoop(props.state, m.value))
@@ -105,15 +117,19 @@ const honestOpen = ref(false)
     >
       <!-- Экран сообщает, чей это месяц и что он не сохраняется. Одной строкой:
            это состояние, а не объяснение устройства. -->
+      <!-- Марка и бизнес разведены по весу. Имя юнита у владельца может
+           совпасть с маркой того, кто считал, и заголовок читался как «месяц
+           компании Ранскеил». Мелкой строкой — кто считал, заголовком — чей
+           это месяц. -->
       <header class="pb-3">
         <p class="text-[0.6875rem] uppercase tracking-wide text-[var(--text-muted)]">
-          Месяц по ссылке · только чтение
+          {{ BRAND.header }} · месяц по ссылке
         </p>
         <h1 class="mt-1 text-[1.375rem] font-bold leading-tight text-[var(--text)]">
           {{ state.unit || state.company || 'Бизнес' }}, {{ monthLabel(state.month) }}
         </h1>
         <p class="mt-1 text-[0.8125rem] text-[var(--text-muted)]">
-          Данные на этом устройстве не сохраняются.
+          Только чтение. Данные на этом устройстве не сохраняются.
         </p>
       </header>
 
@@ -122,19 +138,17 @@ const honestOpen = ref(false)
         class="mb-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 text-[0.8125rem] leading-snug text-[var(--text-secondary)]"
       >Этот месяц закончился. Числа ниже — его итог.</p>
 
-      <ConnectProgress
-        :unit="state.unit || state.company"
-        :pct="energy.pct"
-        :level-id="energy.level.id"
-      />
+      <GrowthProof :m="m" :month-over="monthOver" />
 
-      <!-- Статус чисел получателю нужнее, чем автору: он видит чужой месяц
-           и обязан знать, на чём тот стоит, до того как поверит цифрам. -->
+      <!-- Статус чисел стоит сразу под главным числом: получатель видит чужой
+           месяц и обязан знать, на чём тот стоит, до того как поверит проценту.
+           Здесь эта плашка и есть гарантия — она отличает посчитанное от
+           набранного в заметках. -->
       <div class="mt-3">
         <HonestBadge :loop="loop" @open="honestOpen = true" />
       </div>
 
-      <section class="mt-3 rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-4">
+      <section v-if="full" class="mt-3 rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-4">
         <dl class="flex flex-col">
           <div
             v-for="(r, i) in rows"
@@ -155,7 +169,7 @@ const honestOpen = ref(false)
       <!-- Расстояния между величинами. Получатель видит их тем же списком,
            что и автор в «Целях и планах»: карточек с уровнями сущностей
            больше нет ни у кого, и расходиться этим двум экранам нельзя. -->
-      <ul v-if="visibleGaps.length" class="mt-3 flex flex-col gap-1.5">
+      <ul v-if="full && visibleGaps.length" class="mt-3 flex flex-col gap-1.5">
         <li
           v-for="g in visibleGaps"
           :key="g.key"
@@ -168,7 +182,10 @@ const honestOpen = ref(false)
         </li>
       </ul>
 
+      <!-- Файл живёт только в полном режиме. В режиме роста выгружать нечего:
+           сумм в ссылке нет, и файл с условными величинами был бы обманом. -->
       <button
+        v-if="full"
         type="button"
         class="mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full border border-[var(--rim)] text-[0.9375rem] font-semibold text-[var(--text)]"
         :style="{ background: 'var(--surface)' }"
@@ -178,7 +195,7 @@ const honestOpen = ref(false)
         <Download v-else class="h-5 w-5" :stroke-width="2" aria-hidden="true" />
         {{ saved ? 'Готово' : 'Скачать месяц файлом' }}
       </button>
-      <p v-if="saveFailed" class="mt-2 text-[0.8125rem] leading-snug" :style="{ color: 'var(--negative)' }">
+      <p v-if="full && saveFailed" class="mt-2 text-[0.8125rem] leading-snug" :style="{ color: 'var(--negative)' }">
         Браузер не дал сохранить файл и скопировать текст. Откройте ссылку в Safari или Chrome.
       </p>
 

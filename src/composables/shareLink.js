@@ -16,6 +16,22 @@
 export const SHARE_VERSION = 1
 export const HASH_PREFIX = '#m='
 
+// Два режима ссылки, потому что получателей два.
+//
+//   full   — весь месяц с суммами. Партнёру, бухгалтеру, инженеру на разборе:
+//            они и так знают эти числа, и без них сводка бесполезна.
+//   growth — рост без сумм. Клубу, спору, сториз: выручка малого бизнеса — то,
+//            что владелец не говорит вслух.
+//
+// ⚠ В режиме роста суммы НЕ уезжают вовсе, а не прячутся на экране. Спрятанное
+// число остаётся в адресе, и любой, кто умеет читать ссылку, достанет его
+// обратно. Поэтому деньги нормализуются к плану ДО упаковки: план становится
+// условной величиной `GROWTH_BASE`, дни, стартовая сумма и цель пересчитываются
+// тем же множителем. Все отношения — процент плана, форма месяца, счёт дней —
+// линейны и сохраняются точно, а выручки в ссылке не существует.
+export const SHARE_MODES = ['growth', 'full']
+export const GROWTH_BASE = 1_000_000
+
 /** base64url без завязки на Node: работает в браузере и в самопроверке. */
 function toB64Url(str) {
   const bytes = new TextEncoder().encode(str)
@@ -42,16 +58,37 @@ function fromB64Url(s) {
 const dayNum = (iso) => Number(String(iso).slice(8, 10))
 const isoOf = (month, dd) => `${month}-${String(dd).padStart(2, '0')}`
 
+/**
+ * Множитель нормализации. План месяца становится `GROWTH_BASE`, всё остальное
+ * едет через тот же множитель. Плана нет — нормализовать не от чего, и режим
+ * роста не строится: без плана процент выполнения не существует.
+ */
+function growthScale(s) {
+  const T = Number(s && s.month_target) || 0
+  return T > 0 ? GROWTH_BASE / T : 0
+}
+
 /** Состояние → компактный объект. Ничего, кроме месяца, в него не попадает. */
-export function packState(s) {
+export function packState(s, mode = 'growth') {
   if (!s || !s.month) return null
+  const growth = mode === 'growth'
+  const k = growth ? growthScale(s) : 1
+  // Плана нет — режим роста невозможен: мерить процент выполнения не от чего.
+  if (growth && !k) return null
+  const money = (v) => {
+    const n = Number(v) || 0
+    return growth ? Math.round(n * k) : n
+  }
   const out = {
     v: SHARE_VERSION,
+    // Режим едет в самой ссылке: экран получателя решает по нему, показывать
+    // ли суммы. Старые ссылки поля не имеют и читаются полными, как и были.
+    r: growth ? 'g' : 'f',
     c: s.company || '',
     u: s.unit || '',
     m: s.month,
-    t: Number(s.month_target) || 0,
-    g: Number(s.month_goal) > 0 ? Number(s.month_goal) : 0,
+    t: money(s.month_target),
+    g: Number(s.month_goal) > 0 ? money(s.month_goal) : 0,
     k: (s.dow_coef || []).map((x) => Number(x)),
     ks: s.coef_src || 'preset',
     ki: s.shape_id || 'default',
@@ -59,14 +96,16 @@ export function packState(s) {
     // День: [число месяца, выручка, линейка момента ввода]. Линейка нужна,
     // иначе у получателя дни перекрасятся по сегодняшнему плану — ровно то,
     // что приложение обещает не делать.
-    d: (s.days || []).map((x) => [dayNum(x.date), Number(x.rev), x.planRef ? Math.round(x.planRef) : 0]),
+    d: (s.days || []).map((x) => [dayNum(x.date), money(x.rev), x.planRef ? money(x.planRef) : 0]),
     // Журнал прогноза: день, приземление, что было, достижимость, дата записи.
-    j: (s.forecastLog || []).map((e) => [
+    // В режим роста не едет: на том экране его нет, а ссылка без него короче
+    // примерно на треть.
+    j: growth ? [] : (s.forecastLog || []).map((e) => [
       dayNum(e.after), Math.round(Number(e.landing) || 0),
       e.was == null ? -1 : Math.round(Number(e.was)), e.goalState || '', e.at || '',
     ]),
   }
-  if (s.carry) out.y = [s.carry.upTo, Number(s.carry.amount) || 0, s.carry.spread ? 1 : 0]
+  if (s.carry) out.y = [s.carry.upTo, money(s.carry.amount), s.carry.spread ? 1 : 0]
   return out
 }
 
@@ -82,6 +121,9 @@ export function unpackState(p) {
   if (!Number.isFinite(Number(p.t))) return null
   return {
     ready: true,
+    // Режим: экран получателя решает по нему, показывать ли суммы. У ссылок,
+    // выпущенных до появления поля, режим полный — таким он и был.
+    shareMode: p.r === 'g' ? 'growth' : 'full',
     company: String(p.c || ''),
     unit: String(p.u || ''),
     month,
@@ -108,8 +150,8 @@ export function unpackState(p) {
 }
 
 /** Состояние → строка для фрагмента адреса. */
-export function encodeState(s) {
-  const packed = packState(s)
+export function encodeState(s, mode = 'growth') {
+  const packed = packState(s, mode)
   return packed ? toB64Url(JSON.stringify(packed)) : ''
 }
 
@@ -124,8 +166,8 @@ export function decodeState(code) {
 }
 
 /** Готовая ссылка на месяц от текущего адреса приложения. */
-export function shareUrl(s, base) {
-  const code = encodeState(s)
+export function shareUrl(s, base, mode = 'growth') {
+  const code = encodeState(s, mode)
   if (!code) return ''
   const root = String(base || '').split('#')[0]
   return `${root}${HASH_PREFIX}${code}`

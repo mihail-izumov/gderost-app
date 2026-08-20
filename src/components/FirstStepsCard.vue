@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-vue-next'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { todayISO } from '../composables/miniModel.js'
 import { monthCap } from '../i18n/home.js'
+import { FIRST_STEPS, fill } from '../i18n/onboarding.js'
 
 // Первые шаги — продолжение объяснения уже на интерфейсе.
 //
@@ -39,24 +40,24 @@ const items = computed(() => {
   if (props.m && props.m.realizedCount === 0 && !store.state.carry) {
     out.push({
       id: 'day',
-      title: 'Внесите выручку за день',
-      note: 'С первого дня появится прогноз месяца',
+      title: FIRST_STEPS.dayTitle,
+      note: FIRST_STEPS.dayNote,
       go: 'day',
     })
   }
   if (needsPast.value) {
     out.push({
       id: 'carry',
-      title: `Что уже заработано в ${monthCap(props.m.month).toLowerCase()}`,
-      note: 'Одной суммой, чтобы прогноз считал по правде',
+      title: fill(FIRST_STEPS.carryTitle, '{месяц}', monthCap(props.m.month).toLowerCase()),
+      note: FIRST_STEPS.carryNote,
       go: 'carry',
     })
   }
   if (!store.state.month_goal) {
     out.push({
       id: 'goal',
-      title: 'Поставьте цель месяца',
-      note: 'Цель показывается рядом с планом',
+      title: FIRST_STEPS.goalTitle,
+      note: FIRST_STEPS.goalNote,
       go: 'goals',
     })
   }
@@ -67,7 +68,7 @@ const items = computed(() => {
 <template>
   <section v-if="items.length" class="rounded-2xl bg-[var(--surface)] px-4 py-3">
     <p class="text-[0.625rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-      Что дальше
+      {{ FIRST_STEPS.caption }}
     </p>
     <ul class="mt-1 flex flex-col">
       <li v-for="(it, i) in items" :key="it.id">

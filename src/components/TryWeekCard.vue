@@ -1,6 +1,8 @@
 <script setup>
-import { ref } from 'vue'
-import ShareMonthButton from './ShareMonthButton.vue'
+import { computed, ref } from 'vue'
+import { Share2 } from 'lucide-vue-next'
+import BottomSheet from './BottomSheet.vue'
+import SharePreviewSheet from './share/SharePreviewSheet.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { saveText } from '../composables/saveFile.js'
 
@@ -20,6 +22,15 @@ const store = useMiniStore()
 const saved = ref(false)
 const saveFailed = ref(false)
 const askReset = ref(false)
+const shareOpen = ref(false)
+
+// Ссылка молчит, пока доказывать нечего. Месяц, целиком пришедший стартовой
+// суммой, ростом не является: дисциплины в нём нет, ряд дней пустой, и человек
+// отправил бы пустую страницу. Условие то же, что у поводов поделиться.
+const canShare = computed(() => {
+  const m = store.model.value
+  return !!m && m.enteredCount >= 1
+})
 
 // Выгрузка уходит файлом, а не в буфер: на телефоне длинный текст при вставке
 // обрывается молча, а заметки подменяют дефисы на тире и ломают таблицу.
@@ -79,7 +90,21 @@ function reset() {
       Браузер не дал сохранить файл.
     </p>
 
-    <ShareMonthButton class="mt-2" tone="quiet" shape="card" :icon="false" label="Поделиться" />
+    <!-- «Поделиться» с кнопки снято: слово стало общим на два разных действия.
+         Здесь уезжает МЕСЯЦ — процент плана, дни, а по решению отправителя
+         и суммы; приглашение на трек живёт своей шторкой и своим текстом.
+         Три подписи в ряду говорят три разные вещи: унести файлом, показать
+         ссылкой, стереть. -->
+    <button
+      v-if="canShare"
+      type="button"
+      class="mt-2 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border text-[1.0625rem] font-semibold text-[var(--text)]"
+      :style="{ background: 'var(--surface)', borderColor: 'var(--rim)' }"
+      @click="shareOpen = true"
+    >
+      <Share2 class="h-5 w-5" :stroke-width="2" aria-hidden="true" />
+      Показать месяц ссылкой
+    </button>
 
     <!-- Разделитель со словом посередине: дальше идёт действие другой природы,
          и оно отделено так же, как в системных экранах входа отделяют вход
@@ -114,5 +139,9 @@ function reset() {
         >Оставить</button>
       </div>
     </div>
+
+    <BottomSheet :open="shareOpen" @close="shareOpen = false">
+      <SharePreviewSheet @close="shareOpen = false" />
+    </BottomSheet>
   </section>
 </template>
