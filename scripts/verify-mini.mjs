@@ -600,10 +600,22 @@ ok(scoreNow([]) === null && scoreNow([5, 6.4]) === 6.4,
   'пустой ряд числа не имеет, у непустого берётся последняя оценка')
 ok(TELEMETRY.readsRate >= 0 && TELEMETRY.readsRate <= 1 && TELEMETRY.businesses >= 0,
   'доля прочтений — доля, число бизнесов не отрицательно')
-ok([...TELEMETRY.signalScores, ...TELEMETRY.reviewScores]
+ok(TELEMETRY.signalScores
   .every((s) => s.id && s.label && Array.isArray(s.values)
     && s.values.every((v) => v >= 0 && v <= 10)),
-  'оценки пользы лежат в шкале 0–10 и подписаны месяцем')
+  'оценки сигналов лежат в шкале 0–10 и подписаны месяцем')
+// Связка «после разбора» публикуется только целиком: publish=false означает,
+// что ни одного из трёх чисел в файле нет — публичный репозиторий не должен
+// нести непубликуемое; publish=true обязывает нести все три.
+{
+  const o = TELEMETRY.reviewOutcome
+  ok(o && typeof o.publish === 'boolean' && o.need > 0 && o.votes >= 0,
+    'у связки после разбора есть ворота публикации и счёт оценок')
+  ok(o.publish
+    ? (o.clarity >= 0 && o.clarity <= 10 && o.onTime >= 0 && o.total >= o.onTime)
+    : (o.clarity === null && o.onTime === null && o.total === null),
+    'связка публикуется только целиком: оба числа или ни одного')
+}
 
 // Календарные недели месяца. Строк бывает от четырёх до шести — шесть только
 // когда первое число попадает на воскресенье или суббота начинает 31-дневный

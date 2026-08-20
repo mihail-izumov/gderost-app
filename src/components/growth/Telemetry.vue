@@ -25,6 +25,20 @@ import { HEAD } from '../../i18n/growth247.js'
 // Ряда за месяц нет — график не рисуется, на его месте стоит строка о том,
 // когда он появится. Линия из ниоткуда была бы ровно тем враньём, ради
 // запрета которого заведён статус числа.
+//
+// Контекст места (слова Михаила, 20.08): телеметрия стоит на «Ультре» —
+// у неё нет цены в приложении, в отличие от разбора и буткемпа. Это
+// доказательство существования идеального круга (референс — Майлз,
+// водитель Шелби): сам Ранскейл ездит на своём Треке и показывает приборы.
+// Поэтому тексты внутренностей — короткие показания приборов, без лирики
+// и без продажи: продаёт здесь само число, у которого есть источник.
+//
+// Плитка «Разборы» показывает связку «после разбора»: ясность
+// по оценкам участников + задачи разбора, закрытые в срок. Оба числа
+// выходят только вместе и только когда счёт системы разрешил публикацию
+// (окно четырёх разборов, от шести оценок) — до того плитка называет,
+// когда числа встанут. Ряды «пользы разборов» наружу не идут: польза —
+// внутреннее число методики, и витрина это уважает.
 
 defineEmits(['connect'])
 
@@ -67,14 +81,15 @@ const INVERT = {
 const inverted = (id) => (open.value === id ? INVERT : {})
 const plateFill = (id) => (open.value === id ? { background: 'var(--text)' } : {})
 
-// Переключатель месяцев у каждой плитки свой: ряды у них разные.
-const monthPick = ref({ checkups: 'jul', reviews: 'jul' })
+// Переключатель месяцев — только у проверок: у разборов графика нет,
+// их плитка несёт связку «после разбора».
+const monthPick = ref({ checkups: 'aug' })
 
 function seriesOf(list, id) {
   return list.find((s) => s.id === id) || { values: [], label: '' }
 }
 const checkSeries = computed(() => seriesOf(TELEMETRY.signalScores, monthPick.value.checkups))
-const reviewSeries = computed(() => seriesOf(TELEMETRY.reviewScores, monthPick.value.reviews))
+const outcome = TELEMETRY.reviewOutcome
 
 function word(c) {
   return plural(c.value, ...c.forms)
@@ -108,7 +123,6 @@ function chart(values) {
   }
 }
 const checkChart = computed(() => chart(checkSeries.value.values))
-const reviewChart = computed(() => chart(reviewSeries.value.values))
 
 const TICKS = [0, 5, 10]
 const tickY = (v) => yAt(v)
@@ -219,21 +233,22 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
     <div v-if="open === 'checkups'" class="mt-2 rounded-2xl bg-[var(--surface-2)] p-4">
       <p class="text-[0.8125rem] leading-relaxed text-[var(--text-secondary)]">
         <b class="font-semibold text-[var(--text)]">Проверка</b> — осмотр бизнеса за день:
-        выручка, поток, чек, сданы ли данные. Идёт каждый день, включая выходные.
+        выручка, гости, средний чек, сданы ли цифры. Каждое утро, включая выходные.
       </p>
       <p class="mt-2 border-t border-[var(--line)] pt-2 text-[0.8125rem] leading-relaxed text-[var(--text-secondary)]">
-        <b class="font-semibold text-[var(--text)]">Подсказка</b> — итог проверки, когда нужно
-        внимание: причина и что с этим делать. Каждое прочтение получает оценку от 0 до 10.
+        <b class="font-semibold text-[var(--text)]">Сигнал</b> — итог проверки, когда пора
+        вмешаться: что случилось и что сделать сегодня, пока день можно догнать.
+        Команда оценивает каждый сигнал от 0 до 10 — оценки на графике ниже.
       </p>
       <p class="mt-2 border-t border-[var(--line)] pt-2 text-[0.8125rem] leading-relaxed text-[var(--text-secondary)]">
-        <b class="font-semibold text-[var(--text)]">Прочтения</b> — доля сводок дня, которые
-        открыли управляющие. Система работает, только когда её читают.
+        <b class="font-semibold text-[var(--text)]">Прочтения</b> — доля сигналов, открытых
+        командой. Непрочитанный сигнал не работает, поэтому считается и это.
       </p>
 
       <div class="mt-4">
         <div class="mb-2 flex items-center justify-between gap-2">
           <span class="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-            Польза подсказок
+            Польза сигналов
           </span>
           <span class="inline-flex rounded-lg bg-[var(--surface)] p-[2px]">
             <button
@@ -295,74 +310,42 @@ const oneDecimal = (v) => (v === null ? '' : String(v).replace('.', ','))
     <!-- Внутренности: РАЗБОРЫ -->
     <div v-if="open === 'reviews'" class="mt-2 rounded-2xl bg-[var(--surface-2)] p-4">
       <p class="text-[0.8125rem] leading-relaxed text-[var(--text-secondary)]">
-        <b class="font-semibold text-[var(--text)]">Разбор</b> — живая встреча на 90 минут
-        по вторникам и пятницам: подсказки становятся задачами, задачи — изменениями.
-        Решения принимаются и записываются на встрече.
+        <b class="font-semibold text-[var(--text)]">Разбор</b> — 90 минут по вторникам
+        и пятницам: сигналы недели становятся задачами. У каждой — кто делает, срок
+        и число, которое должно измениться.
       </p>
       <p class="mt-2 border-t border-[var(--line)] pt-2 text-[0.8125rem] leading-relaxed text-[var(--text-secondary)]">
-        У каждого изменения есть дата и число, которое должно поменяться. Через неделю
-        видно, что сработало.
+        После встречи участники оценивают <b class="font-semibold text-[var(--text)]">ясность</b> —
+        насколько понятно, что делать до следующего разбора. Дальше видно по задачам:
+        закрыты они в срок или нет.
       </p>
 
       <div class="mt-4">
-        <div class="mb-2 flex items-center justify-between gap-2">
-          <span class="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-            Польза разборов
-          </span>
-          <span class="inline-flex rounded-lg bg-[var(--surface)] p-[2px]">
-            <button
-              v-for="s in TELEMETRY.reviewScores"
-              :key="s.id"
-              type="button"
-              class="min-h-[28px] rounded-md px-2.5 text-[0.75rem]"
-              :style="monthPick.reviews === s.id
-                ? { background: 'var(--surface-2)', color: 'var(--text)', fontWeight: 600 }
-                : { color: 'var(--text-muted)' }"
-              @click="monthPick.reviews = s.id"
-            >{{ s.label }}</button>
-          </span>
-        </div>
+        <span class="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
+          После разбора
+        </span>
 
-        <div class="grid grid-cols-[5.5rem_1fr] gap-2">
-          <div class="flex min-h-[6.5rem] items-center justify-center rounded-xl bg-[var(--surface)] p-3">
-            <span v-if="scoreNow(reviewSeries.values) !== null" class="whitespace-nowrap text-[1.75rem] font-bold leading-none tabular-nums text-[var(--text)]">
-              {{ oneDecimal(scoreNow(reviewSeries.values)) }}<span class="text-[0.875rem] font-medium text-[var(--text-muted)]"> /10</span>
+        <!-- Связка публикуется только целиком: оба числа или ни одного.
+             Правило счёта живёт в системе, экран его не повторяет. -->
+        <div v-if="outcome.publish" class="mt-2 grid grid-cols-2 gap-2">
+          <div class="flex min-h-[6.5rem] flex-col justify-center gap-1 rounded-xl bg-[var(--surface)] p-3">
+            <span class="whitespace-nowrap text-[1.75rem] font-bold leading-none tabular-nums text-[var(--text)]">
+              {{ oneDecimal(outcome.clarity) }}<span class="text-[0.875rem] font-medium text-[var(--text-muted)]"> /10</span>
             </span>
-            <span v-else class="text-[1.75rem] font-bold leading-none text-[var(--text-muted)]">—</span>
+            <span class="text-[0.75rem] leading-snug text-[var(--text-secondary)]">ясность — понятно, что делать дальше</span>
           </div>
-          <div class="relative min-h-[6.5rem] rounded-xl bg-[var(--surface)] px-3 py-2.5">
-            <svg
-              v-if="reviewChart.n > 1"
-              :viewBox="`0 0 ${W} ${H}`"
-              preserveAspectRatio="none"
-              class="block h-[5.25rem] w-full"
-              role="img"
-              :aria-label="`Оценки пользы разборов за ${reviewSeries.label}, шкала от 0 до 10`"
-            >
-              <line
-                v-for="(gx, i) in reviewChart.grid" :key="'g' + i"
-                :x1="gx" :x2="gx" :y1="tickY(10)" :y2="tickY(0)"
-                stroke="var(--line)" stroke-width="1"
-              />
-              <template v-for="t in TICKS" :key="'t' + t">
-                <line :x1="PAD_L" :x2="W - PAD_R" :y1="tickY(t)" :y2="tickY(t)" stroke="var(--line)" stroke-width="1" />
-                <text :x="PAD_L - 5" :y="tickY(t) + 3" text-anchor="end" font-size="9" fill="var(--text-muted)">{{ t }}</text>
-              </template>
-              <polyline
-                :points="reviewChart.trend" fill="none" stroke="var(--text-muted)"
-                stroke-width="1.5" stroke-dasharray="4 5" stroke-linecap="round" stroke-linejoin="round"
-              />
-              <polyline
-                :points="reviewChart.points" fill="none" stroke="var(--text)"
-                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-              />
-              <circle v-for="d in reviewChart.dots" :key="'d' + d.key" :cx="d.cx" :cy="d.cy" r="2.4" fill="var(--text)" />
-            </svg>
-            <p v-else class="flex h-full items-center justify-center px-2 text-center text-[0.75rem] leading-snug text-[var(--text-muted)]">
-              Оценки за {{ reviewSeries.label.toLowerCase() }} появятся с первым разбором месяца.
-            </p>
+          <div class="flex min-h-[6.5rem] flex-col justify-center gap-1 rounded-xl bg-[var(--surface)] p-3">
+            <span class="whitespace-nowrap text-[1.75rem] font-bold leading-none tabular-nums text-[var(--text)]">
+              {{ formatInt(outcome.onTime) }}<span class="text-[0.875rem] font-medium text-[var(--text-muted)]"> из {{ formatInt(outcome.total) }}</span>
+            </span>
+            <span class="text-[0.75rem] leading-snug text-[var(--text-secondary)]">задач закрыто в срок</span>
           </div>
         </div>
+        <p v-else class="mt-2 rounded-xl bg-[var(--surface)] p-3 text-[0.75rem] leading-snug text-[var(--text-muted)]">
+          Здесь встанут два числа: ясность после встречи и задачи, закрытые в срок.
+          Публикуются вместе, от {{ formatInt(outcome.need) }} оценок — сейчас {{ formatInt(outcome.votes) }}.
+          Ясность меряется с 14 августа.
+        </p>
       </div>
     </div>
 

@@ -160,7 +160,7 @@ function openHonest() {
   storyOpen.value = true
 }
 
-// Финал ведёт на «Сигналы»: и уровень, и статусы чисел посчитаны там.
+// Финал ведёт на «Силу роста»: и уровень, и статусы чисел посчитаны там.
 function storyDone() {
   storyOpen.value = false
   emit('go', 'power')

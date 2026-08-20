@@ -27,9 +27,11 @@ const props = defineProps({
   idleOpacity: { type: Number, default: 1 },
   // Цвет сердца.
   ink: { type: String, default: 'var(--text)' },
-  // Указка для сторис: номер дуги, о которой идёт речь. Когда задана,
-  // состояние человека не показывается — горит только названная дуга
-  // цветом `tone`, остальные гаснут. Это режим объяснения, не состояния.
+  // Указка для сторис: номер дуги, о которой идёт речь. Состояние человека
+  // при этом показывается как есть — названная дуга остаётся в полную силу,
+  // остальные приглушаются прозрачностью. Раньше указка красила дугу синим
+  // и гасила остальные: на первом слайде человек видел свои жёлтые дуги,
+  // на следующих — синие, и это читалось сменой состояния.
   highlight: { type: Number, default: null },
 })
 
@@ -55,14 +57,14 @@ const ARCS = [0, 90, 180, 270].map((base) => {
 })
 
 const arcOpacity = computed(() => (i) => {
-  const on = props.highlight != null ? i === props.highlight : props.segs[i] && props.segs[i].on
-  return on ? 1 : props.idleOpacity
+  if (props.highlight != null) return i === props.highlight ? 1 : 0.25
+  return props.segs[i] && props.segs[i].on ? 1 : props.idleOpacity
 })
 
-const arcColor = computed(() => (i) => {
-  if (props.highlight != null) return i === props.highlight ? props.tone : props.idle
-  return props.segs[i] && props.segs[i].on ? props.tone : props.idle
-})
+// Цвет дуги всегда говорит состоянием: горит — `tone`, погасла — `idle`.
+// Указка меняет только прозрачность соседей, не цвет.
+const arcColor = computed(() => (i) =>
+  (props.segs[i] && props.segs[i].on ? props.tone : props.idle))
 </script>
 
 <template>
