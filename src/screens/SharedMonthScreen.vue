@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Download, ArrowRight, Check } from 'lucide-vue-next'
+import { ArrowRight } from 'lucide-vue-next'
 import GrowthProof from '../components/share/GrowthProof.vue'
+import BrandLockup from '../components/BrandLockup.vue'
 import HonestBadge from '../components/HonestBadge.vue'
 import StoryOnboarding from '../components/StoryOnboarding.vue'
 import { honestStory } from '../i18n/stories.js'
@@ -12,7 +13,7 @@ import { computeGaps } from '../composables/energyModel.js'
 import { buildExportText, exportFileName } from '../composables/exportText.js'
 import { saveText } from '../composables/saveFile.js'
 import { BRAND } from '../i18n/brand.js'
-import { formatRub, monthLabel, plural } from '../i18n/format.js'
+import { formatRub, monthLabel, monthName, plural } from '../i18n/format.js'
 
 // Месяц, пришедший ссылкой. Только чтение.
 //
@@ -57,11 +58,11 @@ const saveFailed = ref(false)
 // Месяц мог закончиться до того, как ссылку открыли. У автора об этом сказано
 // на его экране, и получатель обязан узнать то же: иначе он примет прогноз
 // прошедшего месяца за ожидание.
-const monthOver = computed(() => {
+const nowMonth = computed(() => {
   const now = new Date()
-  const cur = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  return String(props.state.month) < cur
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 })
+const monthOver = computed(() => String(props.state.month) < nowMonth.value)
 
 const rows = computed(() => {
   const x = m.value
@@ -115,21 +116,20 @@ const honestOpen = ref(false)
              pt-[max(1rem,env(safe-area-inset-top))]
              pb-[max(1.5rem,env(safe-area-inset-bottom))]"
     >
-      <!-- Экран сообщает, чей это месяц и что он не сохраняется. Одной строкой:
-           это состояние, а не объяснение устройства. -->
       <!-- Марка и бизнес разведены по весу. Имя юнита у владельца может
            совпасть с маркой того, кто считал, и заголовок читался как «месяц
            компании Ранскеил». Мелкой строкой — кто считал, заголовком — чей
            это месяц. -->
       <header class="pb-3">
-        <p class="text-[0.6875rem] uppercase tracking-wide text-[var(--text-muted)]">
-          {{ BRAND.header }} · месяц по ссылке
-        </p>
+        <BrandLockup size="1.25rem" class="mb-2" />
         <h1 class="mt-1 text-[1.375rem] font-bold leading-tight text-[var(--text)]">
           {{ state.unit || state.company || 'Бизнес' }}, {{ monthLabel(state.month) }}
         </h1>
+        <!-- Одно утверждение вместо двух. «Только чтение» экран сообщает сам:
+             полей на нём нет. Остаётся то, о чём человек действительно думает,
+             открывая чужую ссылку. -->
         <p class="mt-1 text-[0.8125rem] text-[var(--text-muted)]">
-          Только чтение. Данные на этом устройстве не сохраняются.
+          Страница ничего не сохраняет на вашем устройстве.
         </p>
       </header>
 
@@ -145,7 +145,7 @@ const honestOpen = ref(false)
            Здесь эта плашка и есть гарантия — она отличает посчитанное от
            набранного в заметках. -->
       <div class="mt-3">
-        <HonestBadge :loop="loop" @open="honestOpen = true" />
+        <HonestBadge large foreign :loop="loop" @open="honestOpen = true" />
       </div>
 
       <section v-if="full" class="mt-3 rounded-2xl border border-[var(--rim)] bg-[var(--surface)] p-4">
@@ -184,32 +184,41 @@ const honestOpen = ref(false)
 
       <!-- Файл живёт только в полном режиме. В режиме роста выгружать нечего:
            сумм в ссылке нет, и файл с условными величинами был бы обманом. -->
+      <!-- Форма кнопки та же, что на «Сегодня»: одно действие — один вид
+           во всём приложении. Заливка светлая: здесь это не главное действие
+           страницы, главное стоит внизу. -->
       <button
         v-if="full"
         type="button"
-        class="mt-3 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full border border-[var(--rim)] text-[0.9375rem] font-semibold text-[var(--text)]"
-        :style="{ background: 'var(--surface)' }"
+        class="mt-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border text-[1.0625rem] font-semibold text-[var(--text)]"
+        :style="{ background: 'var(--surface)', borderColor: 'var(--rim)' }"
         @click="download"
       >
-        <Check v-if="saved" class="h-5 w-5" :stroke-width="2.5" aria-hidden="true" />
-        <Download v-else class="h-5 w-5" :stroke-width="2" aria-hidden="true" />
-        {{ saved ? 'Готово' : 'Скачать месяц файлом' }}
+        {{ saved ? 'Готово' : 'Скачать' }}
+        <span
+          class="rounded px-1.5 py-0.5 text-[0.6875rem] font-semibold"
+          :style="{ background: 'var(--text)', color: 'var(--surface)' }"
+        >MD</span>
       </button>
       <p v-if="full && saveFailed" class="mt-2 text-[0.8125rem] leading-snug" :style="{ color: 'var(--negative)' }">
         Браузер не дал сохранить файл и скопировать текст. Откройте ссылку в Safari или Chrome.
       </p>
 
-      <button
-        type="button"
-        class="mt-2 flex min-h-[48px] w-full items-center justify-between gap-2 rounded-full px-5 text-[0.9375rem] font-bold"
-        :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
-        @click="$emit('exit')"
-      >
-        Посчитать свой месяц
-        <ArrowRight class="h-5 w-5 shrink-0" :stroke-width="2.5" aria-hidden="true" />
-      </button>
-
-      <SiteFooter />
+      <!-- Действие стоит в подвале, между утверждением и рефреном: человек
+           дочитал чужой месяц до конца, и здесь ему предлагают свой. Кнопка
+           по ширине текста — она отвечает на вопрос, который у читателя уже
+           возник, и занимать всю строку ей незачем. -->
+      <SiteFooter>
+        <button
+          type="button"
+          class="inline-flex min-h-[48px] items-center gap-2 rounded-full px-6 text-[0.9375rem] font-bold"
+          :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
+          @click="$emit('exit')"
+        >
+          {{ BRAND.cta(monthName(nowMonth)) }}
+          <ArrowRight class="h-5 w-5 shrink-0" :stroke-width="2.5" aria-hidden="true" />
+        </button>
+      </SiteFooter>
       <StoryOnboarding
         :open="honestOpen"
         :slides="honestStory(loop)"

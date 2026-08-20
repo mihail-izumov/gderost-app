@@ -32,6 +32,10 @@ const props = defineProps({
   onDark: { type: Boolean, default: false },
   // Крупная плашка вместо пилюли.
   large: { type: Boolean, default: false },
+  // Чужой месяц: подпись говорит о состоянии, не обращаясь к читателю.
+  // «Внесите их» на экране получателя адресовано человеку, у которого этих
+  // дней нет и быть не может.
+  foreign: { type: Boolean, default: false },
 })
 defineEmits(['open'])
 
@@ -74,7 +78,7 @@ const ink = computed(() => (full.value ? 'var(--ink-on-color)' : 'var(--accent-i
     />
     <span class="min-w-0 flex-1">
       <span class="block text-[0.9375rem] font-bold leading-tight" :style="{ color: ink }">Честная цифра</span>
-      <span class="mt-0.5 block text-[0.75rem] leading-snug" :style="{ color: ink, opacity: 0.8 }">{{ loop.note }}</span>
+      <span class="mt-0.5 block text-[0.75rem] leading-snug" :style="{ color: ink, opacity: 0.8 }">{{ foreign ? (loop.noteForeign || loop.note) : loop.note }}</span>
     </span>
     <!-- Стрелка называет плашку нажимаемой. Без неё она читалась сообщением,
          и то, что за ней стоит объяснение петли, человек не находил. -->

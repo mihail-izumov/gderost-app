@@ -1,8 +1,8 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { Share2 } from 'lucide-vue-next'
 import BottomSheet from './BottomSheet.vue'
 import SharePreviewSheet from './share/SharePreviewSheet.vue'
+import SharePreviewOverlay from './share/SharePreviewOverlay.vue'
 import { useMiniStore } from '../composables/useMiniStore.js'
 import { saveText } from '../composables/saveFile.js'
 
@@ -23,6 +23,16 @@ const saved = ref(false)
 const saveFailed = ref(false)
 const askReset = ref(false)
 const shareOpen = ref(false)
+const previewOpen = ref(false)
+const previewUrl = ref('')
+
+// Шторка уступает место предпросмотру: два слоя друг на друге спорили бы
+// за жест закрытия.
+function openPreview({ url }) {
+  previewUrl.value = url
+  shareOpen.value = false
+  previewOpen.value = true
+}
 
 // Ссылка молчит, пока доказывать нечего. Месяц, целиком пришедший стартовой
 // суммой, ростом не является: дисциплины в нём нет, ряд дней пустой, и человек
@@ -90,20 +100,17 @@ function reset() {
       Браузер не дал сохранить файл.
     </p>
 
-    <!-- «Поделиться» с кнопки снято: слово стало общим на два разных действия.
-         Здесь уезжает МЕСЯЦ — процент плана, дни, а по решению отправителя
-         и суммы; приглашение на трек живёт своей шторкой и своим текстом.
-         Три подписи в ряду говорят три разные вещи: унести файлом, показать
-         ссылкой, стереть. -->
+    <!-- Кнопка отдаёт МЕСЯЦ: процент плана, дни, а по решению отправителя
+         и суммы. Что именно уедет, человек видит в предпросмотре — здесь
+         достаточно обычного слова. -->
     <button
       v-if="canShare"
       type="button"
-      class="mt-2 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border text-[1.0625rem] font-semibold text-[var(--text)]"
+      class="mt-2 flex min-h-[52px] w-full items-center justify-center rounded-2xl border text-[1.0625rem] font-semibold text-[var(--text)]"
       :style="{ background: 'var(--surface)', borderColor: 'var(--rim)' }"
       @click="shareOpen = true"
     >
-      <Share2 class="h-5 w-5" :stroke-width="2" aria-hidden="true" />
-      Показать месяц ссылкой
+      Поделиться
     </button>
 
     <!-- Разделитель со словом посередине: дальше идёт действие другой природы,
@@ -141,7 +148,9 @@ function reset() {
     </div>
 
     <BottomSheet :open="shareOpen" @close="shareOpen = false">
-      <SharePreviewSheet @close="shareOpen = false" />
+      <SharePreviewSheet @preview="openPreview" />
     </BottomSheet>
+
+    <SharePreviewOverlay :open="previewOpen" :url="previewUrl" @close="previewOpen = false" />
   </section>
 </template>

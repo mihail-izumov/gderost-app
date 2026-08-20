@@ -14,7 +14,13 @@ import { L } from '../i18n/daily.js'
     <p class="whitespace-pre-line text-[1.375rem] font-bold leading-tight tracking-tight text-[var(--text)]">
       {{ L.motto }}
     </p>
-    <p class="mt-2 text-[1rem] font-semibold" :style="{ color: 'var(--action-text)' }">
+    <!-- Между утверждением и рефреном может встать действие: на чужом месяце
+         это единственный выход в своё приложение, и стоит он там, где человек
+         дочитал страницу до конца. -->
+    <div v-if="$slots.default" class="mt-4 flex justify-center">
+      <slot />
+    </div>
+    <p class="mt-4 text-[1rem] font-semibold" :style="{ color: 'var(--action-text)' }">
       {{ L.refrain }}
     </p>
   </footer>
