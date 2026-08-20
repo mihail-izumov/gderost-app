@@ -78,18 +78,24 @@ onBeforeUnmount(() => {
   <Teleport to="body">
     <div
       v-if="open"
-      class="gr-sheet-overlay z-[60] flex items-end justify-center bg-[var(--scrim)] backdrop-blur-sm sm:items-center"
+      class="gr-sheet-overlay z-[60] flex items-end justify-center sm:items-center"
       role="presentation"
       :data-theme="theme || null"
       @click.self="hide"
     >
+      <!-- Слой размытия шире экрана и обрезается оверлеем: у самого края
+           размывать не из чего, и по бортам оставалась полоса послабее. -->
+      <div
+        class="gr-sheet-scrim absolute -inset-8 bg-[var(--scrim)] backdrop-blur-sm"
+        @click="hide"
+      ></div>
       <div
         ref="dialogRef"
         data-test="connect-modal"
         role="dialog"
         aria-modal="true"
         :aria-label="L.title"
-        class="flex w-full max-w-[430px] flex-col overflow-hidden rounded-t-2xl bg-[var(--surface)] shadow-2xl sm:rounded-2xl"
+        class="relative flex w-full max-w-[430px] flex-col overflow-hidden rounded-t-2xl bg-[var(--surface)] shadow-2xl sm:rounded-2xl"
         :style="{ maxHeight: '88%' }"
         style="padding-bottom: env(safe-area-inset-bottom)"
       >

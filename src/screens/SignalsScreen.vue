@@ -200,7 +200,7 @@ function storyDone() {
           <span class="block truncate text-[0.75rem] text-[var(--text-muted)]">Серия разборов открыта</span>
         </span>
       </span>
-      <span class="shrink-0 text-[0.8125rem] font-medium" :style="{ color: 'var(--action)' }">Изменить</span>
+      <span class="shrink-0 text-[0.8125rem] font-medium" :style="{ color: 'var(--action-text)' }">Изменить</span>
     </button>
 
     <SiteFooter />

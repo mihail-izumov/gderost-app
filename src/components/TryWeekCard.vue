@@ -72,7 +72,7 @@ function reset() {
       {{ saved ? 'Готово' : 'Скачать' }}
       <span
         class="rounded px-1.5 py-0.5 text-[0.6875rem] font-semibold"
-        :style="{ background: 'var(--action-ink)', color: 'var(--action)' }"
+        :style="{ background: 'var(--action-ink)', color: 'var(--action-text)' }"
       >MD</span>
     </button>
     <p v-if="saveFailed" class="mt-2 text-[0.8125rem] text-[var(--negative)]">

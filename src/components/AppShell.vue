@@ -239,7 +239,7 @@ watch(() => [props.active, props.subView], async () => {
         <ArrowDown
           class="h-[22px] w-[22px] shrink-0 transition-all duration-150"
           :class="pullReady
-            ? 'rotate-180 text-[var(--action)] opacity-100'
+            ? 'rotate-180 text-[var(--action-text)] opacity-100'
             : 'text-[var(--text-muted)] opacity-60'"
           :stroke-width="2.5"
           aria-hidden="true"

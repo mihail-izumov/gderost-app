@@ -83,7 +83,7 @@ const razbor = MODULES.razbor
           v-if="r.happened"
           type="button"
           class="mt-1.5 min-h-[44px] w-full rounded-2xl bg-[var(--surface)] text-[0.9375rem] font-semibold"
-          :style="{ color: 'var(--action)' }"
+          :style="{ color: 'var(--action-text)' }"
           @click="$emit('rate')"
         >Оценить разбор</button>
       </li>

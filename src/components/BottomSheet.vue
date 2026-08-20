@@ -5,8 +5,12 @@ import { ref } from 'vue'
 // они совпадают, и правка выглядит лишней: там панель отделяет затемнение,
 // страница под ней уходит в серый. На тёмном затемнять нечего — чёрное
 // на чёрном границы не даёт, и панель, взявшая холст страницы, сливается
-// с ней в одно пятно. Отсюда же светлый кант сверху: не украшение,
-// а верхняя граница предмета, который выехал поверх другого.
+// с ней в одно пятно.
+//
+// Канта по верхнему краю у панели НЕТ. Он ставился, пока панель была темнее:
+// тогда это была единственная граница. На нынешней светлоте граница читается
+// сама, а линия поверх неё превращается в обводку — предмет, обведённый
+// по контуру, читается наклейкой, а не поверхностью.
 //
 // Шторка. Одна на всё приложение — как у Whoosh: всегда снизу, сверху
 // ручка-грабер, закрывается свайпом вниз, тапом по затемнению или кнопкой
@@ -93,7 +97,7 @@ function onTouchEnd() {
         :data-theme="theme || null"
       >
         <div
-          class="gr-sheet-scrim absolute inset-0 bg-[var(--scrim)] backdrop-blur-sm"
+          class="gr-sheet-scrim absolute -inset-8 bg-[var(--scrim)] backdrop-blur-sm"
           @click="emit('close')"
         ></div>
         <div
@@ -101,7 +105,7 @@ function onTouchEnd() {
           class="gr-sheet-panel relative w-full max-w-[430px] overflow-y-auto
                  rounded-t-2xl bg-[var(--sheet)] px-4"
           :class="dragging ? 'is-dragging' : ''"
-          :style="{ '--gr-dy': `${dy}px`, boxShadow: 'inset 0 1px 0 var(--rim-glow)' }"
+          :style="{ '--gr-dy': `${dy}px` }"
           @touchstart.passive="onTouchStart"
           @touchmove="onTouchMove"
           @touchend="onTouchEnd"

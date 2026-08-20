@@ -180,7 +180,7 @@ const fill = (n) => (n < i.value ? 1 : n > i.value ? 0 : progress.value)
         <p
           v-if="slide.kicker"
           class="text-[0.8125rem] font-bold uppercase tracking-wide"
-          :style="{ color: 'var(--action)' }"
+          :style="{ color: 'var(--action-text)' }"
         >{{ slide.kicker }}</p>
         <h2 class="mt-2 text-[1.75rem] font-bold leading-tight">{{ slide.title }}</h2>
         <p class="mt-3 max-w-[24rem] text-[1.0625rem] leading-snug" :style="{ color: 'var(--ink-on-color-muted)' }">

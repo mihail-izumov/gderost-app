@@ -140,7 +140,7 @@ function progFill(r) {
               :key="iso"
               type="button"
               class="inline-flex min-h-[36px] items-center rounded-full bg-[var(--surface-2)] px-3 text-[0.8125rem] font-semibold"
-              :style="{ color: 'var(--action)' }"
+              :style="{ color: 'var(--action-text)' }"
               @click.stop="emit('pick', iso)"
             >{{ w.blockedBy.days[k] }} {{ monthGen(w.blockedBy.days[k]).split(' ')[1] }}</button>
           </div>
@@ -200,7 +200,7 @@ function progFill(r) {
                   v-else-if="r.due"
                   type="button"
                   class="w-full text-right font-semibold"
-                  :style="{ color: 'var(--action)' }"
+                  :style="{ color: 'var(--action-text)' }"
                   @click.stop="emit('pick', `${m.month}-${String(r.dd).padStart(2, '0')}`)"
                 >внести</button>
                 <span v-else class="text-[var(--text-muted)]">—</span>
