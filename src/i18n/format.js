@@ -107,6 +107,15 @@ export function monthLabel(ym) {
   return `${MONTH_RU[mi - 1]} ${y}`
 }
 
+// 'YYYY-MM' → 'август' — имя месяца без года. Год в сообщении, которое человек
+// отправляет в тот же месяц, лишний: он и так знает, какой сейчас год.
+export function monthName(ym) {
+  if (typeof ym !== 'string') return DASH
+  const mi = Number(ym.split('-')[1])
+  if (!Number.isFinite(mi) || mi < 1 || mi > 12) return ym
+  return MONTH_RU[mi - 1]
+}
+
 // 'YYYY-MM' → 'августа' — для подписей вида «перенесено из августа»
 export function monthOf(ym) {
   if (typeof ym !== 'string') return DASH

@@ -1,40 +1,99 @@
 <script setup>
-import { computed } from 'vue'
-import ShareMonthButton from './ShareMonthButton.vue'
+import { computed, ref } from 'vue'
+import { Share2, Check, Copy } from 'lucide-vue-next'
+import { shareHead, shareText } from '../i18n/share.js'
 
-// Предложение поделиться месяцем. Приходит ровно в двух точках, и обе —
-// момент доказанной ценности: первая полностью закрытая неделя (впервые есть
-// что показать) и закрытый месяц (на руках полная картина).
+// Предложение поделиться ростом. Приходит в четырёх точках — старт, третий
+// день, первая полная неделя, закрытый месяц, — и каждая из них момент, когда
+// человеку впервые есть что сказать. Условия — `composables/shareReason.js`,
+// слова — `i18n/share.js`.
 //
-// В онбординге такого предложения нет нарочно: в первые минуты человек сам
-// ещё не доверяет своей цифре, и делиться ему нечем.
+// Уезжает ТЕКСТ с коротким адресом, а не упакованный месяц: это приглашение
+// приехать на трек, а не показ своих цифр. Отправка месяца ссылкой живёт
+// отдельной кнопкой в паспорте разбора — два намерения, две кнопки.
 //
-// Показывается один раз на повод. Закрыл — это ответ, а не отложенное «потом».
+// Все четыре шторки одного вида, с одной кнопкой отказа. Тон не повышается:
+// если каждое проигнорированное предложение будет настойчивее предыдущего,
+// человек научится не смотреть на них вовсе.
+//
+// «Скопировать» стоит рядом с отправкой всегда: на десктопе и в части
+// браузеров системного листа нет, и без этой кнопки сообщение никуда не уедет.
 
 const props = defineProps({
-  reason: { type: String, default: '' }, // week | month
+  reason: { type: String, default: '' }, // start | pace | week | month
+  m: { type: Object, default: null },
 })
 defineEmits(['close'])
 
-const TEXTS = {
-  week: {
-    title: 'Неделя закрыта полностью',
-    lead: 'Месяц посчитан на ваших днях. Ссылка открывает эти же числа у того, кому вы её отправите.',
-  },
-  month: {
-    title: 'Месяц закрыт',
-    lead: 'Полная картина месяца. Ссылка открывает её у партнёра или на разборе — теми же числами.',
-  },
+const head = computed(() => shareHead(props.reason))
+const text = computed(() => shareText(props.reason, props.m))
+
+const done = ref('')
+function flash(s) {
+  done.value = s
+  setTimeout(() => { done.value = '' }, 2500)
 }
-const t = computed(() => TEXTS[props.reason] || TEXTS.week)
+
+async function send() {
+  const t = text.value
+  if (!t) return
+  try {
+    if (navigator.share) {
+      await navigator.share({ text: t })
+      flash('Отправлено')
+    } else {
+      await navigator.clipboard.writeText(t)
+      flash('Текст скопирован')
+    }
+  } catch {
+    // Отмена в системном листе — не ошибка, и говорить о ней нечего.
+    if (!navigator.share) flash('Скопировать не вышло')
+  }
+}
+
+async function copy() {
+  const t = text.value
+  if (!t) return
+  try {
+    await navigator.clipboard.writeText(t)
+    flash('Текст скопирован')
+  } catch {
+    flash('Скопировать не вышло')
+  }
+}
 </script>
 
 <template>
   <div>
-    <h2 class="text-[1.0625rem] font-bold text-[var(--text)]">{{ t.title }}</h2>
-    <p class="mt-1 text-[0.875rem] leading-snug text-[var(--text-secondary)]">{{ t.lead }}</p>
+    <h2 class="text-[1.0625rem] font-bold text-[var(--text)]">{{ head }}</h2>
 
-    <ShareMonthButton class="mt-4" tone="accent" @shared="$emit('close')" />
+    <!-- Сообщение показывается целиком: человек отправляет его от своего имени,
+         и увидеть, что именно уедет, он обязан до отправки, а не после. -->
+    <p
+      class="mt-3 whitespace-pre-line rounded-2xl p-3 text-[0.9375rem] leading-snug text-[var(--text)]"
+      :style="{ background: 'var(--surface-2)' }"
+    >{{ text }}</p>
+
+    <button
+      type="button"
+      class="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-[0.9375rem] font-semibold"
+      :style="{ background: 'var(--graphite)', color: 'var(--ink-on-color)' }"
+      @click="send"
+    >
+      <Check v-if="done" class="h-5 w-5" :stroke-width="2.5" aria-hidden="true" />
+      <Share2 v-else class="h-5 w-5" :stroke-width="2" aria-hidden="true" />
+      {{ done || 'Отправить' }}
+    </button>
+
+    <button
+      type="button"
+      class="mt-2 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full text-[0.9375rem] font-semibold"
+      :style="{ background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--rim)' }"
+      @click="copy"
+    >
+      <Copy class="h-5 w-5" :stroke-width="2" aria-hidden="true" />
+      Скопировать
+    </button>
 
     <button
       type="button"
@@ -43,9 +102,5 @@ const t = computed(() => TEXTS[props.reason] || TEXTS.week)
     >
       Не сейчас
     </button>
-
-    <p class="mt-3 text-[0.75rem] leading-snug text-[var(--text-muted)]">
-      Месяц едет внутри ссылки. Сервера нет, но открыть её сможет любой, у кого она есть.
-    </p>
   </div>
 </template>

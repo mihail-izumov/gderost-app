@@ -17,7 +17,8 @@ import HonestBadge from '../components/HonestBadge.vue'
 import FirstStepsCard from '../components/FirstStepsCard.vue'
 import CarrySheet from '../components/CarrySheet.vue'
 import { useMiniStore, currentMonth } from '../composables/useMiniStore.js'
-import { sigClass, todayISO } from '../composables/miniModel.js'
+import { sigClass } from '../composables/miniModel.js'
+import { shareReason as pickShareReason } from '../composables/shareReason.js'
 import { honestLoop } from '../composables/honestLoop.js'
 import { mlnRub, mlnNum, pct1, pctDelta, monthCap } from '../i18n/home.js'
 import { widgetStory, honestStory } from '../i18n/stories.js'
@@ -106,30 +107,18 @@ const paceInfo = computed(() => {
   return `Сейчас ${pctDelta(d)} — по прогнозу выйдем ровно к плану.`
 })
 
-// Предложение поделиться месяцем приходит в двух точках, и обе — момент,
-// когда человеку впервые есть что показать: первая прожитая и полностью
-// внесённая неделя и закрытый месяц. Показывается по одному разу на повод.
+// Предложение поделиться ростом приходит в четырёх точках, и каждая — момент,
+// когда человеку впервые есть что сказать: план поставлен, третий день на
+// треке, первая прожитая неделя без пропусков, закрытый месяц. Показывается
+// по одному разу на повод.
 //
-// «Полная неделя» здесь означает не `w.complete`: в ядре у будущей недели
-// нет прошедших невнесённых дней, поэтому она полна по определению — и сразу
-// после подключения человеку предлагали бы поделиться пустым месяцем.
-//
-// Дни, покрытые стартовой суммой, тоже не считаются: сумма разносится по уже
-// прошедшим дням при подключении, и неделя из одних разнесённых дней проходила
-// как «закрыта полностью» — шторка прилетала сразу после ввода, в неделю,
-// которая ещё даже не началась. Повод настоящий, когда неделя кончилась
-// календарно и каждый её день внесён руками.
-const shareReason = computed(() => {
-  if (!m.value) return ''
-  const seen = store.state.shareSeen || []
-  if (monthOver.value && !seen.includes('month')) return 'month'
-  const today = todayISO()
-  const livedFull = m.value.weeks.some((w) => w.days.length === 7
-    && w.days[w.days.length - 1].iso < today
-    && w.days.every((d) => d.entered))
-  if (livedFull && !seen.includes('week')) return 'week'
-  return ''
-})
+// Условия живут чистыми функциями в `composables/shareReason.js` и проверяются
+// самопроверкой: правило «только внесённое руками» ломается молча, и однажды
+// уже сломалось — шторка прилетала сразу после подключения, в неделю, которая
+// ещё даже не началась.
+const shareReason = computed(() => (m.value
+  ? pickShareReason(m.value, store.state.shareSeen || [])
+  : ''))
 // Шторка показывается не чаще одного раза за запуск: закрыл повод —
 // следующий приходит в следующий раз, а не подменяет текст под пальцем.
 const shareShown = ref(false)
@@ -283,9 +272,10 @@ function storyDone() {
       <NextMonthSheet @close="nextOpen = false" />
     </BottomSheet>
 
-    <!-- Предложение поделиться: приходит в момент ценности, по разу на повод. -->
+    <!-- Предложение поделиться ростом: приходит в момент ценности, по разу
+         на повод, не чаще раза за запуск. -->
     <BottomSheet :open="shareOpen" @close="closeShare">
-      <ShareSheet :reason="shareShownReason" @close="closeShare" />
+      <ShareSheet :reason="shareShownReason" :m="m" @close="closeShare" />
     </BottomSheet>
 
     <StoryOnboarding

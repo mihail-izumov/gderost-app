@@ -13,6 +13,8 @@ import { honestLoop } from '../src/composables/honestLoop.js'
 import { PULL, pullOffset, canStartPull, shouldFirePull } from '../src/composables/pullGesture.js'
 import { initialNav, navigate, back as navBack, selectTab as navSelectTab } from '../src/composables/navFlow.js'
 import { pickState, stateInk, BADGE_PRIORITY } from '../src/composables/stateBadge.js'
+import { shareConditions, topShareReason, shareReason, SHARE_ORDER, PACE_DAYS } from '../src/composables/shareReason.js'
+import { shareText } from '../src/i18n/share.js'
 
 let fails = 0
 const ok = (cond, name) => {
@@ -803,6 +805,111 @@ for (const [ym, dim] of [['2026-02', 28], ['2026-08', 31], ['2026-11', 30], ['20
   const a = stateInk('result', 'warn')
   const b = stateInk('result', 'warn')
   ok(a.bg === b.bg && a.ink === b.ink, 'состояния: цвет состояния считается одним местом')
+}
+
+// 24. Четыре сообщения роста. Правило показа, а не расчёта, и ломается
+//     оно молча: условие, посчитанное по стартовой сумме, выдаёт человеку
+//     «неделя без пропусков» в первую же секунду после подключения — до того,
+//     как он внёс хоть один день руками. Это уже случалось однажды.
+{
+  const day = (n, rev = 100_000) => ({ date: `2026-08-${String(n).padStart(2, '0')}`, rev })
+  const mk = (days, extra = {}, now = NOW) => computeMini({
+    month: '2026-08', month_target: 3_100_000, month_goal: null,
+    dow_coef: [1, 1, 1, 1, 1, 1, 1], carry: null, days, ...extra,
+  }, now)
+
+  ok(SHARE_ORDER.join() === 'month,week,pace,start', 'поводы: старшинство month → week → pace → start')
+
+  // Один внесённый день — ровно `start`, и ни одного повода сверх него.
+  const one = mk([day(1)])
+  const c1 = shareConditions(one, NOW)
+  ok(topShareReason(one, NOW) === 'start', 'поводы: один внесённый день даёт start')
+  ok(c1.start && !c1.pace && !c1.week && !c1.month, 'поводы: на одном дне выполнен только start')
+
+  // План — условие старта, цель — нет: она в модели необязательна.
+  const noPlan = mk([day(1)], { month_target: 0 })
+  ok(topShareReason(noPlan, NOW) === '', 'поводы: без плана месяца поводов нет')
+  ok(topShareReason(mk([day(1)], { month_goal: null }), NOW) === 'start',
+    'поводы: start приходит и без поставленной цели')
+
+  // Месяц, целиком покрытый стартовой суммой: внесённых руками дней нет.
+  const carried = mk([], { carry: { upTo: '2026-08-14', amount: 1_400_000 } })
+  const cc = shareConditions(carried, NOW)
+  ok(!cc.start && !cc.pace && !cc.week && !cc.month,
+    'поводы: месяц из одной стартовой суммы не даёт ни одного повода')
+
+  // Та же сумма, разнесённая по дням: `spread` тоже не считается.
+  const spread = mk([], { carry: { upTo: '2026-08-14', amount: 1_400_000, spread: true } })
+  ok(topShareReason(spread, NOW) === '', 'поводы: разнесённая стартовая сумма поводов не даёт')
+
+  // Порог первого прогноза — три дня, сколько бы дней ни было в сумме.
+  ok(PACE_DAYS === 3, 'поводы: порог первого прогноза — три внесённых дня')
+  const two = mk([day(1), day(2)], { carry: { upTo: '2026-08-10', amount: 1_000_000 } })
+  ok(!shareConditions(two, NOW).pace, 'поводы: pace не приходит на двух днях при полной стартовой сумме')
+  ok(shareConditions(mk([day(1), day(2), day(3)]), NOW).pace, 'поводы: три дня — pace выполнен')
+
+  // Неделя: календарно закончившаяся и внесённая целиком.
+  const wk = []
+  for (let i = 1; i <= 9; i++) wk.push(day(i))
+  ok(topShareReason(mk(wk), NOW) === 'week', 'поводы: прожитая неделя без пропусков даёт week')
+  const holed = wk.filter((x) => x.date !== '2026-08-05')
+  ok(!shareConditions(mk(holed), NOW).week, 'поводы: неделя с дырой week не даёт')
+  // Идущая неделя, внесённая до вчера, поводом не является: она не кончилась.
+  const running = []
+  for (let i = 10; i <= 14; i++) running.push(day(i))
+  ok(!shareConditions(mk(running), NOW).week, 'поводы: идущая неделя week не даёт')
+
+  // Месяц: закончился календарно И внесён целиком.
+  const SEP = new Date(2026, 8, 2, 12, 0, 0)
+  const full = []
+  for (let i = 1; i <= 31; i++) full.push(day(i))
+  const closedMonth = mk(full, {}, SEP)
+  ok(topShareReason(closedMonth, SEP) === 'month', 'поводы: закрытый месяц целиком даёт month')
+  const gappy = full.filter((x) => x.date !== '2026-08-19')
+  const gappyM = mk(gappy, {}, SEP)
+  ok(!shareConditions(gappyM, SEP).month, 'поводы: месяц с пропусками month не даёт')
+  ok(topShareReason(gappyM, SEP) === 'week', 'поводы: у месяца с пропусками остаётся week')
+
+  // Приоритет: выполнено всё — показывается month.
+  const all = shareConditions(closedMonth, SEP)
+  ok(all.start && all.pace && all.week && all.month, 'поводы: на закрытом месяце выполнены все четыре')
+  ok(topShareReason(closedMonth, SEP) === 'month', 'поводы: при совпадении выбирается month')
+
+  // Показ по разу на повод; старший забрал показ — младшие не подсовываются.
+  ok(shareReason(one, [], NOW) === 'start', 'поводы: непоказанный повод приходит')
+  ok(shareReason(one, ['start'], NOW) === '', 'поводы: показанный повод второй раз не приходит')
+  ok(shareReason(closedMonth, ['month'], SEP) === '',
+    'поводы: после month младшие поводы того же месяца не приходят')
+
+  // Перенос месяца обнуляет отметки: поводы приходят в новом месяце заново.
+  const moved = nextMonthState({ ...closedMonth, month: '2026-08', dow_coef: [1, 1, 1, 1, 1, 1, 1], shareSeen: ['month', 'week'] },
+    { month: '2026-09', target: 3_000_000 })
+  ok((moved.shareSeen || []).length === 0, 'поводы: перенос месяца обнуляет отметки показа')
+
+  // Числа сообщения: процент берётся без обрезки сверху. `landPct` в ядре
+  // обрезано `Math.min(100, …)` ради полосы прогресса — в тексте, который
+  // уезжает за пределы приложения, эта обрезка превратила бы честные 105 %
+  // в 100 %.
+  const ahead = mk([day(1, 200_000), day(2, 200_000), day(3, 200_000)])
+  ok(ahead.landPct === 100, 'поводы: landPct в ядре по-прежнему обрезан сверху — брать его нельзя')
+  const nAhead = Number((shareText('pace', ahead).match(/(\d+)% плана/) || [])[1])
+  ok(nAhead > 100, 'поводы: при прогнозе выше плана процент в тексте больше 100')
+
+  // Закрытый месяц меряется фактом, а не прогнозом.
+  const under = []
+  for (let i = 1; i <= 31; i++) under.push(day(i, 50_000))
+  const underM = mk(under, {}, SEP)
+  const nMonth = Number((shareText('month', underM).match(/(\d+)% плана/) || [])[1])
+  ok(nMonth === Math.round((underM.realizedRev / underM.T) * 100),
+    'поводы: процент закрытого месяца считается фактом')
+
+  // Рефрен живёт ровно в одном сообщении из четырёх.
+  const texts = ['start', 'pace', 'week', 'month'].map((r) => shareText(r, closedMonth))
+  ok(texts.filter((t) => t.includes('Рост не ждёт.')).length === 1,
+    'поводы: рефрен «Рост не ждёт.» стоит ровно в одном сообщении')
+  ok(texts.every((t) => t.trim().endsWith('gderost.ru')),
+    'поводы: все четыре сообщения кончаются коротким адресом')
+  ok(texts.every((t) => !t.includes('#m=')), 'поводы: упакованного месяца в сообщениях нет')
 }
 
 console.log(fails ? `✗ провалов: ${fails}` : '✓ все проверки прошли')
