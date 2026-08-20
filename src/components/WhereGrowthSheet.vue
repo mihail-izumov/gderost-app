@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { logoStyle } from '../composables/brandMask.js'
 import { BRAND } from '../i18n/brand.js'
+import { SHOWCASE, fill } from '../i18n/onboarding.js'
 import { TRACK } from '../data/runscaleCounters.js'
 
 // «Где Рост» — единственное место витрины, где разрешено объяснять.
@@ -48,10 +49,10 @@ const asOf = computed(() => {
     </h2>
 
     <p class="mt-3 text-[0.9375rem] leading-relaxed text-[var(--text-secondary)]">
-      Ранскеил анализирует динамику каждого дня и показывает, как закроется план.
+      {{ SHOWCASE.whatWeDo }}
     </p>
     <p class="mt-3 text-[0.9375rem] font-semibold leading-relaxed text-[var(--text)]">
-      На Треке рост подтверждают цифры, а не слова.
+      {{ SHOWCASE.proof }}
     </p>
 
     <!-- Знак системы. Обёртка добирает тач-таргет до 44pt: сам знак 22px
@@ -59,7 +60,7 @@ const asOf = computed(() => {
          иначе открытая страница получает доступ к window.opener. -->
     <div class="mt-4 flex flex-col items-center rounded-2xl bg-[var(--surface)] px-4 py-3">
       <p class="text-[0.6875rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-        Работает на технологиях
+        {{ SHOWCASE.poweredBy }}
       </p>
       <a
         :href="BRAND.siteUrl"
@@ -73,7 +74,7 @@ const asOf = computed(() => {
     </div>
 
     <p class="mt-3 text-[0.75rem] leading-snug text-[var(--text-muted)]">
-      Счёт бизнесов — на {{ asOf }}, обновляется вручную.
+      {{ fill(SHOWCASE.countAsOf, '{дата}', asOf) }}
     </p>
 
     <button
@@ -81,6 +82,6 @@ const asOf = computed(() => {
       class="mt-4 min-h-[52px] w-full rounded-full text-[1.0625rem] font-bold"
       :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
       @click="$emit('close')"
-    >Понятно</button>
+    >{{ SHOWCASE.close }}</button>
   </section>
 </template>

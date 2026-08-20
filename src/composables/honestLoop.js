@@ -22,6 +22,8 @@
 // она стоит у каждого числа в шторке происхождения. Здесь живёт то,
 // что человек меняет руками.
 
+import { LOOP } from '../i18n/onboarding.js'
+
 export function honestLoop(set, m) {
   const days = Array.isArray(set && set.days) ? set.days : []
 
@@ -37,28 +39,28 @@ export function honestLoop(set, m) {
   // сегмент описывается тем, что человек сделал или ещё не сделал.
   // `check` — строка живого чек-листа в сторис: одна проверка одним фактом.
   const segs = [
-    { id: 'data', label: 'данные', on: data, check: 'Выручка внесена — хотя бы один день' },
-    { id: 'signal', label: 'сигнал', on: signal, check: 'План задан — считается прогноз' },
-    { id: 'action', label: 'действие', on: action, check: 'Выручка вносилась при заданном плане' },
-    { id: 'measure', label: 'дни закрыты', on: measure, check: 'Все прошедшие дни закрыты' },
+    { id: 'data', label: LOOP.labelData, on: data, check: LOOP.checkData },
+    { id: 'signal', label: LOOP.labelSignal, on: signal, check: LOOP.checkSignal },
+    { id: 'action', label: LOOP.labelAction, on: action, check: LOOP.checkAction },
+    { id: 'measure', label: LOOP.labelMeasure, on: measure, check: LOOP.checkMeasure },
   ]
   const lit = segs.filter((s) => s.on).length
 
-  const note = !data ? 'Чисел пока нет: внесите первый день'
-    : !signal ? 'Сигнала нет: задайте план месяца'
-    : !action ? 'Вечером внесите выручку дня'
-    : !measure ? 'Есть дни без выручки: внесите их'
-    : 'Кольцо замкнулось: прогноз стоит на внесённых днях'
+  const note = !data ? LOOP.noteData
+    : !signal ? LOOP.noteSignal
+    : !action ? LOOP.noteAction
+    : !measure ? LOOP.noteMeasure
+    : LOOP.noteFull
 
   // Тот же смысл без обращения к читателю. На чужом месяце подпись владельца
   // превращается в команду тому, кто ничего внести не может: «внесите их»
   // адресовано человеку, у которого этих дней нет. Состояние остаётся тем же,
   // меняется только лицо, от которого оно сказано.
-  const noteForeign = !data ? 'Чисел в этом месяце пока нет'
-    : !signal ? 'План месяца не задан'
-    : !action ? 'Выручка вносилась до того, как встал план'
-    : !measure ? 'Внесены не все прошедшие дни'
-    : 'Кольцо замкнулось: прогноз стоит на внесённых днях'
+  const noteForeign = !data ? LOOP.foreignData
+    : !signal ? LOOP.foreignSignal
+    : !action ? LOOP.foreignAction
+    : !measure ? LOOP.foreignMeasure
+    : LOOP.foreignFull
 
   return { segs, lit, note, noteForeign }
 }

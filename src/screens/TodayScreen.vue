@@ -241,19 +241,23 @@ function storyDone() {
          на `--surface` он был белым пятном среди белых плашек и читался
          четвёртой карточкой подряд. Реплика обязана отличаться от того,
          о чём говорит. -->
-    <div class="mt-2 flex justify-center">
+    <!-- Реплика от виджетов, и она принадлежит им, а не блоку под собой.
+         Плашка эту принадлежность не держала: заливка делала из подписи
+         четвёртую карточку в очереди равных. Держит расстояние — сверху
+         вплотную к деке, снизу вдвое больше, — и подчёркнутое слово,
+         которое читается ссылкой на объяснение. -->
+    <div class="mb-6 mt-2 flex justify-center">
       <button
         type="button"
-        class="gr-bubble relative flex min-h-[40px] items-center gap-1.5 rounded-2xl px-3.5 py-2 text-left"
-        :style="{ background: 'var(--line)' }"
+        class="flex min-h-[40px] items-center gap-1.5 px-1 text-left"
         @click="openWidgetStory"
       >
-        <QuestionIcon class="h-[17px] w-[17px] shrink-0 text-[var(--text-secondary)]" />
-        <span class="text-[0.8125rem] font-medium text-[var(--text-secondary)]">Как читать виджеты</span>
+        <QuestionIcon class="h-[17px] w-[17px] shrink-0 text-[var(--text)]" />
+        <span class="text-[0.8125rem] font-semibold text-[var(--text)] underline underline-offset-4">Как читать виджеты</span>
       </button>
     </div>
 
-    <div class="mt-3">
+    <div>
       <TryWeekCard />
     </div>
 
@@ -287,20 +291,3 @@ function storyDone() {
   </div>
 </template>
 
-<style scoped>
-/* Хвостик облачка. Смотрит вверх, в деку виджетов: реплика принадлежит тому,
-   о чём говорит, и стрелка — единственный способ это показать, не рисуя
-   рамку вокруг обоих. */
-.gr-bubble::before {
-  content: '';
-  position: absolute;
-  top: -4px;
-  left: 50%;
-  width: 10px;
-  height: 10px;
-  margin-left: -5px;
-  transform: rotate(45deg);
-  background: var(--line);
-  border-radius: 2px;
-}
-</style>

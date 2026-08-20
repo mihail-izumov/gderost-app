@@ -9,6 +9,7 @@ import WhereGrowthSheet from '../components/WhereGrowthSheet.vue'
 import { BRAND } from '../i18n/brand.js'
 import { TRACK } from '../data/runscaleCounters.js'
 import { formatInt } from '../i18n/format.js'
+import { SHOWCASE, fill } from '../i18n/onboarding.js'
 
 // Вход. Один экран, один путь и ни одного слова, которое пришлось бы
 // объяснять голосом. Что здесь принято и что отменено — `docs/ВИТРИНА-вход.md`.
@@ -80,7 +81,7 @@ onBeforeUnmount(() => {
     aria-live="polite"
   >
     <BrandLockup size="1.75rem" class="gr-pulse" />
-    <p class="text-[0.8125rem] text-[var(--text-muted)]">Загружаем {{ BRAND.header }}</p>
+    <p class="text-[0.8125rem] text-[var(--text-muted)]">{{ fill(SHOWCASE.loading, '{продукт}', BRAND.header) }}</p>
   </div>
 
   <div class="min-h-[100dvh] w-full flex justify-center bg-[var(--bg)]">

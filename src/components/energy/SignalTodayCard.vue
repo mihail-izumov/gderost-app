@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-vue-next'
 import { formatRub } from '../../i18n/format.js'
 import { sigClass } from '../../composables/miniModel.js'
 import { SIGNAL } from '../../i18n/energy.js'
+import { EMPTY } from '../../i18n/onboarding.js'
 
 // Сигнал сегодня — первая карточка вкладки «Сигналы».
 //
@@ -121,9 +122,9 @@ const method = computed(() => METHOD_SKIN[props.goalState] || METHOD_SKIN.unknow
         @click="emit('method')"
       >
         <span class="min-w-0 flex-1">
-          <span class="block text-[0.9375rem] font-bold leading-tight">Расти по плану</span>
+          <span class="block text-[0.9375rem] font-bold leading-tight">{{ EMPTY.methodTitle }}</span>
           <span class="mt-0.5 block text-[0.75rem] leading-snug" :style="{ color: method.ink, opacity: 0.8 }">
-            Система роста: факт, прогноз, план и цель
+            {{ EMPTY.methodNote }}
           </span>
         </span>
         <ChevronRight class="h-5 w-5 shrink-0" :style="{ color: method.ink }" :stroke-width="2.5" aria-hidden="true" />

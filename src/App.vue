@@ -12,6 +12,7 @@ import DayControlScreen from './screens/DayControlScreen.vue'
 import AppShell from './components/AppShell.vue'
 import StoryOnboarding from './components/StoryOnboarding.vue'
 import { INTRO_STORY } from './i18n/stories.js'
+import { FAILURE } from './i18n/onboarding.js'
 import { useMiniStore } from './composables/useMiniStore.js'
 import { setNavTarget } from './composables/useNavAnchor.js'
 import { initialNav, navigate, back as navBack, selectTab as navSelectTab } from './composables/navFlow.js'
@@ -198,16 +199,16 @@ function selectTab(id) {
        вместо чужого месяца своё приложение. -->
   <div v-else-if="sharedBroken" class="min-h-[100dvh] w-full bg-[var(--bg)]">
     <div class="mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col items-start justify-center gap-3 px-6">
-      <h1 class="text-[1.375rem] font-bold leading-tight text-[var(--text)]">Ссылка не открылась</h1>
+      <h1 class="text-[1.375rem] font-bold leading-tight text-[var(--text)]">{{ FAILURE.linkTitle }}</h1>
       <p class="text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
-        Месяц едет внутри ссылки, и она пришла не целиком. Попросите отправить её ещё раз — файлом или заново.
+        {{ FAILURE.linkText }}
       </p>
       <button
         type="button"
         class="mt-2 min-h-[48px] w-full rounded-full px-5 text-[0.9375rem] font-bold"
         :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
         @click="exitShared"
-      >Посчитать свой месяц</button>
+      >{{ FAILURE.linkAction }}</button>
     </div>
   </div>
 
@@ -229,16 +230,16 @@ function selectTab(id) {
   <!-- Сохранённое не читается. Сказать и дать выход — вместо белого экрана. -->
   <div v-else-if="broken" class="min-h-[100dvh] w-full bg-[var(--bg)]">
     <div class="mx-auto flex min-h-[100dvh] w-full max-w-[430px] flex-col items-start justify-center gap-3 px-6">
-      <h1 class="text-[1.375rem] font-bold leading-tight text-[var(--text)]">Сохранённые данные не читаются</h1>
+      <h1 class="text-[1.375rem] font-bold leading-tight text-[var(--text)]">{{ FAILURE.storageTitle }}</h1>
       <p class="text-[0.9375rem] leading-snug text-[var(--text-secondary)]">
-        Запись месяца повреждена — так бывает, если она оборвалась. Посчитать по ней нельзя.
+        {{ FAILURE.storageText }}
       </p>
       <button
         type="button"
         class="mt-2 min-h-[48px] w-full rounded-full text-[0.9375rem] font-bold"
         :style="{ background: 'var(--negative)', color: 'var(--ink-on-color)' }"
         @click="store.reset()"
-      >Всё забыть и начать заново</button>
+      >{{ FAILURE.storageAction }}</button>
     </div>
   </div>
 
@@ -272,8 +273,7 @@ function selectTab(id) {
       class="mx-4 mb-3 rounded-xl border px-3 py-2 text-[0.8125rem] leading-snug"
       :style="{ borderColor: 'var(--negative)', color: 'var(--negative)', background: 'var(--surface)' }"
     >
-      Браузер не сохраняет данные — введённое живёт, пока открыта эта вкладка.
-      Скачайте файл месяца или откройте сайт не в приватном режиме.
+      {{ FAILURE.noWrite }}
     </p>
 
     <DayControlScreen v-if="subView === 'day'" :open-day="dayPreset" />

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import StatusChip from './StatusChip.vue'
 import { ORIGINS } from '../i18n/energy.js'
+import { BADGE } from '../i18n/onboarding.js'
 
 // Происхождение числа — механика честной цифры.
 //
@@ -34,19 +35,19 @@ const o = computed(() => ORIGINS[props.originKey] || null)
 
     <dl class="mt-3 flex flex-col">
       <div class="border-b border-[var(--line)] py-2.5">
-        <dt class="text-[0.625rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">Что это</dt>
+        <dt class="text-[0.625rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">{{ BADGE.originWhat }}</dt>
         <dd class="mt-0.5 text-[0.875rem] leading-snug text-[var(--text-secondary)]">{{ o.what }}</dd>
       </div>
       <div class="border-b border-[var(--line)] py-2.5">
-        <dt class="text-[0.625rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">Из чего</dt>
+        <dt class="text-[0.625rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">{{ BADGE.originFrom }}</dt>
         <dd class="mt-0.5 text-[0.875rem] leading-snug text-[var(--text-secondary)]">{{ o.from }}</dd>
       </div>
       <div class="flex items-center justify-between gap-3 border-b border-[var(--line)] py-2.5">
-        <dt class="text-[0.625rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">Статус</dt>
+        <dt class="text-[0.625rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">{{ BADGE.originStatus }}</dt>
         <dd><StatusChip :kind="o.status" /></dd>
       </div>
       <div class="py-2.5">
-        <dt class="text-[0.625rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">Выше</dt>
+        <dt class="text-[0.625rem] font-bold uppercase tracking-wide text-[var(--text-muted)]">{{ BADGE.originNext }}</dt>
         <dd class="mt-0.5 text-[0.875rem] leading-snug text-[var(--text-secondary)]">{{ o.next }}</dd>
       </div>
     </dl>
@@ -64,6 +65,6 @@ const o = computed(() => ORIGINS[props.originKey] || null)
       type="button"
       class="mt-2 min-h-[44px] w-full text-[0.875rem] text-[var(--text-muted)]"
       @click="emit('close')"
-    >Закрыть</button>
+    >{{ BADGE.originClose }}</button>
   </section>
 </template>

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { ChevronRight } from 'lucide-vue-next'
 import HonestDigitIcon from './icons/HonestDigitIcon.vue'
+import { BADGE, fill } from '../i18n/onboarding.js'
 
 // Плашка «Честная цифра» — петля роста, показанная знаком.
 //
@@ -65,7 +66,7 @@ const ink = computed(() => (full.value ? 'var(--ink-on-color)' : 'var(--accent-i
     type="button"
     class="flex min-h-[72px] w-full items-center gap-3.5 rounded-2xl px-4 py-3 text-left"
     :style="{ background: tone }"
-    :aria-label="`Петля роста: ${loop.lit} из ${loop.segs.length}`"
+    :aria-label="fill(fill(BADGE.ariaLoop, '{горит}', loop.lit), '{всего}', loop.segs.length)"
     @click="$emit('open')"
   >
     <HonestDigitIcon
@@ -77,7 +78,7 @@ const ink = computed(() => (full.value ? 'var(--ink-on-color)' : 'var(--accent-i
       :ink="ink"
     />
     <span class="min-w-0 flex-1">
-      <span class="block text-[0.9375rem] font-bold leading-tight" :style="{ color: ink }">Честная цифра</span>
+      <span class="block text-[0.9375rem] font-bold leading-tight" :style="{ color: ink }">{{ BADGE.title }}</span>
       <span class="mt-0.5 block text-[0.75rem] leading-snug" :style="{ color: ink, opacity: 0.8 }">{{ foreign ? (loop.noteForeign || loop.note) : loop.note }}</span>
     </span>
     <!-- Стрелка называет плашку нажимаемой. Без неё она читалась сообщением,
@@ -90,13 +91,13 @@ const ink = computed(() => (full.value ? 'var(--ink-on-color)' : 'var(--accent-i
     type="button"
     class="inline-flex min-h-[32px] items-center gap-2 rounded-full px-2.5 py-1"
     :style="{ background: onDark ? 'var(--line-on-color)' : 'var(--surface-2)' }"
-    :aria-label="`Петля роста: ${loop.lit} из ${loop.segs.length}`"
+    :aria-label="fill(fill(BADGE.ariaLoop, '{горит}', loop.lit), '{всего}', loop.segs.length)"
     @click="$emit('open')"
   >
     <span
       class="text-[0.625rem] font-bold uppercase tracking-wide"
       :style="{ color: onDark ? 'var(--ink-on-color)' : 'var(--text-muted)' }"
-    >Честная цифра</span>
+    >{{ BADGE.title }}</span>
     <span class="flex items-center gap-[3px]" aria-hidden="true">
       <span
         v-for="s in loop.segs"

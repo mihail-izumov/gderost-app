@@ -114,8 +114,8 @@ function reset() {
     <button
       v-if="canShare"
       type="button"
-      class="mt-2 flex min-h-[52px] w-full items-center justify-center rounded-2xl border text-[1.0625rem] font-semibold text-[var(--text)]"
-      :style="{ background: 'var(--surface)', borderColor: 'var(--rim)' }"
+      class="mt-2 flex min-h-[52px] w-full items-center justify-center rounded-2xl text-[1.0625rem] font-semibold"
+      :style="{ background: 'var(--surface-2)', color: 'var(--action-text)' }"
       @click="shareOpen = true"
     >
       Поделиться

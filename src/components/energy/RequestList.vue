@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { Clock, ChevronRight } from 'lucide-vue-next'
 import { MODULES } from '../../i18n/energy.js'
 import { dayLabel } from '../../i18n/format.js'
+import { EMPTY } from '../../i18n/onboarding.js'
 
 // «Мои старты» — второй режим ленты. Здесь то, что человек уже отправил,
 // и то, с чего он может начать.
@@ -35,8 +36,8 @@ const rows = computed(() => props.requests
     title: (MODULES[r.module] || {}).title || r.module,
     at: r.at,
     // Статуса из контура ещё нет — стоит то, что известно наверняка.
-    status: r.status || 'Отправлена',
-    note: r.status ? '' : 'Ждём ответа: подтверждение и ссылка на оплату придут от нас',
+    status: r.status || EMPTY.requestStatus,
+    note: r.status ? '' : EMPTY.requestNote,
     // Разбор состоялся — это знает только контур заявок.
     happened: r.module === 'razbor' && !!r.doneAt,
   })))
