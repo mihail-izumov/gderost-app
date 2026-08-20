@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { ChevronLeft, Share2, Copy, Check } from 'lucide-vue-next'
+import { ChevronLeft, Copy } from 'lucide-vue-next'
 import SharedMonthScreen from '../../screens/SharedMonthScreen.vue'
 import { readShared, HASH_PREFIX } from '../../composables/shareLink.js'
 
@@ -69,28 +69,35 @@ async function copy() {
       class="fixed inset-0 z-[70] overflow-y-auto"
       :style="{ background: 'var(--bg)' }"
     >
-      <!-- Полоса сверху говорит, что это ещё не отправка: человек смотрит
-           чужими глазами и может вернуться. -->
+      <!-- Шапка собрана по лекалу оболочки: мобильная колонка, компактная
+           строка 44 px, кнопка возврата слева, заголовок по центру. Своей
+           формы у этого экрана нет — он часть приложения, а не отдельное окно. -->
       <div
-        class="sticky top-0 z-10 flex items-center gap-2 px-3 py-2 backdrop-blur"
+        class="sticky top-0 z-10 pt-[env(safe-area-inset-top)] backdrop-blur"
         :style="{ background: 'color-mix(in srgb, var(--bg) 88%, transparent)', borderBottom: '1px solid var(--line)' }"
       >
-        <button
-          type="button"
-          class="flex min-h-[44px] items-center gap-1 pr-2 text-[0.9375rem] font-medium"
-          :style="{ color: 'var(--action-text)' }"
-          @click="emit('close')"
-        >
-          <ChevronLeft class="h-5 w-5" :stroke-width="2.5" aria-hidden="true" />
-          Назад
-        </button>
-        <span class="ml-auto pr-1 text-[0.8125rem] text-[var(--text-muted)]">Так увидит получатель</span>
+        <div class="mx-auto w-full max-w-[430px] px-3">
+          <div class="grid h-11 grid-cols-[minmax(2.75rem,1fr)_auto_minmax(2.75rem,1fr)] items-center">
+            <button
+              type="button"
+              class="flex min-h-[44px] items-center gap-0.5 justify-self-start rounded-lg px-1 text-[var(--text)] active:bg-[var(--surface-2)]"
+              @click="emit('close')"
+            >
+              <ChevronLeft class="h-6 w-6 shrink-0" :stroke-width="2.25" aria-hidden="true" />
+              <span class="text-[1.0625rem] leading-none">Назад</span>
+            </button>
+            <span class="truncate px-2 text-[1.0625rem] font-semibold text-[var(--text)]">Поделиться ростом</span>
+            <div class="min-h-[44px] min-w-[44px]" aria-hidden="true"></div>
+          </div>
+        </div>
       </div>
 
-      <!-- Кнопки экрана получателя здесь не работают: это его страница,
-           а не наша. Выход в приложение под ними тоже принадлежит ему. -->
-      <div class="pointer-events-none pb-[120px]">
-        <SharedMonthScreen :state="state" />
+      <!-- Страница живая: «Честная цифра» открывается, файл скачивается —
+           владелец проверяет ровно то, что получит другой человек. Выхода
+           в приложение здесь нет: подвал с действием получателя в режиме
+           предпросмотра не показывается. -->
+      <div class="pb-[120px]">
+        <SharedMonthScreen :state="state" preview />
       </div>
 
       <div
@@ -100,12 +107,10 @@ async function copy() {
         <div class="mx-auto flex w-full max-w-[430px] gap-2">
           <button
             type="button"
-            class="flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-2xl text-[1.0625rem] font-semibold"
-            :style="{ background: 'var(--graphite)', color: 'var(--ink-on-color)' }"
+            class="flex min-h-[52px] flex-1 items-center justify-center rounded-2xl text-[1.0625rem] font-semibold"
+            :style="{ background: 'var(--action)', color: 'var(--action-ink)' }"
             @click="send"
           >
-            <Check v-if="done" class="h-5 w-5" :stroke-width="2.5" aria-hidden="true" />
-            <Share2 v-else class="h-5 w-5" :stroke-width="2" aria-hidden="true" />
             {{ done || 'Отправить' }}
           </button>
           <button

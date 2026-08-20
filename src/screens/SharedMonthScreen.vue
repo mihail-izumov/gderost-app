@@ -35,6 +35,10 @@ import { formatRub, monthLabel, monthName, plural } from '../i18n/format.js'
 
 const props = defineProps({
   state: { type: Object, required: true },
+  // Предпросмотр отправителя: подвал с обращением к получателю не показывается.
+  // «Рост — это команда» и приглашение посчитать свой месяц адресованы тому,
+  // кому ссылку прислали; отправителю на этом шаге они мешают увидеть главное.
+  preview: { type: Boolean, default: false },
 })
 defineEmits(['exit'])
 
@@ -125,12 +129,9 @@ const honestOpen = ref(false)
         <h1 class="mt-1 text-[1.375rem] font-bold leading-tight text-[var(--text)]">
           {{ state.unit || state.company || 'Бизнес' }}, {{ monthLabel(state.month) }}
         </h1>
-        <!-- Одно утверждение вместо двух. «Только чтение» экран сообщает сам:
-             полей на нём нет. Остаётся то, о чём человек действительно думает,
-             открывая чужую ссылку. -->
-        <p class="mt-1 text-[0.8125rem] text-[var(--text-muted)]">
-          Страница ничего не сохраняет на вашем устройстве.
-        </p>
+        <!-- Строки о приватности здесь нет. «Только чтение» экран сообщает сам —
+             полей на нём не существует, а «ничего не сохраняем» отвечает
+             на тревогу отправителя, которой у читателя не возникало. -->
       </header>
 
       <p
@@ -190,14 +191,14 @@ const honestOpen = ref(false)
       <button
         v-if="full"
         type="button"
-        class="mt-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl border text-[1.0625rem] font-semibold text-[var(--text)]"
-        :style="{ background: 'var(--surface)', borderColor: 'var(--rim)' }"
+        class="mt-3 flex min-h-[52px] w-full items-center justify-center gap-2 rounded-2xl text-[1.0625rem] font-semibold"
+        :style="{ background: 'var(--graphite)', color: 'var(--ink-on-color)' }"
         @click="download"
       >
         {{ saved ? 'Готово' : 'Скачать' }}
         <span
           class="rounded px-1.5 py-0.5 text-[0.6875rem] font-semibold"
-          :style="{ background: 'var(--text)', color: 'var(--surface)' }"
+          :style="{ background: 'var(--ink-on-color)', color: 'var(--graphite)' }"
         >MD</span>
       </button>
       <p v-if="full && saveFailed" class="mt-2 text-[0.8125rem] leading-snug" :style="{ color: 'var(--negative)' }">
@@ -208,7 +209,7 @@ const honestOpen = ref(false)
            дочитал чужой месяц до конца, и здесь ему предлагают свой. Кнопка
            по ширине текста — она отвечает на вопрос, который у читателя уже
            возник, и занимать всю строку ей незачем. -->
-      <SiteFooter>
+      <SiteFooter v-if="!preview">
         <button
           type="button"
           class="inline-flex min-h-[48px] items-center gap-2 rounded-full px-6 text-[0.9375rem] font-bold"

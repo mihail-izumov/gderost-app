@@ -1,5 +1,7 @@
 <script setup>
 import { computed } from 'vue'
+import MonthStrip from '../daily/MonthStrip.vue'
+import { BRAND } from '../../i18n/brand.js'
 import { formatGrowth, plural, monthOf } from '../../i18n/format.js'
 import { pctWhole } from '../../i18n/home.js'
 import { SIG_VAR } from '../../i18n/daily.js'
@@ -42,24 +44,6 @@ const tone = computed(() => SIG_VAR[sigClass(ratio.value)] || 'var(--surface-2)'
 const factW = computed(() => Math.max(0, Math.min(100, props.m.factPct || 0)))
 const landW = computed(() => Math.max(0, Math.min(100, props.m.landPct || 0) - factW.value))
 
-// Ряд дней. Устройство перенесено из блока месяца на «Прогрессе»: высота —
-// деньги дня, цвет — состояние, фактура разводит измеренное и недостающее.
-// Шкалы у ряда нет, поэтому суммы из него не восстанавливаются.
-const dayValue = (d) => (d.entered ? d.fact : (props.m.impliedBase || 0) * (d.weight || 0))
-const maxV = computed(() => Math.max(...props.m.days.map(dayValue), 1))
-const HATCH = (color) => ({
-  backgroundColor: 'var(--surface)',
-  backgroundImage: `repeating-linear-gradient(-45deg, ${color} 0 2px, transparent 2px 4px)`,
-})
-const strip = computed(() => props.m.days.map((d) => {
-  const h = Math.round(8 + (dayValue(d) / maxV.value) * 20)
-  const base = { key: d.iso, h }
-  if (d.entered) return { ...base, style: { background: SIG_VAR[sigClass(d.fact / d.planAt)] } }
-  if (d.inCarry) return { ...base, style: HATCH('var(--text-muted)') }
-  if (d.iso < today.value) return { ...base, style: HATCH('var(--warning)') }
-  return { ...base, style: { background: 'var(--line)' } }
-}))
-
 // Серия: сколько прожитых дней владелец внёс руками. Это и есть доказательство
 // дисциплины — число, которое нельзя получить, не ведя месяц каждый день.
 const passed = computed(() => props.m.days.filter((d) => d.iso < today.value || d.entered).length)
@@ -85,14 +69,8 @@ const passed = computed(() => props.m.days.filter((d) => d.iso < today.value || 
       <span :style="{ width: `${landW}%`, background: 'var(--text-muted)', opacity: 0.45 }" />
     </div>
 
-    <div class="mt-3.5 flex h-[28px] items-end gap-[2px]">
-      <span
-        v-for="d in strip"
-        :key="d.key"
-        class="min-w-0 flex-1 rounded-[2px]"
-        :style="{ height: `${d.h}px`, ...d.style }"
-      />
-    </div>
+    <!-- Ряд дней. Устройство общее с блоком месяца на «Прогрессе». -->
+    <MonthStrip class="mt-3.5" :m="m" :today="today" />
 
     <div class="mt-4">
       <div class="text-[0.6875rem] uppercase tracking-wide text-[var(--text-muted)]">Внесено</div>
@@ -109,8 +87,8 @@ const passed = computed(() => props.m.days.filter((d) => d.iso < today.value || 
          один — откуда взялся процент. -->
     <p class="mt-3 text-[0.75rem] leading-snug text-[var(--text-muted)]">
       {{ monthOver
-        ? 'Трек считал месяц по дням. Это итог.'
-        : 'Трек считает месяц по дням. Прогноз — если темп не изменится.' }}
+        ? `${BRAND.header} считал месяц по дням. Это итог.`
+        : `${BRAND.header} считает месяц по дням. Прогноз — если темп не изменится.` }}
     </p>
   </section>
 </template>

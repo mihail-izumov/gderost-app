@@ -1,10 +1,10 @@
 <script setup>
 import { computed } from 'vue'
 import { ChevronDown } from 'lucide-vue-next'
+import MonthStrip from '../daily/MonthStrip.vue'
 import { formatRub, formatGrowth, plural } from '../../i18n/format.js'
 import { monthCap } from '../../i18n/home.js'
-import { SIG_VAR, L, mln } from '../../i18n/daily.js'
-import { sigClass } from '../../composables/miniModel.js'
+import { SIG_VAR, L, mln, hatch } from '../../i18n/daily.js'
 import { useMiniStore } from '../../composables/useMiniStore.js'
 import { shapeName } from '../../data/weekShape.js'
 
@@ -67,36 +67,6 @@ const nextISO = computed(() => {
 // внутри столбца-плана. Получалось три величины в одном делении — план, вес
 // и темп, — и человек читал их как одну. Форма недели никуда не делась:
 // она видна ровно так же, потому что прогноз дня из неё и считается.
-const dayValue = (d) => (d.entered ? d.fact : (props.m.impliedBase || 0) * (d.weight || 0))
-const maxV = computed(() => Math.max(...props.m.days.map(dayValue), 1))
-
-// ⚠ Здесь жёлтый носил ДВА смысла сразу — это ловит общее правило
-// приоритета состояний (`composables/stateBadge.js`).
-// Сплошным жёлтым красился и день, отработавший близко к плану (результат),
-// и день, за который цифры нет вовсе (долг). На экране это дало дюжину жёлтых
-// столбцов при счётчике «0 близко 85–99 %»: числа были верны, врал цвет —
-// человек считал жёлтые столбцы и получал другое число.
-//
-// Разводим не цветом, а ФАКТУРОЙ. Цвет остаётся значением состояния,
-// а заливка — его природой: сплошное — измеренное, штриховка — дыра
-// в данных, серое — прогноз. Тот же приём уже работает в сводке недель,
-// где штриховкой помечена разнесённая стартовая сумма.
-const HATCH = (color) => ({
-  backgroundColor: 'var(--surface)',
-  backgroundImage: `repeating-linear-gradient(-45deg, ${color} 0 2px, transparent 2px 4px)`,
-})
-
-const strip = computed(() => props.m.days.map((d) => {
-  const h = Math.round(8 + (dayValue(d) / maxV.value) * 20)
-  const base = { key: d.iso, dd: d.dd, h, today: d.iso === props.today }
-  if (d.entered) return { ...base, style: { background: SIG_VAR[sigClass(d.fact / d.planAt)] } }
-  // День из стартовой суммы: выручка известна общей суммой, но не по дням —
-  // тоже не измерение, и тоже штриховка, только нейтральная.
-  if (d.inCarry) return { ...base, style: HATCH('var(--text-muted)') }
-  if (d.iso < props.today) return { ...base, style: HATCH('var(--warning)') }
-  return { ...base, style: { background: 'var(--line)' } }
-}))
-
 const passed = computed(() => props.m.days.filter((d) => d.iso < props.today).length)
 const filled = computed(() => props.m.days.filter((d) => d.closed).length)
 const missing = computed(() => props.m.days.filter((d) => d.due).length)
@@ -127,22 +97,8 @@ const stats = computed(() => props.m.dayStats)
       </div>
     </div>
 
-    <!-- Дни месяца. Высота — деньги дня: у прожитого выручка, у будущего темп.
-         Сегодняшний отмечен точкой под столбцом. -->
-    <div class="mt-3.5 flex h-[28px] items-end gap-[2px]">
-      <span
-        v-for="d in strip"
-        :key="d.key"
-        class="relative min-w-0 flex-1 rounded-[2px]"
-        :style="{ height: `${d.h}px`, ...d.style }"
-      >
-        <i
-          v-if="d.today"
-          class="absolute -bottom-[6px] left-1/2 block h-[3px] w-[3px] -translate-x-1/2 rounded-full"
-          :style="{ background: 'var(--action)' }"
-        />
-      </span>
-    </div>
+    <!-- Дни месяца. Устройство ряда общее с экраном месяца по ссылке. -->
+    <MonthStrip class="mt-3.5" :m="m" :today="today" mark-today />
 
     <!-- Слева — полнота данных одной величиной: сколько прошедших дней внесено.
          Справа — поправка на день недели: заголовок и текущий пресет кнопкой,
@@ -191,7 +147,7 @@ const stats = computed(() => props.m.dayStats)
         </span>
       </template>
       <span v-if="missing" class="inline-flex items-center gap-1.5">
-        <i class="inline-block h-2.5 w-2.5 rounded-sm" :style="HATCH('var(--warning)')" />
+        <i class="inline-block h-2.5 w-2.5 rounded-sm" :style="hatch('var(--warning)')" />
         <b class="font-semibold text-[var(--text)]">{{ missing }}</b> без цифр
       </span>
     </div>
